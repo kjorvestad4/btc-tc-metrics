@@ -10,12 +10,30 @@ import MSTYModelTab from "@/components/tabs/MSTYModelTab";
 import PreferredTab from "@/components/tabs/PreferredTab";
 import ProjectionsTable from "@/components/tabs/ProjectionsTable";
 import { DEFAULT_PARAMS, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, generateProjections } from "@/lib/calculations";
+import { fetchAllMarketData, MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 
 export default function Dashboard() {
   const [params, setParams] = useState(DEFAULT_PARAMS);
   const [preferreds, setPreferreds] = useState(DEFAULT_PREFERREDS);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [liveData, setLiveData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefreshLive = useCallback(async () => {
+    setRefreshing(true);
+    const data = await fetchAllMarketData();
+    setLiveData(data);
+    // Apply fetched values to params
+    setParams((prev) => ({
+      ...prev,
+      ...(data.btc_price != null && { btc_price: Math.round(data.btc_price) }),
+      ...(data.mstr_price != null && { mstr_price: Math.round(data.mstr_price) }),
+      ...(data.msty_price != null && { msty_nav: parseFloat(data.msty_price.toFixed(2)) }),
+    }));
+    setRefreshing(false);
+    return data;
+  }, []);
 
   const projections = useMemo(() => {
     return generateProjections(params, preferreds, params.projection_years * 4);
@@ -69,9 +87,11 @@ export default function Dashboard() {
       <Navbar
         activeScenario={params.active_scenario}
         onScenarioChange={handleScenarioChange}
-        onRefresh={() => {}}
+        onRefresh={handleRefreshLive}
         onExport={handleExport}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        refreshing={refreshing}
+        liveData={liveData}
       />
 
       <div className="flex">
@@ -113,7 +133,7 @@ export default function Dashboard() {
               <MSTRModelTab params={params} preferreds={preferreds} projections={projections} />
             </TabsContent>
             <TabsContent value="msty">
-              <MSTYModelTab params={params} projections={projections} />
+              <MSTYModelTab params={params} projections={projections} liveData={liveData} onRefresh={handleRefreshLive} refreshing={refreshing} />
             </TabsContent>
             <TabsContent value="preferred">
               <PreferredTab params={params} preferreds={preferreds} projections={projections} />
