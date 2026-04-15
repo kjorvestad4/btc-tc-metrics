@@ -1,0 +1,63 @@
+{
+  "name": "PreferredIssuance",
+  "type": "object",
+  "properties": {
+    "ticker": {
+      "type": "string",
+      "enum": [
+        "STRC",
+        "STRF",
+        "STRE",
+        "STRK",
+        "STRD"
+      ],
+      "description": "Preferred stock ticker"
+    },
+    "name": {
+      "type": "string",
+      "description": "Full name of the preferred issue"
+    },
+    "notional_amount": {
+      "type": "number",
+      "description": "Notional issuance amount in USD millions"
+    },
+    "dividend_rate": {
+      "type": "number",
+      "description": "Annual dividend rate %"
+    },
+    "payment_frequency": {
+      "type": "string",
+      "enum": [
+        "monthly",
+        "quarterly",
+        "semi-annual"
+      ],
+      "description": "Dividend payment frequency"
+    },
+    "is_btc_denominated": {
+      "type": "boolean",
+      "description": "Whether dividends are BTC-denominated"
+    },
+    "conversion_ratio": {
+      "type": "number",
+      "description": "Conversion ratio to MSTR common shares"
+    },
+    "current_price": {
+      "type": "number",
+      "description": "Current trading price per share"
+    },
+    "shares_outstanding": {
+      "type": "number",
+      "description": "Preferred shares outstanding"
+    },
+    "liquidation_preference": {
+      "type": "number",
+      "description": "Per-share liquidation preference USD"
+    }
+  },
+  "required": [
+    "ticker",
+    "notional_amount",
+    "dividend_rate"
+  ]
+}

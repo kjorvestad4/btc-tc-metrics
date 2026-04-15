@@ -1,0 +1,46 @@
+{
+  "name": "Scenario",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Scenario name"
+    },
+    "btc_cagr": {
+      "type": "number",
+      "description": "BTC compound annual growth rate %"
+    },
+    "accumulation_rate": {
+      "type": "number",
+      "description": "BTC accumulation per quarter"
+    },
+    "amplification_ratio": {
+      "type": "number",
+      "description": "MSTR amplification ratio"
+    },
+    "premium_multiple": {
+      "type": "number",
+      "description": "mNAV premium multiple"
+    },
+    "dilution_rate": {
+      "type": "number",
+      "description": "Quarterly dilution rate %"
+    },
+    "mstr_iv": {
+      "type": "number",
+      "description": "MSTR implied volatility %"
+    },
+    "earnings_cagr": {
+      "type": "number",
+      "description": "Earnings CAGR %"
+    },
+    "is_default": {
+      "type": "boolean",
+      "description": "Whether this is a default scenario"
+    }
+  },
+  "required": [
+    "name",
+    "btc_cagr"
+  ]
+}

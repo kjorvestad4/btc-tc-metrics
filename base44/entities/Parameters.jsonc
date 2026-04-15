@@ -1,0 +1,69 @@
+{
+  "name": "Parameters",
+  "type": "object",
+  "properties": {
+    "btc_price": {
+      "type": "number",
+      "description": "Current BTC price in USD"
+    },
+    "btc_cagr": {
+      "type": "number",
+      "description": "Projected BTC CAGR %"
+    },
+    "mstr_btc_holdings": {
+      "type": "number",
+      "description": "MSTR total BTC holdings"
+    },
+    "mstr_shares_outstanding": {
+      "type": "number",
+      "description": "MSTR shares outstanding (millions)"
+    },
+    "mstr_price": {
+      "type": "number",
+      "description": "Current MSTR stock price"
+    },
+    "amplification_ratio": {
+      "type": "number",
+      "description": "Market cap / BTC NAV multiplier"
+    },
+    "btc_accumulation_per_quarter": {
+      "type": "number",
+      "description": "BTC acquired per quarter"
+    },
+    "dilution_rate_per_quarter": {
+      "type": "number",
+      "description": "Share dilution rate per quarter %"
+    },
+    "mstr_iv": {
+      "type": "number",
+      "description": "MSTR implied volatility %"
+    },
+    "msty_nav": {
+      "type": "number",
+      "description": "Current MSTY NAV per share"
+    },
+    "msty_participation_rate": {
+      "type": "number",
+      "description": "MSTY participation in MSTR upside %"
+    },
+    "projection_years": {
+      "type": "number",
+      "description": "Projection horizon in years"
+    },
+    "premium_multiple": {
+      "type": "number",
+      "description": "Premium multiple over mNAV"
+    },
+    "earnings_cagr": {
+      "type": "number",
+      "description": "Earnings CAGR % (PunterJeff 50%)"
+    },
+    "active_scenario": {
+      "type": "string",
+      "description": "Currently active scenario name"
+    }
+  },
+  "required": [
+    "btc_price"
+  ]
+}
