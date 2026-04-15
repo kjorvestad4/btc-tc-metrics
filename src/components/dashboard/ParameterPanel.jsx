@@ -92,7 +92,7 @@ export default function ParameterPanel({ params, onParamsChange, preferreds, onP
 
         <Section icon={TrendingUp} title="MSTR / Strategy">
           <ParamSlider label="MSTR Price" value={params.mstr_price} onChange={(v) => updateParam("mstr_price", v)} min={50} max={5000} step={1} tooltip="Current MSTR stock price" />
-          <ParamSlider label="Shares (M)" value={params.mstr_shares_outstanding} onChange={(v) => updateParam("mstr_shares_outstanding", v)} min={100} max={1000} step={1} tooltip="Shares outstanding in millions" />
+          <ParamSlider label="Shares (M)" value={params.mstr_shares_outstanding} onChange={(v) => updateParam("mstr_shares_outstanding", v)} min={100} max={2000} step={5} tooltip="Shares outstanding in millions" />
           <ParamSlider label="Amplification" value={params.amplification_ratio} onChange={(v) => updateParam("amplification_ratio", v)} min={0.5} max={5} step={0.1} tooltip="Market cap ÷ BTC NAV. Per PunterJeff: the 'amplification ratio' reflects MSTR's premium as a Bitcoin treasury / fiat debasement insurer." />
           <ParamSlider label="Premium Multiple" value={params.premium_multiple} onChange={(v) => updateParam("premium_multiple", v)} min={0.5} max={3} step={0.05} tooltip="Additional premium multiple applied to mNAV × amplification" />
           <ParamSlider label="Dilution/Qtr %" value={params.dilution_rate_per_quarter} onChange={(v) => updateParam("dilution_rate_per_quarter", v)} min={0} max={5} step={0.1} tooltip="Quarterly share dilution from ATM offerings and conversions" />

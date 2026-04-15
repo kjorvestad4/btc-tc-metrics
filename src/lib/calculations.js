@@ -1,17 +1,17 @@
 // PunterJeff MSTR Projection Engine - Core Calculations
 
 export const DEFAULT_PARAMS = {
-  btc_price: 84500,
+  btc_price: 74300,
   btc_cagr: 40,
-  mstr_btc_holdings: 531644,
-  mstr_shares_outstanding: 460,
-  mstr_price: 368,
-  amplification_ratio: 2.4,
+  mstr_btc_holdings: 780897,
+  mstr_shares_outstanding: 220,
+  mstr_price: 296,
+  amplification_ratio: 3.0,
   btc_accumulation_per_quarter: 15000,
   dilution_rate_per_quarter: 1.5,
-  mstr_iv: 85,
-  msty_nav: 22.5,
-  msty_participation_rate: 65,
+  mstr_iv: 60,
+  msty_nav: 18.5,
+  msty_participation_rate: 35,
   projection_years: 5,
   premium_multiple: 1.0,
   earnings_cagr: 50,
@@ -19,17 +19,17 @@ export const DEFAULT_PARAMS = {
 };
 
 export const DEFAULT_PREFERREDS = [
-  { ticker: "STRF", name: "Strategy 10% Perpetual Preferred", notional_amount: 711, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0, current_price: 92.50, shares_outstanding: 8500000, liquidation_preference: 100 },
-  { ticker: "STRK", name: "Strategy Series A Perpetual Preferred", notional_amount: 563, dividend_rate: 8, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0.1, current_price: 87.00, shares_outstanding: 6500000, liquidation_preference: 100 },
-  { ticker: "STRC", name: "Strategy Convertible Preferred C", notional_amount: 450, dividend_rate: 6, payment_frequency: "semi-annual", is_btc_denominated: false, conversion_ratio: 0.15, current_price: 95.00, shares_outstanding: 5000000, liquidation_preference: 100 },
-  { ticker: "STRE", name: "Strategy Enhanced Preferred E", notional_amount: 350, dividend_rate: 12, payment_frequency: "monthly", is_btc_denominated: true, conversion_ratio: 0, current_price: 78.00, shares_outstanding: 4000000, liquidation_preference: 100 },
-  { ticker: "STRD", name: "Strategy Digital Credit Preferred D", notional_amount: 280, dividend_rate: 7.5, payment_frequency: "quarterly", is_btc_denominated: true, conversion_ratio: 0.08, current_price: 82.00, shares_outstanding: 3200000, liquidation_preference: 100 },
+  { ticker: "STRF", name: "Strategy 10% Perpetual Preferred", notional_amount: 3450, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0, current_price: 92.50, shares_outstanding: 34500000, liquidation_preference: 100 },
+  { ticker: "STRK", name: "Strategy Series A Perpetual Preferred", notional_amount: 2100, dividend_rate: 8, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0.1, current_price: 87.00, shares_outstanding: 21000000, liquidation_preference: 100 },
+  { ticker: "STRC", name: "Strategy Convertible Preferred C", notional_amount: 1500, dividend_rate: 10, payment_frequency: "semi-annual", is_btc_denominated: false, conversion_ratio: 0.15, current_price: 95.00, shares_outstanding: 15000000, liquidation_preference: 100 },
+  { ticker: "STRE", name: "Strategy Enhanced Preferred E", notional_amount: 1210, dividend_rate: 13, payment_frequency: "monthly", is_btc_denominated: true, conversion_ratio: 0, current_price: 78.00, shares_outstanding: 12100000, liquidation_preference: 100 },
+  { ticker: "STRD", name: "Strategy Digital Credit Preferred D", notional_amount: 900, dividend_rate: 11, payment_frequency: "quarterly", is_btc_denominated: true, conversion_ratio: 0.08, current_price: 82.00, shares_outstanding: 9000000, liquidation_preference: 100 },
 ];
 
 export const DEFAULT_SCENARIOS = [
-  { name: "Base", btc_cagr: 40, accumulation_rate: 15000, amplification_ratio: 2.4, premium_multiple: 1.0, dilution_rate: 1.5, mstr_iv: 85, earnings_cagr: 50, is_default: true },
-  { name: "Bull", btc_cagr: 60, accumulation_rate: 25000, amplification_ratio: 3.2, premium_multiple: 1.3, dilution_rate: 2.0, mstr_iv: 100, earnings_cagr: 70, is_default: true },
-  { name: "Bear", btc_cagr: 20, accumulation_rate: 8000, amplification_ratio: 1.6, premium_multiple: 0.8, dilution_rate: 1.0, mstr_iv: 65, earnings_cagr: 30, is_default: true },
+  { name: "Base", btc_cagr: 40, accumulation_rate: 15000, amplification_ratio: 3.0, premium_multiple: 1.0, dilution_rate: 1.5, mstr_iv: 60, earnings_cagr: 50, is_default: true },
+  { name: "Bull", btc_cagr: 60, accumulation_rate: 25000, amplification_ratio: 3.5, premium_multiple: 1.2, dilution_rate: 2.0, mstr_iv: 80, earnings_cagr: 70, is_default: true },
+  { name: "Bear", btc_cagr: 20, accumulation_rate: 8000, amplification_ratio: 2.0, premium_multiple: 0.8, dilution_rate: 1.0, mstr_iv: 45, earnings_cagr: 30, is_default: true },
 ];
 
 /**
