@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Bitcoin, TrendingUp, BarChart3, Layers, TableProperties, GitBranch } from "lucide-react";
+import { LayoutDashboard, Bitcoin, TrendingUp, BarChart3, Layers, TableProperties, GitBranch, Building2, Wallet } from "lucide-react";
 import Navbar from "@/components/dashboard/Navbar";
 import ParameterPanel from "@/components/dashboard/ParameterPanel";
 import OverviewTab from "@/components/tabs/OverviewTab";
@@ -10,6 +10,9 @@ import MSTYModelTab from "@/components/tabs/MSTYModelTab";
 import PreferredTab from "@/components/tabs/PreferredTab";
 import ProjectionsTable from "@/components/tabs/ProjectionsTable";
 import CorrelationsTab from "@/components/tabs/CorrelationsTab";
+import StrategyDashboardTab from "@/components/tabs/StrategyDashboardTab";
+import ASSTModelTab from "@/components/tabs/ASSTModelTab";
+import SATAModelTab from "@/components/tabs/SATAModelTab";
 import { DEFAULT_PARAMS, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, generateProjections } from "@/lib/calculations";
 import { fetchAllMarketData } from "@/lib/marketData";
 import { toast } from "sonner";
@@ -116,11 +119,14 @@ export default function Dashboard() {
 
   const tabItems = [
     { value: "overview",      label: "Overview",      icon: LayoutDashboard },
+    { value: "strategy",      label: "Strategy",      icon: Building2 },
     { value: "btc",           label: "BTC",           icon: Bitcoin },
     { value: "mstr",          label: "MSTR",          icon: TrendingUp },
     { value: "msty",          label: "MSTY",          icon: BarChart3 },
     { value: "preferred",     label: "Preferreds",    icon: Layers },
     { value: "correlations",  label: "Correlations",  icon: GitBranch },
+    { value: "asst",          label: "ASST",          icon: Building2 },
+    { value: "sata",          label: "SATA",          icon: Wallet },
     { value: "table",         label: "Table",         icon: TableProperties },
   ];
 
@@ -171,6 +177,16 @@ export default function Dashboard() {
             <TabsContent value="overview">
               <OverviewTab params={params} preferreds={preferreds} projections={projections} />
             </TabsContent>
+            <TabsContent value="strategy">
+              <StrategyDashboardTab
+                params={params}
+                preferreds={preferreds}
+                projections={projections}
+                liveData={liveData}
+                onRefresh={handleRefreshLive}
+                refreshing={refreshing}
+              />
+            </TabsContent>
             <TabsContent value="btc">
               <BTCModelTab params={params} projections={projections} />
             </TabsContent>
@@ -191,6 +207,22 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="correlations">
               <CorrelationsTab params={params} onParamsChange={setParams} />
+            </TabsContent>
+            <TabsContent value="asst">
+              <ASSTModelTab
+                params={params}
+                liveData={liveData}
+                onRefresh={handleRefreshLive}
+                refreshing={refreshing}
+              />
+            </TabsContent>
+            <TabsContent value="sata">
+              <SATAModelTab
+                params={params}
+                liveData={liveData}
+                onRefresh={handleRefreshLive}
+                refreshing={refreshing}
+              />
             </TabsContent>
             <TabsContent value="table">
               <ProjectionsTable projections={projections} params={params} />

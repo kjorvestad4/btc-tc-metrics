@@ -133,6 +133,8 @@ export async function fetchAllMarketData(polygonKey = null) {
   if (polygonKey) {
     tasks.mstr = fetchPolygonPrice("MSTR", polygonKey);
     tasks.msty = fetchPolygonPrice("MSTY", polygonKey);
+    tasks.asst = fetchPolygonPrice("ASST", polygonKey);
+    tasks.sata = fetchPolygonPrice("SATA", polygonKey);
     tasks.iv = fetchPolygonIV(polygonKey);
     tasks.divs = fetchPolygonDividends(polygonKey);
   }
@@ -156,6 +158,8 @@ export async function fetchAllMarketData(polygonKey = null) {
     btc_holdings: results.holdings ?? null,
     mstr_price: results.mstr ?? null,
     msty_price: results.msty ?? null,
+    asst_price: results.asst ?? null,
+    sata_price: results.sata ?? null,
     mstr_iv: results.iv ?? null,
     msty_dividends: results.divs ?? null,
     msty_latest_div: results.divs?.[0]?.amount ?? null,
