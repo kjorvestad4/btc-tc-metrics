@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Bitcoin, TrendingUp, BarChart3, Layers, TableProperties } from "lucide-react";
+import { LayoutDashboard, Bitcoin, TrendingUp, BarChart3, Layers, TableProperties, GitBranch } from "lucide-react";
 import Navbar from "@/components/dashboard/Navbar";
 import ParameterPanel from "@/components/dashboard/ParameterPanel";
 import OverviewTab from "@/components/tabs/OverviewTab";
@@ -9,8 +9,10 @@ import MSTRModelTab from "@/components/tabs/MSTRModelTab";
 import MSTYModelTab from "@/components/tabs/MSTYModelTab";
 import PreferredTab from "@/components/tabs/PreferredTab";
 import ProjectionsTable from "@/components/tabs/ProjectionsTable";
+import CorrelationsTab from "@/components/tabs/CorrelationsTab";
 import { DEFAULT_PARAMS, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, generateProjections } from "@/lib/calculations";
-import { fetchAllMarketData, MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
+import { fetchAllMarketData } from "@/lib/marketData";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const [params, setParams] = useState(DEFAULT_PARAMS);
@@ -19,21 +21,60 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [liveData, setLiveData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [polygonKey, setPolygonKey] = useState(() => sessionStorage.getItem("polygon_api_key") || "");
+
+  const handlePolygonKeyChange = useCallback((key) => {
+    setPolygonKey(key);
+    sessionStorage.setItem("polygon_api_key", key);
+  }, []);
 
   const handleRefreshLive = useCallback(async () => {
     setRefreshing(true);
-    const data = await fetchAllMarketData();
-    setLiveData(data);
-    // Apply fetched values to params
-    setParams((prev) => ({
-      ...prev,
-      ...(data.btc_price != null && { btc_price: Math.round(data.btc_price) }),
-      ...(data.mstr_price != null && { mstr_price: Math.round(data.mstr_price) }),
-      ...(data.msty_price != null && { msty_nav: parseFloat(data.msty_price.toFixed(2)) }),
-    }));
-    setRefreshing(false);
-    return data;
-  }, []);
+    try {
+      const data = await fetchAllMarketData(polygonKey || null);
+      setLiveData(data);
+
+      // Apply fetched values to params
+      setParams((prev) => ({
+        ...prev,
+        ...(data.btc_price != null && { btc_price: Math.round(data.btc_price) }),
+        ...(data.btc_holdings != null && { mstr_btc_holdings: data.btc_holdings }),
+        ...(data.mstr_price != null && { mstr_price: Math.round(data.mstr_price) }),
+        ...(data.msty_price != null && { msty_nav: parseFloat(data.msty_price.toFixed(2)) }),
+        ...(data.mstr_iv != null && { mstr_iv: data.mstr_iv }),
+      }));
+
+      // Build toast summary
+      const parts = [];
+      if (data.btc_price) parts.push(`BTC $${data.btc_price.toLocaleString()}`);
+      if (data.btc_holdings) parts.push(`Holdings ${data.btc_holdings.toLocaleString()} BTC`);
+      if (data.mstr_price) parts.push(`MSTR $${data.mstr_price.toFixed(2)}`);
+      if (data.msty_price) parts.push(`MSTY $${data.msty_price.toFixed(2)}`);
+      if (data.mstr_iv) parts.push(`IV ${data.mstr_iv}%`);
+
+      const hasErrors = data.errors?.length > 0;
+      if (hasErrors) {
+        // Show helpful message if polygon key missing
+        const noPolygon = !polygonKey && data.errors.some(e => e.includes("MSTR") || e.includes("MSTY"));
+        if (noPolygon) {
+          toast.warning(
+            parts.length > 0
+              ? `Partial refresh: ${parts.join(" · ")} — Enter Polygon key in sidebar for live stock data`
+              : "Enter Polygon.io API key in sidebar for live MSTR/MSTY/IV data",
+            { duration: 6000 }
+          );
+        } else {
+          toast.warning(`Partial data — ${parts.join(" · ")} | Failed: ${data.errors.join(", ")}`, { duration: 5000 });
+        }
+      } else {
+        toast.success(`Live data synced — ${parts.join(" · ")}`, { duration: 5000 });
+      }
+
+      return data;
+    } finally {
+      setRefreshing(false);
+    }
+  }, [polygonKey]);
 
   const projections = useMemo(() => {
     return generateProjections(params, preferreds, params.projection_years * 4);
@@ -74,12 +115,13 @@ export default function Dashboard() {
   }, [projections, params.active_scenario]);
 
   const tabItems = [
-    { value: "overview", label: "Overview", icon: LayoutDashboard },
-    { value: "btc", label: "BTC", icon: Bitcoin },
-    { value: "mstr", label: "MSTR", icon: TrendingUp },
-    { value: "msty", label: "MSTY", icon: BarChart3 },
-    { value: "preferred", label: "Preferreds", icon: Layers },
-    { value: "table", label: "Table", icon: TableProperties },
+    { value: "overview",      label: "Overview",      icon: LayoutDashboard },
+    { value: "btc",           label: "BTC",           icon: Bitcoin },
+    { value: "mstr",          label: "MSTR",          icon: TrendingUp },
+    { value: "msty",          label: "MSTY",          icon: BarChart3 },
+    { value: "preferred",     label: "Preferreds",    icon: Layers },
+    { value: "correlations",  label: "Correlations",  icon: GitBranch },
+    { value: "table",         label: "Table",         icon: TableProperties },
   ];
 
   return (
@@ -92,6 +134,7 @@ export default function Dashboard() {
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         refreshing={refreshing}
         liveData={liveData}
+        hasPolygonKey={!!polygonKey}
       />
 
       <div className="flex">
@@ -102,6 +145,8 @@ export default function Dashboard() {
           onPreferredsChange={setPreferreds}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          polygonKey={polygonKey}
+          onPolygonKeyChange={handlePolygonKeyChange}
         />
 
         {sidebarOpen && (
@@ -133,10 +178,19 @@ export default function Dashboard() {
               <MSTRModelTab params={params} preferreds={preferreds} projections={projections} />
             </TabsContent>
             <TabsContent value="msty">
-              <MSTYModelTab params={params} projections={projections} liveData={liveData} onRefresh={handleRefreshLive} refreshing={refreshing} />
+              <MSTYModelTab
+                params={params}
+                projections={projections}
+                liveData={liveData}
+                onRefresh={handleRefreshLive}
+                refreshing={refreshing}
+              />
             </TabsContent>
             <TabsContent value="preferred">
               <PreferredTab params={params} preferreds={preferreds} projections={projections} />
+            </TabsContent>
+            <TabsContent value="correlations">
+              <CorrelationsTab params={params} onParamsChange={setParams} />
             </TabsContent>
             <TabsContent value="table">
               <ProjectionsTable projections={projections} params={params} />

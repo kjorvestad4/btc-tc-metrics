@@ -4,21 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw, Download, Menu, Zap, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-export default function Navbar({ activeScenario, onScenarioChange, onRefresh, onExport, onToggleSidebar, refreshing, liveData }) {
-
-  const handleRefresh = async () => {
-    const data = await onRefresh?.();
-    if (!data) return;
-    if (data.errors?.length > 0) {
-      toast.warning(`Refreshed with partial data. Failed: ${data.errors.join(", ")}`, { duration: 4000 });
-    } else {
-      const parts = [];
-      if (data.btc_price) parts.push(`BTC $${data.btc_price.toLocaleString()}`);
-      if (data.mstr_price) parts.push(`MSTR $${data.mstr_price.toFixed(2)}`);
-      if (data.msty_price) parts.push(`MSTY $${data.msty_price.toFixed(2)}`);
-      toast.success(`Live data updated — ${parts.join(" · ")}`, { duration: 5000 });
-    }
-  };
+export default function Navbar({ activeScenario, onScenarioChange, onRefresh, onExport, onToggleSidebar, refreshing, liveData, hasPolygonKey }) {
+  // Toast logic is now fully handled in Dashboard.handleRefreshLive
+  const handleRefresh = () => onRefresh?.();
 
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4 sticky top-0 z-50">
@@ -74,6 +62,11 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
           </SelectContent>
         </Select>
 
+        {!hasPolygonKey && !liveData && (
+          <span className="hidden lg:inline text-[10px] text-amber-400/70 font-medium">
+            Add Polygon key ↙ for full live data
+          </span>
+        )}
         <Button
           variant="default"
           size="sm"

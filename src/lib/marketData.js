@@ -1,6 +1,6 @@
 /**
  * Market Data Fetchers — PunterJeff MSTR Projection Engine
- * Uses public APIs (no keys required for BTC/Yahoo Finance)
+ * Supports: CoinGecko (BTC), Strategy.com scraper (holdings), Polygon.io (MSTR/MSTY/IV/dividends)
  */
 
 // Known MSTY weekly distribution history (last 8 weeks, updated to April 2026)
@@ -23,69 +23,143 @@ export async function fetchBTCPrice() {
     "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
     { headers: { Accept: "application/json" } }
   );
-  if (!res.ok) throw new Error(`CoinGecko error: ${res.status}`);
+  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
   const data = await res.json();
   return data.bitcoin.usd;
 }
 
 /**
- * Fetch MSTR + MSTY prices via Yahoo Finance v8 (public, no key)
+ * Scrape Strategy.com /purchases page for BTC holdings
+ * Parses the latest total BTC held from public page
  */
-async function fetchYahooPrice(ticker) {
-  const res = await fetch(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`,
-    { headers: { Accept: "application/json" } }
-  );
-  if (!res.ok) throw new Error(`Yahoo Finance error for ${ticker}: ${res.status}`);
-  const data = await res.json();
-  const meta = data?.chart?.result?.[0]?.meta;
-  if (!meta) throw new Error(`No data returned for ${ticker}`);
-  return {
-    price: meta.regularMarketPrice ?? meta.previousClose,
-    previousClose: meta.previousClose,
-    ticker,
-  };
+export async function fetchStrategyHoldings() {
+  try {
+    const res = await fetch("https://corsproxy.io/?url=https://www.strategy.com/purchases", {
+      headers: { Accept: "text/html" },
+    });
+    if (!res.ok) throw new Error(`Strategy scrape ${res.status}`);
+    const html = await res.text();
+    // Look for total BTC pattern like "780,897" or "Total Bitcoin: 780,897"
+    const patterns = [
+      /Total(?:\s+Bitcoin)?[:\s]+([0-9,]+)/i,
+      /([0-9]{3},[0-9]{3})\s*BTC/,
+      /holdings[:\s]+([0-9,]+)/i,
+    ];
+    for (const pat of patterns) {
+      const m = html.match(pat);
+      if (m) {
+        const val = parseInt(m[1].replace(/,/g, ""));
+        if (val > 100000 && val < 2000000) return val;
+      }
+    }
+    throw new Error("Holdings pattern not found");
+  } catch {
+    throw new Error("Strategy.com scrape failed");
+  }
 }
 
 /**
- * Fetch MSTY dividend data (latest distribution from Yahoo Finance)
+ * Fetch stock price from Polygon.io (requires API key)
  */
-async function fetchMSTYDividend() {
-  // Yahoo Finance v8 dividend events
+export async function fetchPolygonPrice(ticker, apiKey) {
   const res = await fetch(
-    "https://query1.finance.yahoo.com/v8/finance/chart/MSTY?events=dividends&interval=1wk&range=3mo",
+    `https://api.polygon.io/v2/last/trade/${ticker}?apiKey=${apiKey}`,
     { headers: { Accept: "application/json" } }
   );
-  if (!res.ok) throw new Error(`Yahoo dividend error: ${res.status}`);
+  if (!res.ok) throw new Error(`Polygon price ${ticker}: ${res.status}`);
   const data = await res.json();
-  const events = data?.chart?.result?.[0]?.events?.dividends;
-  if (!events) return null;
+  if (data.status !== "OK") throw new Error(`Polygon: ${data.message || "unknown error"}`);
+  return data.results?.p ?? null;
+}
 
-  const sorted = Object.values(events).sort((a, b) => b.date - a.date);
-  return sorted[0]?.amount ?? null;
+/**
+ * Fetch 30-day ATM implied volatility for MSTR from Polygon.io options chain
+ */
+export async function fetchPolygonIV(apiKey) {
+  try {
+    // Get ATM options snapshot for MSTR — nearest expiry ~30 DTE
+    const today = new Date();
+    const targetExp = new Date(today);
+    targetExp.setDate(today.getDate() + 30);
+    const expStr = targetExp.toISOString().split("T")[0];
+
+    const res = await fetch(
+      `https://api.polygon.io/v3/snapshot/options/MSTR?expiration_date.lte=${expStr}&limit=10&apiKey=${apiKey}`,
+      { headers: { Accept: "application/json" } }
+    );
+    if (!res.ok) throw new Error(`Polygon IV ${res.status}`);
+    const data = await res.json();
+    const results = data?.results ?? [];
+    const ivs = results
+      .map((r) => r?.details?.implied_volatility)
+      .filter((v) => v != null && v > 0.1 && v < 5);
+    if (ivs.length === 0) throw new Error("No IV data");
+    const avgIV = (ivs.reduce((s, v) => s + v, 0) / ivs.length) * 100;
+    return Math.round(avgIV);
+  } catch {
+    throw new Error("Polygon IV fetch failed");
+  }
+}
+
+/**
+ * Fetch latest MSTY dividends from Polygon.io (last 5 weekly distributions)
+ */
+export async function fetchPolygonDividends(apiKey) {
+  const res = await fetch(
+    `https://api.polygon.io/v3/reference/dividends?ticker=MSTY&limit=10&sort=ex_dividend_date&order=desc&apiKey=${apiKey}`,
+    { headers: { Accept: "application/json" } }
+  );
+  if (!res.ok) throw new Error(`Polygon dividends ${res.status}`);
+  const data = await res.json();
+  const results = data?.results ?? [];
+  return results.slice(0, 5).map((d) => ({
+    ex_date: d.ex_dividend_date,
+    amount: d.cash_amount,
+    frequency: "weekly",
+  }));
 }
 
 /**
  * Fetch all live market data in parallel
- * Returns partial results on failure (falls back gracefully per field)
+ * polygonKey: optional — if missing, Polygon sources are skipped gracefully
  */
-export async function fetchAllMarketData() {
-  const results = await Promise.allSettled([
-    fetchBTCPrice(),
-    fetchYahooPrice("MSTR"),
-    fetchYahooPrice("MSTY"),
-    fetchMSTYDividend(),
-  ]);
+export async function fetchAllMarketData(polygonKey = null) {
+  const tasks = {
+    btc: fetchBTCPrice(),
+    holdings: fetchStrategyHoldings(),
+  };
 
-  const [btcResult, mstrResult, mstyResult, mstyDivResult] = results;
+  // Add Polygon tasks only if key is provided
+  if (polygonKey) {
+    tasks.mstr = fetchPolygonPrice("MSTR", polygonKey);
+    tasks.msty = fetchPolygonPrice("MSTY", polygonKey);
+    tasks.iv = fetchPolygonIV(polygonKey);
+    tasks.divs = fetchPolygonDividends(polygonKey);
+  }
 
+  const keys = Object.keys(tasks);
+  const settled = await Promise.allSettled(Object.values(tasks));
+
+  const results = {};
+  const errors = [];
+  keys.forEach((key, i) => {
+    if (settled[i].status === "fulfilled") {
+      results[key] = settled[i].value;
+    } else {
+      errors.push(`${key.toUpperCase()}: ${settled[i].reason?.message ?? "failed"}`);
+    }
+  });
+
+  // Build unified output
   return {
-    btc_price: btcResult.status === "fulfilled" ? btcResult.value : null,
-    mstr_price: mstrResult.status === "fulfilled" ? mstrResult.value.price : null,
-    msty_price: mstyResult.status === "fulfilled" ? mstyResult.value.price : null,
-    msty_latest_div: mstyDivResult.status === "fulfilled" ? mstyDivResult.value : null,
-    errors: results
-      .map((r, i) => (r.status === "rejected" ? ["BTC", "MSTR", "MSTY", "MSTY Div"][i] : null))
-      .filter(Boolean),
+    btc_price: results.btc ?? null,
+    btc_holdings: results.holdings ?? null,
+    mstr_price: results.mstr ?? null,
+    msty_price: results.msty ?? null,
+    mstr_iv: results.iv ?? null,
+    msty_dividends: results.divs ?? null,
+    msty_latest_div: results.divs?.[0]?.amount ?? null,
+    polygon_used: !!polygonKey,
+    errors,
   };
 }

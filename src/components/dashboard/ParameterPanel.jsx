@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, Info, RotateCcw, Bitcoin, TrendingUp, Layers, BarChart3 } from "lucide-react";
+import { ChevronDown, Info, RotateCcw, Bitcoin, TrendingUp, Layers, BarChart3, Key, Eye, EyeOff } from "lucide-react";
 import { DEFAULT_PARAMS } from "@/lib/calculations";
 import PreferredCard from "./PreferredCard";
 
@@ -60,7 +60,9 @@ function Section({ icon: Icon, title, children, defaultOpen = true }) {
   );
 }
 
-export default function ParameterPanel({ params, onParamsChange, preferreds, onPreferredsChange, isOpen, onClose }) {
+export default function ParameterPanel({ params, onParamsChange, preferreds, onPreferredsChange, isOpen, onClose, polygonKey, onPolygonKeyChange }) {
+  const [showApiKey, setShowApiKey] = useState(false);
+
   const updateParam = (key, value) => {
     onParamsChange({ ...params, [key]: value });
   };
@@ -119,6 +121,48 @@ export default function ParameterPanel({ params, onParamsChange, preferreds, onP
             />
           ))}
         </Section>
+
+        {/* Polygon.io API Key */}
+        <div className="border-b border-border pb-3">
+          <div className="flex items-center gap-2 py-2">
+            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Live Data API</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Polygon.io API Key</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger><Info className="w-3 h-3 text-muted-foreground/40" /></TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs text-xs">
+                    Free Polygon.io key unlocks live MSTR/MSTY prices, 30-day ATM IV, and latest 5 MSTY dividend events. Get one free at polygon.io
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="relative">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={polygonKey}
+                onChange={(e) => onPolygonKeyChange(e.target.value)}
+                placeholder="Enter key for live stock data…"
+                className="h-7 text-xs pr-8 bg-secondary border-border font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showApiKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              </button>
+            </div>
+            <div className={`text-[10px] px-2 py-1 rounded ${polygonKey ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
+              {polygonKey
+                ? "✓ Polygon key set — Refresh to pull live MSTR/MSTY/IV"
+                : "Without key: BTC (CoinGecko) + Strategy.com holdings only"}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="p-4 border-t border-border">
