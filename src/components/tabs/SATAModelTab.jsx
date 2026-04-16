@@ -389,7 +389,7 @@ export default function SATAModelTab({ params, liveData, onRefresh, refreshing }
           <ul className="space-y-1.5">
             <li>• <span className="text-purple-400 font-medium">SATA vs STRC:</span> Both are perpetual preferreds funding BTC accumulation via dividend carry. STRC is Strategy's (MSTR) program; SATA is Strive's (ASST) parallel.</li>
             <li>• <span className="text-purple-400 font-medium">Rate comparison:</span> SATA ~13% variable vs STRC ~10% fixed — SATA offers higher yield but variable rate adds uncertainty.</li>
-            <li>• <span className="text-primary font-medium">BTC CAGR target:</span> Both programs profitable if BTC CAGR > dividend rate. At 40% BTC CAGR, both SATA and STRC are highly accretive.</li>
+            <li>• <span className="text-primary font-medium">BTC CAGR target:</span> Both programs profitable if BTC CAGR &gt; dividend rate. At 40% BTC CAGR, both SATA and STRC are highly accretive.</li>
           </ul>
           <ul className="space-y-1.5">
             <li>• <span className="text-amber-400 font-medium">Par mechanics:</span> Like STRC, SATA should trade near par due to fixed liquidation preference. Monthly payments vs STRC's quarterly create smoother ex-div drops.</li>
