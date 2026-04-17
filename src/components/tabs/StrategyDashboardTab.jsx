@@ -103,18 +103,23 @@ Strategy's BTC Reserve is the largest corporate Bitcoin holding globally. Unlike
 Source: strategy.com/btc — "Bitcoin Reserve" + FASB ASC 350-60 fair value disclosures.`,
   },
   amplification: {
-    short: "Market cap ÷ BTC NAV — leverage multiplier of BTC exposure",
-    full: `Amplification = Market Capitalization ÷ BTC Reserve Value.
+    short: "(Total Debt + Preferred Notional) ÷ BTC Reserve — fixed-cost leverage on Bitcoin",
+    full: `Amplification = (Total Debt + Preferred Notional) ÷ BTC Reserve.
 
-As of April 2026: Amplification ≈ 34% (expressed as EV ÷ BTC Reserve premium, i.e. mNAV − 1 = 15% net premium on top of BTC Reserve in EV terms). Strategy's official Amplification display on strategy.com reflects how much of the company's enterprise value is "levered" to Bitcoin relative to the pure reserve value.
+This is the ratio of Strategy's total fixed-cost obligations (convertible notes + all preferred stock liquidation preference) to the current value of its Bitcoin reserve. It measures how much financial leverage the capital structure has against the BTC holdings.
 
-PunterJeff framework: Amplification is the reflexive premium investors pay for the MSTR capital-markets engine. It reflects: (1) the ATM/preferred issuance flywheel generating positive BTC Yield; (2) software business optionality; (3) the brand and first-mover premium as the largest corporate BTC holder; (4) the fixed-cost leverage of perpetual preferred paying ~10–13% while BTC targets 30–60%+ CAGR.
+As of April 2026 (est.):
+• Total Debt (converts): ~$3.7B
+• Preferred Notional: ~$9.16B
+• Total fixed obligations: ~$12.86B
+• BTC Reserve: ~$58.6B
+• Amplification ≈ 21.9% (~0.22x)
 
-Historically: amplification multiple has ranged 2x–4x of BTC NAV in bull markets, compressed toward 1.0x–1.5x in bear markets.
+A lower Amplification ratio means the fixed obligations are a smaller fraction of the BTC reserve — the balance sheet is less leveraged and more resilient to BTC price drawdowns. As BTC rises and the reserve grows faster than new issuances, Amplification compresses (improving). As Strategy issues more preferred or converts, Amplification rises.
 
-Net Leverage = (Total Debt + Preferred Notional − Cash) ÷ BTC Reserve. Currently ~10%, indicating Strategy's fixed obligations are a small fraction of BTC assets.
+PunterJeff context: This is distinct from the mNAV multiple. Amplification measures the leverage of the fixed-cost capital on top of BTC — not the market premium. The "digital credit flywheel" works when BTC appreciation rate > weighted avg cost of fixed obligations (~10–13% blended rate).
 
-Source: strategy.com/btc page, @PunterJeff analysis, and Strategy investor presentations.`,
+Source: strategy.com/btc, /credit — Amplification metric definition.`,
   },
   enterpriseValue: {
     short: "Market cap + preferred + converts − cash — full capital stack value",
@@ -323,7 +328,7 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
           <StatRow label="Market Cap" value={formatCurrency(marketCap)} sub="common equity" accent="text-primary" />
           <StatRow label="mNAV / Share" value={formatCurrency(mnav, 2)} sub="BTC NAV per share" defKey="mnav" accent="text-cyan-400" />
           <StatRow label="mNAV Multiple" value={`${mnavMultiple.toFixed(2)}x`} sub="price ÷ mNAV" accent="text-amber-400" />
-          <StatRow label="Amplification Ratio" value={`${params.amplification_ratio.toFixed(1)}x`} sub="market cap ÷ BTC NAV" defKey="amplification" accent="text-purple-400" />
+          <StatRow label="Amplification" value={`${(((totalPrefLiq + 3.7e9) / btcReserve) * 100).toFixed(1)}%`} sub="(debt+pref) ÷ BTC reserve" defKey="amplification" accent="text-purple-400" />
         </Section>
 
         {/* KPIs */}
