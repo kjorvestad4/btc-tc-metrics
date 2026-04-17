@@ -6,81 +6,196 @@ import { Info, RefreshCw, Bitcoin, TrendingUp, Layers, DollarSign, Zap, BookOpen
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent, calcMNAV, calcTotalPrefLiquidation } from "@/lib/calculations";
 
-// Official Strategy.com metric definitions (verbatim / paraphrased from strategy.com/notes, /btc, /credit)
+// Official Strategy.com metric definitions — verbatim/near-verbatim from strategy.com/notes, /btc, /credit
 const STRATEGY_DEFINITIONS = {
   mnav: {
-    short: "Market cap ÷ Bitcoin NAV",
-    full: `mNAV (Multiple of Net Asset Value) = Market Capitalization ÷ (BTC Holdings × BTC Price − Total Preferred Liquidation Preference).
+    short: "Multiple of Net Asset Value — market cap ÷ Bitcoin NAV",
+    full: `mNAV is the multiple of the BTC Reserve, as of the specified date, calculated as the Company's enterprise value (as we define it) divided by the BTC Reserve.
 
-When mNAV > 1.0, the market is paying a premium over the pure BTC value per share, reflecting the value of Strategy's capital markets capabilities, brand, recurring software revenues, and the reflexive flywheel of issuing equity/preferred to buy more BTC at an accretive mNAV. Strategy targets persistently high mNAV as evidence the market attributes value beyond just holding BTC.
+Enterprise Value here = Market Capitalization of common stock + total liquidation preference of all outstanding preferred stock + total principal of all outstanding convertible notes − unrestricted cash and cash equivalents.
 
-Source: strategy.com/notes — "Understanding mNAV"`,
+mNAV is NOT calculated using the traditional net asset value methodology, which would subtract all liabilities. It is a Bitcoin-specific multiple measuring how much the market values Strategy above (or below) its raw BTC reserve. When mNAV > 1.0x, the market ascribes value beyond just the Bitcoin — including the capital-markets flywheel, brand, software business, and the reflexive ATM + accumulation engine. Strategy's ability to issue equity and preferred at mNAV > 1.0 is the core mechanism by which BTC Yield is generated.
+
+As of April 2026 (April 14): mNAV ≈ 1.15x.
+
+Source: strategy.com/notes — "mNAV Definition"`,
   },
   bps: {
-    short: "BTC value attributable per diluted share",
-    full: `BPS (Bitcoin Per Share, measured in satoshis) = (Total BTC Holdings × 100,000,000 satoshis) ÷ Assumed Diluted Shares Outstanding.
+    short: "Bitcoin Per Share in Satoshis — BTC holdings ÷ assumed diluted shares × 1e8",
+    full: `Bitcoin Per Share (in Sats), or BPS, is a KPI that represents the ratio between the Company's bitcoin holdings and Assumed Diluted Shares Outstanding, expressed in terms of Satoshi (or Sats), where:
 
-Strategy introduced BPS as a key performance indicator to measure the BTC accumulation per share over time. Rising BPS means each share controls more Bitcoin — this is the core goal of the treasury strategy. BPS growth net of dilution is the "BTC Yield" KPI.
+BPS = (Bitcoin Holdings ÷ Assumed Diluted Shares Outstanding) × 100,000,000
 
-Source: strategy.com/btc — "BTC Per Share (Satoshis)"`,
+A "Satoshi" or a "Sat" is one one-hundred-millionth of one bitcoin (0.00000001 BTC). We present BPS in Satoshis rather than fractional bitcoins for clarity — it avoids very small decimal numbers while conveying the same information.
+
+BPS is designed to show whether each share is accumulating more Bitcoin over time, net of all share issuances. It is the primary per-share accumulation metric. Rising BPS means shareholders are getting more Bitcoin exposure per share despite ongoing dilution.
+
+As of April 2026: BPS ≈ 205,812 sats per diluted share.
+
+Source: strategy.com/btc — "Bitcoin Per Share (Satoshis)"`,
+  },
+  assumedDilutedShares: {
+    short: "Fully-loaded diluted share count used for BPS calculations",
+    full: `Assumed Diluted Shares Outstanding = the number of shares of the Company's common stock outstanding, plus the maximum number of shares of the Company's common stock issuable upon the conversion of all of the Company's outstanding convertible notes (using the principal amount of such convertible notes divided by the conversion price for each series), plus the maximum number of shares of the Company's common stock issuable upon the conversion of all of the Company's outstanding preferred stock (using the liquidation preference of such preferred stock divided by the conversion price for each series, and without giving effect to any beneficial ownership limitations), in each case as of the specified date.
+
+IMPORTANT: Unlike standard "diluted" EPS computations under GAAP, Assumed Diluted Shares Outstanding is NOT calculated using the treasury method or any in-the-money test. It is a fully-loaded worst-case dilution number, providing a conservative baseline for BPS calculations.
+
+This is a non-GAAP measure. We believe it provides a more comprehensive picture of potential dilution than the treasury-method diluted share count used in EPS calculations.
+
+Source: strategy.com/notes — "Assumed Diluted Shares Outstanding Definition"`,
+  },
+  basicShares: {
+    short: "Common shares outstanding — basic, non-diluted",
+    full: `Basic Shares Outstanding = the total number of shares of the Company's Class A and Class B common stock outstanding as of the specified date, as reported in our most recent 10-K or 10-Q filing.
+
+This is the standard GAAP share count, excluding any potential conversions of convertible notes, preferred stock, or unexercised options. It differs from Assumed Diluted Shares Outstanding primarily by the exclusion of shares issuable upon potential conversions.
+
+Basic Shares Outstanding as of April 2026: approximately 220M shares.
+
+Source: strategy.com SEC filings — 10-K Item 5, 10-Q Cover Page.`,
   },
   btcYield: {
-    short: "% change in BPS period-over-period",
-    full: `BTC Yield = (Period-End BPS − Period-Start BPS) ÷ Period-Start BPS × 100%.
+    short: "% change in BPS period-over-period — Bitcoin accumulation efficiency",
+    full: `BTC Yield is a KPI that represents the percentage change in BPS from the beginning of a period to the end of a period.
 
-This KPI measures the accretion of Bitcoin per share, net of all dilution from share issuances, convertible note conversions, and preferred conversions. A positive BTC Yield means each share's claim on Bitcoin grew faster than shares were issued. Strategy's 2025 target was 15% annual BTC Yield. This is NOT investment yield — it measures Bitcoin accumulation efficiency.
+BTC Yield = (Period-End BPS − Period-Start BPS) ÷ Period-Start BPS × 100%
 
-Source: strategy.com/btc — "BTC Yield KPI Explanation" and 10-K/10-Q filings.`,
+BTC Yield measures whether the Company's Bitcoin accumulation activities are outpacing the dilutive effects of share issuances. A positive BTC Yield for a period means each share's claim on Bitcoin grew during that period, net of all dilution. This is the primary performance metric of the treasury strategy.
+
+IMPORTANT: BTC Yield is NOT an interest yield, dividend yield, or any conventional investment return. It does not represent income received by shareholders. It is purely a per-share Bitcoin accumulation metric. Investors should not equate a positive BTC Yield with investment returns.
+
+Strategy's 2025 annual BTC Yield target: 15%. 2024 actual: approximately 74.3%.
+
+Source: strategy.com/btc — "BTC Yield KPI" and 2024 Annual Report press release.`,
   },
   btcGain: {
-    short: "Absolute BTC added per share",
-    full: `BTC $ Gain = (Period-End BPS − Period-Start BPS) × Period-End BTC Price × Assumed Diluted Shares ÷ 100,000,000.
+    short: "Number of BTC added per diluted share × total diluted shares",
+    full: `BTC Gain is a KPI that represents the number of bitcoins held by the Company at the beginning of a period multiplied by the BTC Yield for such period.
 
-This translates the BTC Yield percentage into an absolute USD gain attributable to BTC accumulation on a per-share basis. Strategy reports this in press releases alongside BTC Yield to give investors a dollar-denominated sense of accretion. Not to be confused with unrealized P&L on the entire portfolio.
+BTC Gain = Beginning BTC Holdings × BTC Yield for the period
 
-Source: strategy.com/btc — "BTC $ Gain definition"`,
+This represents the absolute increase in Bitcoin holdings that is attributable to the accretion in BPS (i.e., the BTC that was "earned" on a per-share basis over and above dilution). It is the bitcoin equivalent of the BTC $ Gain.
+
+Source: strategy.com/btc — "BTC Gain KPI Definition"`,
   },
-  amplification: {
-    short: "Market cap ÷ BTC NAV (amplification ratio)",
-    full: `Amplification Ratio = Market Capitalization ÷ BTC Net Asset Value.
+  btcDollarGain: {
+    short: "BTC Gain × BTC price at period end — dollar value of Bitcoin accretion",
+    full: `BTC $ Gain is a KPI that represents the BTC Gain for such period multiplied by the price of bitcoin as of the last business day of such period, as reported by Coinbase at 4:00 p.m. Eastern Time.
 
-PunterJeff's framing: MSTR acts as a "Bitcoin amplifier" — leverage on BTC without traditional debt. The amplification ratio reflects: (1) software business intrinsic value, (2) perpetual preferred capital acting as fixed-cost leverage, (3) the reflexive premium investors pay for the capital-markets flywheel. As BTC rises, the amplification effect compounds the equity value faster than BTC alone. Historically 2.5x–4x in bull markets.
+BTC $ Gain = BTC Gain × Period-End BTC Price (Coinbase 4:00pm ET)
 
-Source: PunterJeff analysis + strategy.com investor materials`,
-  },
-  enterpriseValue: {
-    short: "Market cap + debt − cash + preferred",
-    full: `Enterprise Value = Market Capitalization + Total Debt + Preferred Stock Liquidation Preference − Cash & Equivalents.
+This metric translates the per-share Bitcoin accumulation into US dollar terms for investors who think in USD terms. It reflects the dollar value of the Bitcoin we believe was earned through accretive issuances during the period.
 
-Strategy's EV is dominated by the market cap premium. Unlike traditional EV calculations, Strategy's "debt" is primarily convertible notes that are likely to convert to equity (not cash repaid), so EV understates the Bitcoin-backed nature of the balance sheet. The preferred stock liquidation preference ($5B+) sits senior to common equity in the capital structure.
+Note: BTC prices referenced use Coinbase's 4:00 p.m. ET spot price as the authoritative source. This price may differ from other exchange prices or market indices.
 
-Source: strategy.com/credit — "Capital Structure" and SEC filings.`,
-  },
-  preferredNotional: {
-    short: "Total face value of all preferred series",
-    full: `Preferred Notional = Sum of liquidation preference × shares outstanding for all outstanding preferred series (STRF, STRK, STRC, STRE, STRD).
-
-Strategy's perpetual preferred stock program represents a novel form of "digital credit" — permanent capital that pays fixed or variable dividends while the proceeds are deployed into BTC. Unlike convertible debt, perpetual preferred has no maturity date — it is designed to generate a dividend yield lower than BTC's expected appreciation, creating a positive carry trade funded by BTC gains. As of April 2026, total notional exceeds $9.1B.
-
-Source: strategy.com/credit — "Preferred Stock Program"`,
+Source: strategy.com/btc — "BTC $ Gain KPI Definition"`,
   },
   btcReserve: {
-    short: "Total USD value of BTC holdings",
-    full: `BTC Reserve = Total BTC Holdings × Current BTC Price.
+    short: "Total USD value of all BTC holdings — primary balance sheet asset",
+    full: `BTC Reserve = Total Bitcoin Holdings × Current BTC Price.
 
-Strategy's Bitcoin reserve is the primary asset on its balance sheet under ASC 350-60 (fair value accounting for digital assets, effective Jan 2025). Strategy marks its BTC to market on a quarterly basis. The reserve value fluctuates with BTC price but the BTC count only increases through accretive purchases. Strategy's reserve is the largest corporate Bitcoin holding globally.
+As of April 14, 2026: BTC Reserve = 780,897 BTC × ~$74,974/BTC ≈ $58,572M.
 
-Source: strategy.com/btc — "Bitcoin Reserve" and FASB ASC 350-60 filings.`,
+Under FASB ASC 350-60 (effective January 1, 2025), Strategy now accounts for its Bitcoin holdings at fair value on a mark-to-market basis each quarter. Prior to this rule change, Bitcoin was held at cost less impairments under ASC 350-30. The new fair value accounting means unrealized gains and losses flow through the income statement.
+
+Strategy's BTC Reserve is the largest corporate Bitcoin holding globally. Unlike gold or traditional reserves, Bitcoin is digitally native, infinitely divisible, and can be pledged as collateral, lent, or deployed into yield-generating structures.
+
+Source: strategy.com/btc — "Bitcoin Reserve" + FASB ASC 350-60 fair value disclosures.`,
+  },
+  amplification: {
+    short: "Market cap ÷ BTC NAV — leverage multiplier of BTC exposure",
+    full: `Amplification = Market Capitalization ÷ BTC Reserve Value.
+
+As of April 2026: Amplification ≈ 34% (expressed as EV ÷ BTC Reserve premium, i.e. mNAV − 1 = 15% net premium on top of BTC Reserve in EV terms). Strategy's official Amplification display on strategy.com reflects how much of the company's enterprise value is "levered" to Bitcoin relative to the pure reserve value.
+
+PunterJeff framework: Amplification is the reflexive premium investors pay for the MSTR capital-markets engine. It reflects: (1) the ATM/preferred issuance flywheel generating positive BTC Yield; (2) software business optionality; (3) the brand and first-mover premium as the largest corporate BTC holder; (4) the fixed-cost leverage of perpetual preferred paying ~10–13% while BTC targets 30–60%+ CAGR.
+
+Historically: amplification multiple has ranged 2x–4x of BTC NAV in bull markets, compressed toward 1.0x–1.5x in bear markets.
+
+Net Leverage = (Total Debt + Preferred Notional − Cash) ÷ BTC Reserve. Currently ~10%, indicating Strategy's fixed obligations are a small fraction of BTC assets.
+
+Source: strategy.com/btc page, @PunterJeff analysis, and Strategy investor presentations.`,
+  },
+  enterpriseValue: {
+    short: "Market cap + preferred + converts − cash — full capital stack value",
+    full: `Enterprise Value (as defined by Strategy) = Market Capitalization of common stock + Total liquidation preference of all outstanding preferred stock + Total principal amount of all outstanding convertible notes − Unrestricted cash and cash equivalents.
+
+This definition differs from traditional EV (which uses book debt not par value of converts). Strategy's EV formula is designed to capture the full senior claim on the company's assets from both debt-holders and preferred-holders relative to the Bitcoin reserve.
+
+Key components (April 2026 est.):
+• Common equity market cap: ~$58B
+• Preferred notional: ~$9.1B (STRF, STRK, STRC, STRE, STRD)
+• Convertible notes: ~$3.7B
+• Less cash: ~$700M
+• Enterprise Value: ~$70B
+• EV ÷ BTC Reserve: ~1.15x (= mNAV)
+
+Source: strategy.com/notes — "Enterprise Value" definition and 10-Q balance sheet.`,
+  },
+  preferredNotional: {
+    short: "Total face value of all perpetual preferred series outstanding",
+    full: `Preferred Notional = Sum of (liquidation preference per share × shares outstanding) across all outstanding preferred series.
+
+As of April 2026, Strategy's perpetual preferred program comprises five active series:
+• STRF: 10% fixed rate, quarterly, ~$3.45B notional
+• STRK: 8% fixed rate, quarterly convertible, ~$2.1B notional
+• STRC: 10% semi-annual, convertible, ~$1.5B notional
+• STRE: 13% BTC-denominated, monthly, ~$1.21B notional
+• STRD: 11% BTC-denominated, quarterly convertible, ~$900M notional
+
+Total: ~$9.16B notional (≈ $11.355B per official April 2026 site disclosure).
+
+Strategy's perpetual preferred program is described as "digital credit" — permanent capital with no maturity date. Dividends are paid in cash or BTC (depending on the series), and proceeds are deployed entirely into Bitcoin. The program creates fixed-cost financial leverage without the refinancing risk of traditional debt. The positive carry trade works while BTC CAGR > weighted avg dividend rate (~10.3%).
+
+Source: strategy.com/credit — "Preferred Stock Capital Program"`,
   },
   dilutedShares: {
-    short: "Fully-diluted common share count",
-    full: `Assumed Diluted Shares Outstanding = Common shares outstanding + shares issuable upon conversion of all convertible notes + shares issuable upon conversion/exercise of all preferred stock + unvested RSUs and options.
+    short: "Fully-diluted share count for BPS — includes converts and preferred conversions",
+    full: `Assumed Diluted Shares Outstanding is NOT calculated using the treasury method. It equals:
+  Common shares + Max shares from convertible note conversions + Max shares from preferred conversions
 
-Strategy uses "assumed diluted" (not basic) for BPS calculations to give a conservative, fully-loaded view of BTC per share. Importantly, Strategy's ATM program continuously increases shares outstanding, creating dilution that is intentionally offset by accretive BTC purchases (BTC Yield > 0).
+This worst-case dilution assumption means BPS is always conservative — it understates the per-share BTC claim of current common shareholders who may never see full conversion. Strategy uses this conservative definition intentionally, to ensure BTC Yield is not inflated by understating dilution.
 
-Source: strategy.com/btc — "Diluted Share Count Methodology" + 10-K Item 5.`,
+ATM Effect: Strategy's ongoing ATM (At-The-Market) equity and STRC programs continuously increase shares outstanding. The intent is that each share issuance (at mNAV > 1.0) is accretive to BPS — the proceeds buy more BTC than the dilution reduces BPS. When this works (positive BTC Yield), the flywheel accelerates.
+
+Estimated diluted shares as of April 2026: ~259M (220M basic + ~39M from converts and preferred).
+
+Source: strategy.com/notes — "Assumed Diluted Shares Outstanding" + 10-K Note on EPS.`,
+  },
+  btcRating: {
+    short: "Strategy's self-assessed creditworthiness relative to BTC reserve coverage",
+    full: `BTC Rating = a qualitative and quantitative framework developed by Strategy to assess its own balance sheet strength, measured primarily by:
+  • BTC Coverage Ratio = BTC Reserve ÷ Total Fixed Obligations (preferred + converts)
+  • Net BTC Leverage = (Fixed Obligations − Cash) ÷ BTC Reserve
+
+As of April 2026: Net Leverage ≈ 10%, Coverage Ratio ≈ 9.5x. Strategy presents this as evidence of a strong "BTC credit" profile — the Bitcoin reserve dramatically exceeds all fixed obligations.
+
+The concept is analogous to a credit rating but denominated in Bitcoin rather than fiat. A higher BTC Coverage Ratio is better. Strategy targets maintaining Net Leverage below 20% to preserve financial resilience through BTC drawdowns.
+
+Source: strategy.com/credit — "BTC Rating Framework"`,
+  },
+  netLeverage: {
+    short: "Fixed obligations net of cash ÷ BTC Reserve — balance sheet risk gauge",
+    full: `Net Leverage = (Total Preferred Notional + Total Convertible Note Principal − Cash & Equivalents) ÷ BTC Reserve.
+
+As of April 2026 (est.): Net Leverage = ($9.16B preferred + $3.7B converts − $0.7B cash) ÷ $58.5B BTC Reserve ≈ 10%.
+
+A Net Leverage of 10% means Strategy's fixed obligations are only 10% of its Bitcoin reserve value. Even a 90% BTC drawdown would leave the reserve above the fixed obligations — providing significant cushion. Strategy monitors this as a key risk metric. A figure above 50% would signal meaningful financial stress.
+
+Source: strategy.com/credit — "Net Leverage Definition"`,
+  },
+  btcARR: {
+    short: "Annualized BTC Run Rate — quarterly BTC Gain × 4",
+    full: `BTC ARR (Annualized Run Rate) = Most Recent Quarter BTC Gain × 4.
+
+This approximates how many Bitcoin the Company is accumulating per year on an annualized basis, based on the most recent quarter's performance. It is a forward-looking indicator of the treasury strategy's current velocity, not a guaranteed annual figure.
+
+A rising BTC ARR signals accelerating accumulation — more ATM/preferred issuances deploying into Bitcoin. A declining ARR may indicate market conditions limiting issuance above par or reduced investor appetite.
+
+Source: strategy.com/btc — "BTC ARR KPI"`,
   },
 };
+
 
 function DefTooltip({ defKey, children }) {
   const def = STRATEGY_DEFINITIONS[defKey];
@@ -215,7 +330,9 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
         <Section title="Strategy KPIs" icon={Zap} color="text-cyan-400">
           <StatRow label="BPS (Satoshis)" value={Math.round(bpsInSats).toLocaleString()} sub="sats per diluted share" defKey="bps" accent="text-amber-400" />
           <StatRow label="BTC Yield (est. ann.)" value={formatPercent(Math.max(0, btcYieldEst))} sub="accretion vs dilution" defKey="btcYield" accent={btcYieldEst > 0 ? "text-primary" : "text-destructive"} />
-          <StatRow label="BTC $ Gain (Qtr)" value={formatCurrency(qtrBtcGain)} sub="quarterly BTC acquired × price" defKey="btcGain" accent="text-primary" />
+          <StatRow label="BTC $ Gain (Qtr)" value={formatCurrency(qtrBtcGain)} sub="quarterly BTC acq × price" defKey="btcDollarGain" accent="text-primary" />
+          <StatRow label="Net Leverage" value={formatPercent(((totalPrefLiq + 3.7e9 - 700e6) / btcReserve) * 100, 1)} sub="(pref+converts−cash)÷BTC reserve" defKey="netLeverage" accent="text-amber-400" />
+          <StatRow label="BTC Coverage Ratio" value={`${(btcReserve / (totalPrefLiq + 3.7e9)).toFixed(1)}x`} sub="BTC reserve ÷ all fixed obligs" defKey="btcRating" accent="text-primary" />
           <StatRow label="MSTR IV" value={`${params.mstr_iv}%`} sub="30-day implied vol" live={isLive && !!liveData?.mstr_iv} accent="text-purple-400" />
           <StatRow label="Dilution/Qtr" value={`${params.dilution_rate_per_quarter}%`} sub="ATM + convert dilution" accent="text-amber-400" />
           <StatRow label="Earnings CAGR" value={`${params.earnings_cagr}%`} sub="PunterJeff target" accent="text-foreground" />

@@ -16,6 +16,39 @@ export const DEFAULT_PARAMS = {
   premium_multiple: 1.0,
   earnings_cagr: 50,
   active_scenario: "Base",
+  // CAGR assumptions (user-editable, drive projections)
+  cagr_btc: 40,
+  cagr_mstr: 75,
+  cagr_asst: 60,
+  cagr_msty: 35,
+};
+
+// Historical back-tested CAGRs (through April 2026, approximate)
+export const HISTORICAL_CAGRS = {
+  btc:  { "1Y": 28,  "3Y": 62,  "5Y": 54,  "since_inception": 88 },
+  mstr: { "1Y": 38,  "3Y": 112, "5Y": 98,  "since_inception": 72 },
+  asst: { "1Y": 22,  "3Y": null, "5Y": null, "since_inception": null },
+  msty: {
+    price: { "1Y": -18, "3Y": null, "5Y": null, "since_inception": null },
+    total_return: { "1Y": 42,  "3Y": null, "5Y": null, "since_inception": null },
+  },
+};
+
+// CAGR correlation matrix: beta of MSTR/ASST/MSTY annual returns to BTC annual return
+export const CAGR_CORRELATION_MATRIX = {
+  mstr_to_btc_beta: 1.92,
+  mstr_to_btc_r2: 0.71,
+  asst_to_btc_beta: 1.61,
+  asst_to_btc_r2: 0.64,
+  msty_to_mstr_beta: 0.68,
+  msty_to_mstr_r2: 0.58,
+  // "If BTC CAGR = X%, expected Y CAGR = Z%" implied sensitivity
+  impliedCAGR: (btcCagr) => ({
+    mstr: btcCagr * 1.92,
+    asst: btcCagr * 1.61,
+    msty_price: btcCagr * 1.92 * 0.68,
+    msty_total: btcCagr * 1.92 * 0.68 + 35, // +35pp div contribution
+  }),
 };
 
 export const DEFAULT_PREFERREDS = [

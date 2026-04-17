@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import MetricCard from "../dashboard/MetricCard";
+import CAGRModule from "./CAGRModule";
 import {
   TrendingUp, Activity, Layers, BarChart3, Target, Zap,
   ChevronRight, AlertTriangle
@@ -389,6 +390,7 @@ function STRCParStatsPanel() {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function CorrelationsTab({ params, onParamsChange }) {
+  const [activeSection, setActiveSection] = useState("correlations");
   return (
     <div className="space-y-4">
       {/* Banner */}
@@ -396,38 +398,59 @@ export default function CorrelationsTab({ params, onParamsChange }) {
         <div className="flex items-start gap-3">
           <Zap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Back-Tested Correlations & ATM Analytics</h3>
+            <h3 className="text-sm font-semibold text-foreground">Back-Tested Correlations, ATM Analytics & CAGR Module</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Historical beta analysis (BTC→MSTR, MSTY→MSTR), STRC $21B ATM program mechanics, and reflexive BTC accumulation impact simulator. All data through April 2026.
+              Historical beta (BTC→MSTR, MSTY→MSTR), STRC $21B ATM simulator, CAGR back-testing, and user-editable CAGR assumptions driving projections.
             </p>
           </div>
         </div>
+        {/* Sub-section toggle */}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => setActiveSection("correlations")}
+            className={`text-xs px-3 py-1 rounded-lg border transition-colors ${activeSection === "correlations" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}
+          >
+            Correlations & ATM
+          </button>
+          <button
+            onClick={() => setActiveSection("cagr")}
+            className={`text-xs px-3 py-1 rounded-lg border transition-colors ${activeSection === "cagr" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}
+          >
+            CAGR Module
+          </button>
+        </div>
       </div>
 
-      {/* Summary metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard title="MSTR Beta (1Y)" value="1.82x" subtitle="to BTC daily moves" icon={TrendingUp} accentClass="text-primary" />
-        <MetricCard title="MSTR Beta (3Y)" value="2.11x" subtitle="to BTC daily moves" icon={TrendingUp} accentClass="text-cyan-400" />
-        <MetricCard title="MSTY Beta (Div-Adj)" value="0.71x" subtitle="to MSTR total return" icon={BarChart3} accentClass="text-amber-400" />
-        <MetricCard title="STRC ATM Capacity" value="$17.6B" subtitle="remaining dry powder" icon={Layers} accentClass="text-purple-400" />
-      </div>
+      {activeSection === "correlations" && <>
+        {/* Summary metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard title="MSTR Beta (1Y)" value="1.82x" subtitle="to BTC daily moves" icon={TrendingUp} accentClass="text-primary" />
+          <MetricCard title="MSTR Beta (3Y)" value="2.11x" subtitle="to BTC daily moves" icon={TrendingUp} accentClass="text-cyan-400" />
+          <MetricCard title="MSTY Beta (Div-Adj)" value="0.71x" subtitle="to MSTR total return" icon={BarChart3} accentClass="text-amber-400" />
+          <MetricCard title="STRC ATM Capacity" value="$17.6B" subtitle="remaining dry powder" icon={Layers} accentClass="text-purple-400" />
+        </div>
 
-      {/* BTC/MSTR correlation + sensitivity side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <BTCMSTRPanel />
-        <SensitivityPanel />
-      </div>
+        {/* BTC/MSTR correlation + sensitivity side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <BTCMSTRPanel />
+          <SensitivityPanel />
+        </div>
 
-      {/* MSTY + STRC par stats side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <MSTYMSTRPanel />
-        <STRCParStatsPanel />
-      </div>
+        {/* MSTY + STRC par stats side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <MSTYMSTRPanel />
+          <STRCParStatsPanel />
+        </div>
 
-      {/* STRC ATM full-width */}
-      <div className="grid grid-cols-1 gap-4">
-        <STRCATMPanel params={params} onParamsChange={onParamsChange} />
-      </div>
+        {/* STRC ATM full-width */}
+        <div className="grid grid-cols-1 gap-4">
+          <STRCATMPanel params={params} onParamsChange={onParamsChange} />
+        </div>
+      </>}
+
+      {activeSection === "cagr" && (
+        <CAGRModule params={params} onParamsChange={onParamsChange} />
+      )}
 
       <p className="text-[10px] text-muted-foreground/40 text-center pt-2">
         Back-test data through April 2026. Beta and correlation estimates based on daily log-return OLS regression. Not financial advice.

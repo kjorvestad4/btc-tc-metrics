@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, Info, RotateCcw, Bitcoin, TrendingUp, Layers, BarChart3, Key, Eye, EyeOff } from "lucide-react";
+import { ChevronDown, Info, RotateCcw, Bitcoin, TrendingUp, Layers, BarChart3, Key, Eye, EyeOff, Activity } from "lucide-react";
 import { DEFAULT_PARAMS } from "@/lib/calculations";
 import PreferredCard from "./PreferredCard";
 
@@ -106,6 +106,13 @@ export default function ParameterPanel({ params, onParamsChange, preferreds, onP
           <ParamSlider label="MSTY NAV" value={params.msty_nav} onChange={(v) => updateParam("msty_nav", v)} min={5} max={100} step={0.5} tooltip="Current MSTY net asset value per share" />
           <ParamSlider label="Participation %" value={params.msty_participation_rate} onChange={(v) => updateParam("msty_participation_rate", v)} min={20} max={100} step={1} tooltip="MSTY's participation rate in MSTR upside. Capped by the covered call structure." />
           <ParamSlider label="Proj. Years" value={params.projection_years} onChange={(v) => updateParam("projection_years", v)} min={1} max={10} step={1} />
+        </Section>
+
+        <Section icon={Activity} title="CAGR Assumptions" defaultOpen={false}>
+          <ParamSlider label="BTC CAGR %" value={params.cagr_btc ?? 40} onChange={(v) => updateParam("cagr_btc", v)} min={5} max={150} step={5} tooltip="Your target BTC compound annual growth rate — drives CAGR sensitivity module and 1–10Y projections." />
+          <ParamSlider label="MSTR CAGR %" value={params.cagr_mstr ?? 75} onChange={(v) => updateParam("cagr_mstr", v)} min={10} max={300} step={5} tooltip="Your MSTR target CAGR (net of dilution). PunterJeff default: 50% net. Historical 3Y: ~112%." />
+          <ParamSlider label="ASST CAGR %" value={params.cagr_asst ?? 60} onChange={(v) => updateParam("cagr_asst", v)} min={10} max={200} step={5} tooltip="Strive (ASST) target CAGR. Beta to BTC ≈ 1.61x. Limited history (IPO 2024)." />
+          <ParamSlider label="MSTY Total Return %" value={params.cagr_msty ?? 35} onChange={(v) => updateParam("cagr_msty", v)} min={5} max={150} step={5} tooltip="MSTY expected total return (price + dividends). Historical 1Y total return ≈ 42%." />
         </Section>
 
         <Section icon={Layers} title="Perpetual Preferreds" defaultOpen={false}>
