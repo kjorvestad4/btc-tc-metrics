@@ -52,12 +52,13 @@ export const CAGR_CORRELATION_MATRIX = {
   }),
 };
 
+// Official data from strategy.com/credit (April 17, 2026)
 export const DEFAULT_PREFERREDS = [
-  { ticker: "STRF", name: "Strategy 10% Perpetual Preferred", notional_amount: 3450, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0, current_price: 92.50, shares_outstanding: 34500000, liquidation_preference: 100 },
-  { ticker: "STRK", name: "Strategy Series A Perpetual Preferred", notional_amount: 2100, dividend_rate: 8, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0.1, current_price: 87.00, shares_outstanding: 21000000, liquidation_preference: 100 },
-  { ticker: "STRC", name: "Strategy Convertible Preferred C", notional_amount: 1500, dividend_rate: 10, payment_frequency: "semi-annual", is_btc_denominated: false, conversion_ratio: 0.15, current_price: 95.00, shares_outstanding: 15000000, liquidation_preference: 100 },
-  { ticker: "STRE", name: "Strategy Enhanced Preferred E", notional_amount: 1210, dividend_rate: 13, payment_frequency: "monthly", is_btc_denominated: true, conversion_ratio: 0, current_price: 78.00, shares_outstanding: 12100000, liquidation_preference: 100 },
-  { ticker: "STRD", name: "Strategy Digital Credit Preferred D", notional_amount: 900, dividend_rate: 11, payment_frequency: "quarterly", is_btc_denominated: true, conversion_ratio: 0.08, current_price: 82.00, shares_outstanding: 9000000, liquidation_preference: 100 },
+  { ticker: "STRC", name: "Strategy 11.5% Perpetual Preferred C (Variable)", notional_amount: 6358, dividend_rate: 11.5, payment_frequency: "semi-annual", is_btc_denominated: false, conversion_ratio: 0, current_price: 99.21, shares_outstanding: 63580000, liquidation_preference: 100 },
+  { ticker: "STRF", name: "Strategy 10% Perpetual Preferred F", notional_amount: 1284, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0, current_price: 92.50, shares_outstanding: 12840000, liquidation_preference: 100 },
+  { ticker: "STRK", name: "Strategy 8% Perpetual Preferred K (Convertible)", notional_amount: 1402, dividend_rate: 8, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0.001, current_price: 87.00, shares_outstanding: 14020000, liquidation_preference: 100 },
+  { ticker: "STRE", name: "Strategy 13% Perpetual Preferred E (BTC-denominated)", notional_amount: 908, dividend_rate: 13, payment_frequency: "monthly", is_btc_denominated: true, conversion_ratio: 0, current_price: 78.00, shares_outstanding: 9080000, liquidation_preference: 100 },
+  { ticker: "STRD", name: "Strategy 10% Perpetual Preferred D (BTC-denominated)", notional_amount: 1402, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: true, conversion_ratio: 0.08, current_price: 77.14, shares_outstanding: 14024000, liquidation_preference: 100 },
 ];
 
 export const DEFAULT_SCENARIOS = [

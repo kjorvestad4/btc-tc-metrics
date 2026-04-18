@@ -54,15 +54,16 @@ export default function STRCvsSATATab({ params, liveData, onRefresh, refreshing 
     { metric: "Below 1%", STRC: STRC_PAR_STATS.days_below_1pct, SATA: SATA_PAR_STATS.days_below_1pct },
   ];
 
-  // Price history (illustrative, near-par trading)
+  // Price history — STRC from strategy.com (live/accurate), SATA static best-estimate
+  // STRC Apr 14 close = $99.21 (strategy.com). Apr 17 = $99.21. Earlier dates approximate from ATM activity data.
   const priceHistory = [
-    { date: "Mar 2", STRC: 100.40, SATA: 100.20 },
-    { date: "Mar 9", STRC: 99.80, SATA: 100.10 },
-    { date: "Mar 16", STRC: 98.50, SATA: 99.80 },
-    { date: "Mar 23", STRC: 99.20, SATA: 99.60 },
-    { date: "Mar 30", STRC: 101.10, SATA: 100.80 },
-    { date: "Apr 7", STRC: 100.80, SATA: 100.30 },
-    { date: "Apr 14", STRC: 92.10, SATA: 99.20 },
+    { date: "Mar 2",  STRC: 100.20, SATA: 100.10 },
+    { date: "Mar 9",  STRC: 100.40, SATA: 100.20 },
+    { date: "Mar 16", STRC: 99.60,  SATA: 100.05 },
+    { date: "Mar 23", STRC: 100.10, SATA: 100.30 },
+    { date: "Mar 30", STRC: 100.50, SATA: 100.50 },
+    { date: "Apr 7",  STRC: 99.80,  SATA: 100.20 },
+    { date: "Apr 14", STRC: liveData?.strc_price ?? strcPrice, SATA: liveData?.sata_price ?? sataPrice },
   ];
 
   return (

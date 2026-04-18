@@ -212,13 +212,7 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
         </div>
       </div>
 
-      {/* Monthly div projection chart */}
-      <ProjectionChart
-        title="MSTY Monthly Dividend/Share Projection (PunterJeff Model)"
-        data={mstyData}
-        lines={[{ key: "msty_dividend_monthly", name: "Monthly Div/Share ($)", color: "#22C55E" }]}
-        height={260}
-      />
+      {/* Monthly div projection chart moved to Projections tab */}
     </div>
   );
 }

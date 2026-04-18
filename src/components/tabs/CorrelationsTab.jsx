@@ -2,7 +2,6 @@ import React, { useState, useMemo } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import MetricCard from "../dashboard/MetricCard";
-import CAGRModule from "./CAGRModule";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   TrendingUp, Activity, Layers, BarChart3, Target, Zap, BookOpen, AlertTriangle
@@ -878,8 +877,7 @@ function ParStatsPanel({ title, color, stats }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export default function CorrelationsTab({ params, onParamsChange, liveData }) {
-  const [activeSection, setActiveSection] = useState("correlations");
+export default function CorrelationsTab({ params, liveData }) {
 
   return (
     <div className="space-y-4">
@@ -895,12 +893,9 @@ export default function CorrelationsTab({ params, onParamsChange, liveData }) {
           </div>
         </div>
         <div className="flex gap-2 mt-3">
-          {["correlations", "cagr"].map((s) => (
-            <button key={s} onClick={() => setActiveSection(s)}
-              className={`text-xs px-3 py-1 rounded-lg border transition-colors ${activeSection === s ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-              {s === "correlations" ? "Correlations & Analytics" : "CAGR Module (also on Projections tab)"}
-            </button>
-          ))}
+          <span className="text-xs px-3 py-1 rounded-lg border bg-primary text-primary-foreground border-primary">
+            Correlations & Analytics
+          </span>
         </div>
       </div>
 
@@ -996,10 +991,6 @@ export default function CorrelationsTab({ params, onParamsChange, liveData }) {
           </Accordion>
         </div>
       </>}
-
-      {activeSection === "cagr" && (
-        <CAGRModule params={params} onParamsChange={onParamsChange} />
-      )}
 
       <p className="text-[10px] text-muted-foreground/40 text-center pt-2">
         Back-test data through April 2026. Beta/Alpha/Gamma/Theta estimates based on daily log-return OLS regression. Not financial advice.

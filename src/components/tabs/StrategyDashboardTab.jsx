@@ -4,7 +4,34 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Info, RefreshCw, Bitcoin, TrendingUp, Layers, DollarSign, Zap, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatPercent, calcMNAV, calcTotalPrefLiquidation } from "@/lib/calculations";
+import { formatCurrency, formatPercent } from "@/lib/calculations";
+
+// Official data from strategy.com (April 17-18, 2026)
+// Basic Shares: 346,823K = 346.8M (Class A 327,183K + Class B 19,640K)
+// Assumed Diluted Shares: 379,423K = 379.4M
+// Total Debt: $8,214M (converts). Total Pref: $11,355M. Total Debt+Pref: $19,568M
+// Cash: $2,250M. BTC Holdings: 780,897. BTC Yield QTD: 2.3%, YTD: 5.6%
+// BTC Gain QTD: 17,585 BTC. BTC $ Gain QTD: $1,333M
+// Annual dividends: $1,237M (official strategy.com). Net Leverage: ~10%
+// Acquisition velocity: 7,403 BTC/wk pace, lifetime monthly avg 11,472 BTC/mo
+
+const OFFICIAL_MSTR_DATA = {
+  basic_shares_M: 346.8,           // Class A 327.2M + Class B 19.6M
+  diluted_shares_M: 379.4,         // Assumed Diluted (fully loaded, no treasury method)
+  total_debt_M: 8214,              // Convertible notes principal
+  total_pref_M: 11355,             // Official preferred notional
+  total_debt_pref_M: 19568,        // Total Debt + Pref
+  cash_M: 2250,                    // USD cash reserve
+  btc_holdings: 780897,
+  btc_yield_ytd: 5.6,
+  btc_yield_qtd: 2.3,
+  btc_gain_qtd: 17585,
+  btc_dollar_gain_qtd_M: 1333,
+  annual_dividends_M: 1237,        // Official strategy.com annual dividends
+  acquisition_weekly_pace: 7403,   // 2026 weekly pace (tnorth.com)
+  acquisition_monthly_avg: 11472,  // Lifetime monthly avg (tnorth.com)
+  bps_sats: 205812,                // Official BPS in satoshis
+};
 
 // Official Strategy.com metric definitions — verbatim/near-verbatim from strategy.com/notes, /btc, /credit
 const STRATEGY_DEFINITIONS = {
@@ -249,33 +276,41 @@ function Section({ title, icon: Icon, color, children }) {
   );
 }
 
-// Official constants from strategy.com (April 2026)
-const MSTR_CASH_M = 2250; // $2.25B USD cash reserve
-
 export default function StrategyDashboardTab({ params, preferreds, projections, liveData, onRefresh, refreshing }) {
-  const now = projections[0] || {};
-  const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
-  const btcReserve = params.mstr_btc_holdings * params.btc_price;
-  const mnav = calcMNAV(params.mstr_btc_holdings, params.btc_price, totalPrefLiq, params.mstr_shares_outstanding);
-  const marketCap = params.mstr_price * params.mstr_shares_outstanding * 1e6;
-  const mnavMultiple = mnav > 0 ? params.mstr_price / mnav : 0;
+  const btcPrice = liveData?.btc_price ?? params.btc_price;
+  const mstrPrice = liveData?.mstr_price ?? params.mstr_price;
+  const btcHoldings = liveData?.btc_holdings ?? OFFICIAL_MSTR_DATA.btc_holdings;
 
-  // BPS in satoshis = (BTC holdings / assumed diluted shares) * 1e8
-  const dilutedSharesM = params.mstr_shares_outstanding * 1.18; // ~18% dilution from converts + preferred
-  const bpsInSats = (params.mstr_btc_holdings / (dilutedSharesM * 1e6)) * 1e8;
+  // Use official balance sheet data — not computed from params
+  const { total_debt_M, total_pref_M, total_debt_pref_M, cash_M, basic_shares_M, diluted_shares_M } = OFFICIAL_MSTR_DATA;
 
-  // Official BTC Yield figures (from strategy.com/btc)
-  const btcYieldYTD = 5.6;  // YTD 2026 official
-  const btcYieldQTD = 1.4;  // Q1 2026 approximate
-  const btcYieldEst = btcYieldYTD;
+  const btcReserve = btcHoldings * btcPrice;
+  const marketCap = mstrPrice * basic_shares_M * 1e6;
 
-  // BTC $ Gain (quarterly)
-  const qtrBtcGain = params.btc_accumulation_per_quarter * params.btc_price;
+  // mNAV = EV / BTC Reserve (official Strategy.com definition)
+  // EV = Market Cap + Total Debt + Total Pref − Cash
+  const ev = marketCap + (total_debt_M * 1e6) + (total_pref_M * 1e6) - (cash_M * 1e6);
+  const mnavMultiple = btcReserve > 0 ? ev / btcReserve : 0;
 
-  // Total annual preferred dividends
-  const annualPrefDiv = preferreds.reduce((s, p) => s + (p.notional_amount * 1e6 * p.dividend_rate / 100), 0);
+  // Amplification = (Debt + Pref) / BTC Reserve  — from strategy.com/btc
+  const amplificationPct = btcReserve > 0 ? (total_debt_pref_M * 1e6 / btcReserve) * 100 : 0;
 
-  const isLive = !!liveData;
+  // Net Leverage = (Debt + Pref - Cash) / BTC Reserve
+  const netLeveragePct = btcReserve > 0 ? ((total_debt_pref_M - cash_M) * 1e6 / btcReserve) * 100 : 0;
+
+  // BTC Coverage Ratio = BTC Reserve / (Debt + Pref)
+  const btcCoverageRatio = total_debt_pref_M > 0 ? btcReserve / (total_debt_pref_M * 1e6) : 0;
+
+  // BTC Years of Dividend Coverage = BTC Reserve / Annual Dividends
+  const btcYearsDivCoverage = btcReserve > 0 ? btcReserve / (OFFICIAL_MSTR_DATA.annual_dividends_M * 1e6) : 0;
+
+  // USD Months of Dividend Coverage = Cash / (Annual Dividends / 12)
+  const usdMonthsDivCoverage = OFFICIAL_MSTR_DATA.annual_dividends_M > 0 ? (cash_M / (OFFICIAL_MSTR_DATA.annual_dividends_M / 12)) : 0;
+
+  // Official annual dividends from strategy.com
+  const annualPrefDiv = OFFICIAL_MSTR_DATA.annual_dividends_M * 1e6;
+
+  const isLive = !!(liveData?.btc_price || liveData?.mstr_price);
   const lastUpdated = isLive ? new Date().toLocaleTimeString() : null;
 
   return (
@@ -315,34 +350,36 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
 
         {/* Bitcoin Holdings */}
         <Section title="Bitcoin Reserve" icon={Bitcoin} color="text-amber-400">
-          <StatRow label="BTC Holdings" value={params.mstr_btc_holdings.toLocaleString()} sub="total BTC" accent="text-amber-400" live={isLive && !!liveData?.btc_holdings} />
-          <StatRow label="BTC Price" value={formatCurrency(params.btc_price)} sub="USD / BTC" accent="text-amber-400" live={isLive && !!liveData?.btc_price} />
+          <StatRow label="BTC Holdings" value={btcHoldings.toLocaleString()} sub="total BTC" accent="text-amber-400" live={isLive && !!liveData?.btc_holdings} />
+          <StatRow label="BTC Price" value={formatCurrency(btcPrice)} sub="USD / BTC" accent="text-amber-400" live={isLive && !!liveData?.btc_price} />
           <StatRow label="BTC Reserve Value" value={formatCurrency(btcReserve)} sub="total USD value" defKey="btcReserve" accent="text-amber-400" />
           <StatRow label="Avg Cost Basis" value={formatCurrency(75_577)} sub="official strategy.com" accent="text-muted-foreground" />
-          <StatRow label="Unrealized Gain" value={`+${(((params.btc_price / 75577) - 1) * 100).toFixed(1)}%`} sub="vs $75,577 avg cost" accent={params.btc_price > 75577 ? "text-primary" : "text-destructive"} />
-          <StatRow label="BTC/Qtr Accumulation" value="~15,000" sub="from tnorth.com/tools/strategy-1m-btc" accent="text-primary" />
+          <StatRow label="Unrealized Gain" value={`${btcPrice > 75577 ? "+" : ""}${(((btcPrice / 75577) - 1) * 100).toFixed(1)}%`} sub="vs $75,577 avg cost" accent={btcPrice > 75577 ? "text-primary" : "text-destructive"} />
+          <StatRow label="2026 Acquisition Pace" value="7,403 BTC/wk" sub="tnorth.com (YTD 2026 weekly pace)" accent="text-primary" />
+          <StatRow label="Lifetime Monthly Avg" value="11,472 BTC/mo" sub="all-time avg acquisition rate" accent="text-cyan-400" />
         </Section>
 
         {/* MSTR Equity */}
         <Section title="MSTR Equity Metrics" icon={TrendingUp} color="text-primary">
-          <StatRow label="MSTR Price" value={formatCurrency(params.mstr_price, 2)} sub="common stock" accent="text-primary" live={isLive && !!liveData?.mstr_price} />
-          <StatRow label="Shares Outstanding" value={`${params.mstr_shares_outstanding.toFixed(0)}M`} sub="basic" accent="text-foreground" />
-          <StatRow label="Diluted Shares (est.)" value={`${dilutedSharesM.toFixed(0)}M`} sub="incl. converts + preferred" defKey="dilutedShares" accent="text-muted-foreground" />
+          <StatRow label="MSTR Price" value={formatCurrency(mstrPrice, 2)} sub="common stock" accent="text-primary" live={isLive && !!liveData?.mstr_price} />
+          <StatRow label="Basic Shares Outstanding" value={`${basic_shares_M.toFixed(1)}M`} sub="Class A 327.2M + Class B 19.6M" accent="text-foreground" />
+          <StatRow label="Assumed Diluted Shares" value={`${diluted_shares_M.toFixed(1)}M`} sub="incl. converts + preferred + options" defKey="dilutedShares" accent="text-muted-foreground" />
           <StatRow label="Market Cap" value={formatCurrency(marketCap)} sub="common equity" accent="text-primary" />
-          <StatRow label="mNAV / Share" value={formatCurrency(mnav, 2)} sub="BTC NAV per share" defKey="mnav" accent="text-cyan-400" />
-          <StatRow label="mNAV Multiple" value={`${mnavMultiple.toFixed(2)}x`} sub="price ÷ mNAV" accent="text-amber-400" />
-          <StatRow label="Amplification" value={`${(((totalPrefLiq + 3.7e9) / btcReserve) * 100).toFixed(1)}%`} sub="(debt+pref) ÷ BTC reserve" defKey="amplification" accent="text-purple-400" />
+          <StatRow label="mNAV" value={`${mnavMultiple.toFixed(2)}x`} sub="EV ÷ BTC Reserve" defKey="mnav" accent="text-amber-400" />
+          <StatRow label="Amplification" value={`${amplificationPct.toFixed(1)}%`} sub="(Debt+Pref) ÷ BTC Reserve" defKey="amplification" accent="text-purple-400" />
         </Section>
 
         {/* KPIs */}
         <Section title="Strategy KPIs" icon={Zap} color="text-cyan-400">
-          <StatRow label="BPS (Satoshis)" value="205,000" sub="official strategy.com/btc" defKey="bps" accent="text-amber-400" />
-          <StatRow label="BTC Yield (YTD 2026)" value={`${btcYieldYTD}%`} sub="official strategy.com/btc" defKey="btcYield" accent="text-primary" />
-          <StatRow label="BTC Yield (QTD)" value={`${btcYieldQTD}%`} sub="current quarter estimate" accent="text-primary" />
-          <StatRow label="BTC $ Gain (Qtr est.)" value={formatCurrency(qtrBtcGain)} sub="quarterly BTC acq × price" defKey="btcDollarGain" accent="text-primary" />
-          <StatRow label="Net Leverage" value={formatPercent(((totalPrefLiq + 3.7e9 - MSTR_CASH_M * 1e6) / btcReserve) * 100, 1)} sub="(pref+converts−cash)÷BTC reserve" defKey="netLeverage" accent="text-amber-400" />
-          <StatRow label="BTC Coverage Ratio" value={`${(btcReserve / (totalPrefLiq + 3.7e9)).toFixed(1)}x`} sub="BTC reserve ÷ all fixed obligs" defKey="btcRating" accent="text-primary" />
-          <StatRow label="MSTR IV" value={`${params.mstr_iv}%`} sub="30-day implied vol" live={isLive && !!liveData?.mstr_iv} accent="text-purple-400" />
+          <StatRow label="BPS (Satoshis)" value={OFFICIAL_MSTR_DATA.bps_sats.toLocaleString()} sub="official strategy.com/btc" defKey="bps" accent="text-amber-400" />
+          <StatRow label="BTC Yield (YTD 2026)" value={`${OFFICIAL_MSTR_DATA.btc_yield_ytd}%`} sub="official strategy.com/btc" defKey="btcYield" accent="text-primary" />
+          <StatRow label="BTC Yield (QTD)" value={`${OFFICIAL_MSTR_DATA.btc_yield_qtd}%`} sub="official strategy.com/btc" accent="text-primary" />
+          <StatRow label="BTC Gain QTD" value={`₿${OFFICIAL_MSTR_DATA.btc_gain_qtd.toLocaleString()}`} sub="official strategy.com/btc" defKey="btcGain" accent="text-primary" />
+          <StatRow label="BTC $ Gain QTD" value={`$${OFFICIAL_MSTR_DATA.btc_dollar_gain_qtd_M.toLocaleString()}M`} sub="official strategy.com/btc" defKey="btcDollarGain" accent="text-green-400" />
+          <StatRow label="Net Leverage" value={`${netLeveragePct.toFixed(1)}%`} sub="(Debt+Pref−Cash) ÷ BTC Reserve" defKey="netLeverage" accent="text-amber-400" />
+          <StatRow label="BTC Years of Div. Coverage" value={`${btcYearsDivCoverage.toFixed(1)} yrs`} sub="BTC Reserve ÷ Annual Dividends" defKey="btcRating" accent="text-primary" />
+          <StatRow label="USD Months of Div. Coverage" value={`${usdMonthsDivCoverage.toFixed(1)} mo`} sub="Cash ÷ (Annual Dividends / 12)" accent="text-cyan-400" />
+          <StatRow label="MSTR IV" value={`${liveData?.mstr_iv ?? 43}%`} sub="implied vol (strategy.com/btc)" live={isLive && !!liveData?.mstr_iv} accent="text-purple-400" />
         </Section>
 
       </div>
@@ -350,28 +387,24 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
       {/* Preferred + Capital Structure */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Section title="Preferred Capital Program" icon={Layers} color="text-purple-400">
-          <StatRow label="Total Notional" value={formatCurrency(totalPrefLiq)} sub="sum of liquidation prefs" defKey="preferredNotional" accent="text-purple-400" />
-          <StatRow label="Annual Dividend Liability" value={formatCurrency(annualPrefDiv)} sub="cash out per year" accent="text-destructive" />
-          <StatRow label="Div/BTC Reserve Ratio" value={formatPercent((annualPrefDiv / btcReserve) * 100, 2)} sub="flywheel healthy if < 2%" accent="text-amber-400" />
-          {preferreds.map((p) => (
-            <StatRow
-              key={p.ticker}
-              label={`${p.ticker} — ${p.dividend_rate}% ${p.is_btc_denominated ? "₿" : "$"}`}
-              value={formatCurrency(p.notional_amount * 1e6)}
-              sub={`${p.payment_frequency}`}
-              accent="text-muted-foreground"
-            />
-          ))}
+          <StatRow label="Total Pref Notional" value={formatCurrency(total_pref_M * 1e6)} sub="official strategy.com/credit" defKey="preferredNotional" accent="text-purple-400" />
+          <StatRow label="Annual Dividends" value={formatCurrency(annualPrefDiv)} sub="$1,237M — official strategy.com" accent="text-destructive" />
+          <StatRow label="Div / BTC Reserve" value={`${((annualPrefDiv / btcReserve) * 100).toFixed(2)}%`} sub="healthy flywheel if < 2%" accent="text-amber-400" />
+          <StatRow label="STRC — 11.5% Variable" value="$6,358M" sub="semi-annual · $99.21 · 30D Sharpe 2.64" accent="text-muted-foreground" />
+          <StatRow label="STRF — 10% Fixed" value="$1,284M" sub="quarterly · $92.50" accent="text-muted-foreground" />
+          <StatRow label="STRK — 8% Fixed (Conv.)" value="$1,402M" sub="quarterly · $87.00" accent="text-muted-foreground" />
+          <StatRow label="STRE — 13% BTC-denom." value="$908M" sub="monthly" accent="text-muted-foreground" />
+          <StatRow label="STRD — 10% BTC-denom." value="$1,402M" sub="quarterly · $77.14" accent="text-muted-foreground" />
         </Section>
 
         {/* Enterprise Value breakdown */}
         <Section title="Capital Structure & Enterprise Value" icon={DollarSign} color="text-green-400">
           <StatRow label="Market Cap (Common)" value={formatCurrency(marketCap)} accent="text-primary" />
-          <StatRow label="Preferred Notional" value={formatCurrency(totalPrefLiq)} accent="text-purple-400" />
-          <StatRow label="Convertible Notes (est.)" value={formatCurrency(3.7e9)} sub="~$3.7B outstanding" accent="text-amber-400" />
-          <StatRow label="USD Cash Reserve" value={formatCurrency(MSTR_CASH_M * 1e6)} sub="$2.25B official" accent="text-muted-foreground" />
-          <StatRow label="Enterprise Value (est.)" value={formatCurrency(marketCap + totalPrefLiq + 3.7e9 - MSTR_CASH_M * 1e6)} defKey="enterpriseValue" accent="text-cyan-400" />
-          <StatRow label="EV ÷ BTC Reserve (mNAV)" value={`${((marketCap + totalPrefLiq + 3.7e9 - MSTR_CASH_M * 1e6) / btcReserve).toFixed(2)}x`} sub="official ~1.26x" accent="text-amber-400" />
+          <StatRow label="Total Preferred Notional" value={formatCurrency(total_pref_M * 1e6)} sub="official — $11,355M" accent="text-purple-400" />
+          <StatRow label="Convertible Notes" value={formatCurrency(total_debt_M * 1e6)} sub="official — $8,214M (strategy.com/credit)" accent="text-amber-400" />
+          <StatRow label="USD Cash Reserve" value={formatCurrency(cash_M * 1e6)} sub="$2,250M official" accent="text-muted-foreground" />
+          <StatRow label="Enterprise Value" value={formatCurrency(ev)} defKey="enterpriseValue" accent="text-cyan-400" />
+          <StatRow label="mNAV (EV ÷ BTC Reserve)" value={`${mnavMultiple.toFixed(2)}x`} sub="official definition — strategy.com/btc" accent="text-amber-400" />
         </Section>
       </div>
 

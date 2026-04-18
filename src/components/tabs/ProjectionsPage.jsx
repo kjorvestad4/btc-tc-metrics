@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, TrendingUp, BarChart3, Activity, Zap, Users, Bitcoin } from "lucide-react";
 import CAGRModule from "./CAGRModule";
+import InvestmentCalculator from "./InvestmentCalculator";
 import { formatCurrency, formatPercent, generateProjections, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, calcMSTYDividend } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import ProjectionChart from "../dashboard/ProjectionChart";
@@ -276,6 +277,15 @@ export default function ProjectionsPage({ liveData }) {
             </div>
           </div>
         </div>
+      </Card>
+
+      {/* Multi-Asset Investment Calculator */}
+      <Card>
+        <SectionHeader icon={Users} title="My Portfolio Investment Calculator" color="text-green-400" />
+        <p className="text-[10px] text-muted-foreground mb-3">
+          Enter your share count for each asset. Income estimates use current dividend rates. Prices update on live refresh.
+        </p>
+        <InvestmentCalculator liveData={liveData} />
       </Card>
 
       {/* CAGR Module */}

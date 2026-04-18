@@ -90,13 +90,13 @@ export default function Dashboard() {
 
   const tabItems = [
     { value: "overview",      label: "Overview",        icon: LayoutDashboard },
+    { value: "correlations",  label: "Correlations",    icon: GitBranch },
     { value: "strategy",      label: "Strategy",        icon: Building2 },
     { value: "btc",           label: "BTC Models",      icon: Bitcoin },
     { value: "mstr-asst",     label: "MSTR vs ASST",    icon: TrendingUp },
     { value: "strc-sata",     label: "STRC vs SATA",    icon: Layers },
     { value: "preferred",     label: "Other Preferreds",icon: Wallet },
     { value: "msty",          label: "MSTY",            icon: BarChart3 },
-    { value: "correlations",  label: "Correlations",    icon: GitBranch },
     { value: "projections",   label: "Projections",     icon: LineChart },
   ];
 
@@ -189,7 +189,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="correlations">
-            <CorrelationsTab params={params} onParamsChange={setParams} liveData={liveData} />
+            <CorrelationsTab params={params} liveData={liveData} />
           </TabsContent>
 
           <TabsContent value="projections">

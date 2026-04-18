@@ -182,11 +182,11 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
       <div className="grid grid-cols-2 gap-3">
         <MetricCard
           title="MSTR Pref Div Liability"
-          value={formatCurrency(totalAnnualDiv)}
+          value="$1,237M"
           icon={Percent}
           accentClass="text-purple-400"
-          subtitle={`${preferreds.length} preferred series`}
-          tooltip="Total annual preferred dividend obligation across Strategy's perpetual preferred series. Official strategy.com shows $1,237M annual dividends."
+          subtitle="official strategy.com annual dividends"
+          tooltip="Total annual preferred dividend obligation: $1,237M — source: strategy.com. Includes STRC, STRF, STRK, STRE, STRD."
         />
         <MetricCard
           title="SATA Div Liability (ASST)"

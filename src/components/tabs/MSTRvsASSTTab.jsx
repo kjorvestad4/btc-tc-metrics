@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/calculations";
 import { ASST_DEFAULTS } from "./ASSTModelTab";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar
 } from "recharts";
 
 const MSTR_DEBT_M = 8254;
@@ -139,43 +139,23 @@ export default function MSTRvsASSTTab({ params, liveData, onRefresh, refreshing 
         <CompareRow label="Primary Strategy" mstrVal="Digital credit ATM" asstVal="SATA preferred + equity" mstrColor="text-muted-foreground" asstColor="text-muted-foreground" />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Bitcoin className="w-3.5 h-3.5 text-amber-400" /> Balance Sheet ($B)
-          </h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={barData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-              <XAxis dataKey="metric" tick={TICK} />
-              <YAxis tick={TICK} tickFormatter={v => `$${v}B`} />
-              <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", borderRadius: 6, fontSize: 11 }}
-                formatter={v => [`$${v.toFixed(1)}B`]} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Bar dataKey="MSTR" fill="#22C55E" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="ASST" fill="#60A5FA" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-4">
-          <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5 text-primary" /> Price Index (Rebased to 100, Sep '25)
-          </h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={priceHistory} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-              <XAxis dataKey="date" tick={TICK} />
-              <YAxis tick={TICK} />
-              <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", borderRadius: 6, fontSize: 11 }} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              <Line type="monotone" dataKey="MSTR" stroke="#22C55E" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="ASST" stroke="#60A5FA" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-          <p className="text-[9px] text-muted-foreground/50 mt-2">⚠ Rebased index for visual comparison only. Not actual prices.</p>
-        </div>
+      {/* Charts — Balance Sheet only (Price Index removed per user request) */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Bitcoin className="w-3.5 h-3.5 text-amber-400" /> Balance Sheet Comparison ($B)
+        </h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={barData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+            <XAxis dataKey="metric" tick={TICK} />
+            <YAxis tick={TICK} tickFormatter={v => `$${v}B`} />
+            <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", borderRadius: 6, fontSize: 11 }}
+              formatter={v => [`$${v.toFixed(1)}B`]} />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <Bar dataKey="MSTR" fill="#22C55E" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="ASST" fill="#60A5FA" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       <p className="text-[10px] text-muted-foreground/40 text-center">
