@@ -177,7 +177,7 @@ export default function Dashboard() {
             </TabsList>
 
             <TabsContent value="overview">
-              <OverviewTab params={params} preferreds={preferreds} projections={projections} />
+              <OverviewTab params={params} preferreds={preferreds} projections={projections} liveData={liveData} />
             </TabsContent>
             <TabsContent value="strategy">
               <StrategyDashboardTab
