@@ -121,18 +121,23 @@ export default function ProjectionsPage({ liveData }) {
 
   const portfolioProjections = useMemo(() => {
     return projections.map(p => {
-      let portfolioVal = 0;
-      portfolioVal += portfolioHoldings.BTC * p.btc_price;
-      portfolioVal += portfolioHoldings.MSTR * p.mstr_price;
-      portfolioVal += portfolioHoldings.ASST * (p.btc_price * 0.0789);
-      portfolioVal += portfolioHoldings.STRC * 99.21;
-      portfolioVal += portfolioHoldings.SATA * 99.45;
-      portfolioVal += portfolioHoldings.STRF * 92.50;
-      portfolioVal += portfolioHoldings.STRK * 87.00;
-      portfolioVal += portfolioHoldings.STRD * 77.14;
-      portfolioVal += portfolioHoldings.MSTY * (p.msty_nav || 22.50);
-      const btcNavVal = p.btc_holdings * p.btc_price;
-      return { ...p, portfolio_value: portfolioVal, btc_nav: btcNavVal };
+      const btc_val = portfolioHoldings.BTC * p.btc_price;
+      const mstr_val = portfolioHoldings.MSTR * p.mstr_price;
+      const asst_val = portfolioHoldings.ASST * (p.btc_price * 0.0789);
+      const strc_val = portfolioHoldings.STRC * 99.21;
+      const sata_val = portfolioHoldings.SATA * 99.45;
+      const strf_val = portfolioHoldings.STRF * 92.50;
+      const strk_val = portfolioHoldings.STRK * 87.00;
+      const strd_val = portfolioHoldings.STRD * 77.14;
+      const msty_val = portfolioHoldings.MSTY * (p.msty_nav || 22.50);
+      
+      const total = btc_val + mstr_val + asst_val + strc_val + sata_val + strf_val + strk_val + strd_val + msty_val;
+      
+      return { 
+        ...p, 
+        btc_val, mstr_val, asst_val, strc_val, sata_val, strf_val, strk_val, strd_val, msty_val,
+        portfolio_value: total 
+      };
     });
   }, [projections, portfolioHoldings]);
 
@@ -331,8 +336,16 @@ export default function ProjectionsPage({ liveData }) {
               <YAxis tick={TICK_STYLE} />
               <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 0)} />
               <Legend />
-              <Line type="monotone" dataKey="portfolio_value" stroke="#22C55E" strokeWidth={2} name="Portfolio Value" dot={false} />
-              <Line type="monotone" dataKey="btc_nav" stroke="#F59E0B" strokeWidth={2} name="BTC Holdings Value" dot={false} />
+              <Line type="monotone" dataKey="btc_val" stroke="#F59E0B" strokeWidth={1.5} name="BTC" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="mstr_val" stroke="#22C55E" strokeWidth={1.5} name="MSTR" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="asst_val" stroke="#60A5FA" strokeWidth={1.5} name="ASST" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="strc_val" stroke="#34D399" strokeWidth={1.5} name="STRC" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="sata_val" stroke="#A78BFA" strokeWidth={1.5} name="SATA" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="strf_val" stroke="#06B6D4" strokeWidth={1.5} name="STRF" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="strk_val" stroke="#FBBF24" strokeWidth={1.5} name="STRK" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="strd_val" stroke="#FB923C" strokeWidth={1.5} name="STRD" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="msty_val" stroke="#FBBF24" strokeWidth={1.5} name="MSTY" dot={false} opacity={0.7} />
+              <Line type="monotone" dataKey="portfolio_value" stroke="#10B981" strokeWidth={2.5} name="Total Portfolio" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
