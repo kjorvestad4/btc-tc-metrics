@@ -393,7 +393,6 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
           <StatRow label="STRC — 11.5% Variable" value="$6,358M" sub="semi-annual · $99.21 · 30D Sharpe 2.64" accent="text-muted-foreground" />
           <StatRow label="STRF — 10% Fixed" value="$1,284M" sub="quarterly · $92.50" accent="text-muted-foreground" />
           <StatRow label="STRK — 8% Fixed (Conv.)" value="$1,402M" sub="quarterly · $87.00" accent="text-muted-foreground" />
-          <StatRow label="STRE — 13% BTC-denom." value="$908M" sub="monthly" accent="text-muted-foreground" />
           <StatRow label="STRD — 10% BTC-denom." value="$1,402M" sub="quarterly · $77.14" accent="text-muted-foreground" />
         </Section>
 
