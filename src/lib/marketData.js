@@ -62,14 +62,17 @@ export async function fetchStrategyHoldings() {
  * Fetch stock price from Polygon.io (requires API key)
  */
 export async function fetchPolygonPrice(ticker, apiKey) {
+  // Use previous close endpoint — more reliable than last trade for all tickers
   const res = await fetch(
-    `https://api.polygon.io/v2/last/trade/${ticker}?apiKey=${apiKey}`,
+    `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`,
     { headers: { Accept: "application/json" } }
   );
   if (!res.ok) throw new Error(`Polygon price ${ticker}: ${res.status}`);
   const data = await res.json();
-  if (data.status !== "OK") throw new Error(`Polygon: ${data.message || "unknown error"}`);
-  return data.results?.p ?? null;
+  if (data.status !== "OK" && data.resultsCount === 0) throw new Error(`Polygon: no data for ${ticker}`);
+  const price = data.results?.[0]?.c ?? null; // closing price
+  if (!price) throw new Error(`Polygon: no close price for ${ticker}`);
+  return price;
 }
 
 /**

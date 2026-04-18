@@ -3,10 +3,57 @@ import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import MetricCard from "../dashboard/MetricCard";
 import CAGRModule from "./CAGRModule";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
-  TrendingUp, Activity, Layers, BarChart3, Target, Zap,
+  TrendingUp, Activity, Layers, BarChart3, Target, Zap, BookOpen,
   ChevronRight, AlertTriangle
 } from "lucide-react";
+
+const CORRELATION_DEFINITIONS = {
+  beta: {
+    short: "Beta — how much an asset moves per 1% BTC move, on average",
+    full: `Beta measures the sensitivity of one asset's returns to another's. In this context:
+• BTC→MSTR Beta = how many % MSTR moves for each 1% BTC moves
+• A Beta of 1.82x means: if BTC rises 10%, MSTR historically rose ~18.2% on average
+
+Beta is calculated via OLS (Ordinary Least Squares) regression of daily log-returns.
+Beta ≠ guaranteed movement. It is an average historical relationship. In liquidity crunches, MSTR may move far more than beta predicts (downside asymmetry).
+
+Important: Beta changes over time as MSTR's leverage, BTC holdings, and market dynamics evolve.`
+  },
+  r2: {
+    short: "R² — how much of an asset's variance is explained by BTC movements",
+    full: `R² (R-squared) measures the goodness of fit of the beta regression. It ranges from 0 to 1 (0% to 100%).
+
+• R² = 0.71 means 71% of MSTR's daily return variance is explained by BTC price movements
+• The remaining 29% is idiosyncratic to MSTR (earnings news, leverage events, premium compression, etc.)
+
+A higher R² means the beta relationship is more reliable. ASST has a slightly lower R² than MSTR (less trading history, smaller float), meaning more noise around the beta estimate.`
+  },
+  correlation: {
+    short: "Pearson correlation (r) — linear relationship strength between −1 and +1",
+    full: `Pearson correlation (r) measures the direction and strength of the linear relationship between two return series.
+• r = +1.0: perfect positive correlation (move in lockstep)
+• r = 0.0: no correlation
+• r = −1.0: perfect inverse correlation
+
+r relates to R² by: R² = r²
+
+MSTR vs BTC 1Y correlation ≈ 0.84: strong positive. When BTC rises, MSTR very reliably rises.
+Note: correlation measures direction but not magnitude. Beta captures magnitude (how much). Use both together.`
+  },
+  mstyBeta: {
+    short: "MSTY beta to MSTR — covered call structure limits upside capture to ~0.62x price",
+    full: `MSTY's covered call structure sells call options on MSTR, capping upside participation.
+• Price beta to MSTR ≈ 0.62x: for every 10% MSTR rises, MSTY price rises ~6.2% (on average)
+• When dividends are included (total return), the effective beta rises to ~0.71x
+
+This means MSTY underperforms MSTR in strong bull markets but provides income compensation via weekly distributions.
+
+The trade-off: sacrifice some upside for consistent income. In flat/volatile markets (not trending), MSTY can outperform MSTR on total return basis because the option premium is collected without giving up upside.`
+  },
+};
+
 import { formatCurrency, formatPercent } from "@/lib/calculations";
 import {
   BTC_MSTR_CORRELATIONS, BTC_SENSITIVITY, generateScatterData,
@@ -442,10 +489,30 @@ export default function CorrelationsTab({ params, onParamsChange }) {
           <STRCParStatsPanel />
         </div>
 
-        {/* STRC ATM full-width */}
-        <div className="grid grid-cols-1 gap-4">
-          <STRCATMPanel params={params} onParamsChange={onParamsChange} />
+        {/* Definitions accordion */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Correlation Definitions</h3>
+          </div>
+          <Accordion type="multiple" className="space-y-1">
+            {Object.entries(CORRELATION_DEFINITIONS).map(([key, def]) => (
+              <AccordionItem key={key} value={key} className="border border-border/50 rounded-lg px-3 overflow-hidden">
+                <AccordionTrigger className="text-xs text-foreground font-medium py-2 hover:no-underline">
+                  <span className="text-primary font-mono mr-2 uppercase">{key}</span>
+                  <span className="text-muted-foreground font-normal">{def.short}</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <pre className="text-[11px] text-muted-foreground leading-relaxed whitespace-pre-wrap font-sans pb-2">{def.full}</pre>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
+
+        <p className="text-[10px] text-muted-foreground/40 text-center">
+          Note: STRC ATM analytics have moved to the dedicated STRC tab.
+        </p>
       </>}
 
       {activeSection === "cagr" && (

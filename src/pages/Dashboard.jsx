@@ -13,6 +13,7 @@ import CorrelationsTab from "@/components/tabs/CorrelationsTab";
 import StrategyDashboardTab from "@/components/tabs/StrategyDashboardTab";
 import ASSTModelTab from "@/components/tabs/ASSTModelTab";
 import SATAModelTab from "@/components/tabs/SATAModelTab";
+import STRCModelTab from "@/components/tabs/STRCModelTab";
 import { DEFAULT_PARAMS, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, generateProjections } from "@/lib/calculations";
 import { fetchAllMarketData } from "@/lib/marketData";
 import { toast } from "sonner";
@@ -118,16 +119,17 @@ export default function Dashboard() {
   }, [projections, params.active_scenario]);
 
   const tabItems = [
-    { value: "overview",      label: "Overview",      icon: LayoutDashboard },
-    { value: "strategy",      label: "Strategy",      icon: Building2 },
-    { value: "btc",           label: "BTC",           icon: Bitcoin },
-    { value: "mstr",          label: "MSTR",          icon: TrendingUp },
-    { value: "msty",          label: "MSTY",          icon: BarChart3 },
-    { value: "preferred",     label: "Preferreds",    icon: Layers },
-    { value: "correlations",  label: "Correlations",  icon: GitBranch },
-    { value: "asst",          label: "ASST",          icon: Building2 },
-    { value: "sata",          label: "SATA",          icon: Wallet },
-    { value: "table",         label: "Table",         icon: TableProperties },
+    { value: "overview",      label: "Overview",         icon: LayoutDashboard },
+    { value: "correlations",  label: "Correlations",     icon: GitBranch },
+    { value: "strategy",      label: "Strategy",         icon: Building2 },
+    { value: "btc",           label: "BTC",              icon: Bitcoin },
+    { value: "mstr",          label: "MSTR",             icon: TrendingUp },
+    { value: "strc",          label: "STRC",             icon: Layers },
+    { value: "asst",          label: "ASST",             icon: Building2 },
+    { value: "sata",          label: "SATA",             icon: Wallet },
+    { value: "msty",          label: "MSTY",             icon: BarChart3 },
+    { value: "preferred",     label: "Other Preferreds", icon: Layers },
+    { value: "table",         label: "Table",            icon: TableProperties },
   ];
 
   return (
@@ -207,6 +209,14 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="correlations">
               <CorrelationsTab params={params} onParamsChange={setParams} />
+            </TabsContent>
+            <TabsContent value="strc">
+              <STRCModelTab
+                params={params}
+                liveData={liveData}
+                onRefresh={handleRefreshLive}
+                refreshing={refreshing}
+              />
             </TabsContent>
             <TabsContent value="asst">
               <ASSTModelTab

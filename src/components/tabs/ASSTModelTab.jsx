@@ -144,7 +144,8 @@ export default function ASSTModelTab({ params, liveData, onRefresh, refreshing }
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricCard title="ASST Price" value={formatCurrency(asstPrice, 2)} subtitle={isLive ? "Live" : "Default"} icon={DollarSign} accentClass="text-blue-400" />
         <MetricCard title="BTC Holdings" value={asstBtcHoldings.toLocaleString()} subtitle={`${(btcNav / 1e9).toFixed(2)}B reserve`} icon={Bitcoin} accentClass="text-amber-400" />
-        <MetricCard title="mNAV Multiple" value={`${mnavMultiple.toFixed(2)}x`} subtitle="price ÷ BTC NAV/share" icon={TrendingUp} accentClass="text-primary" />
+        <MetricCard title="mNAV Multiple" value={`${mnavMultiple.toFixed(2)}x`} subtitle="share price ÷ BTC NAV/share" icon={TrendingUp} accentClass="text-primary"
+          tooltip="mNAV Multiple = ASST share price ÷ (BTC Reserve ÷ shares). Shows how much the market pays above raw BTC asset value. 1.0x = trading at BTC NAV. >1x = market premium." />
         <MetricCard title="Market Cap" value={formatCurrency(mktCap)} subtitle={`${sharesM}M shares`} icon={BarChart3} accentClass="text-purple-400" />
       </div>
 
@@ -164,7 +165,7 @@ export default function ASSTModelTab({ params, liveData, onRefresh, refreshing }
             { label: "SATA Notional", value: formatCurrency(ASST_DEFAULTS.sata_notional_M * 1e6), accent: "text-purple-400" },
             { label: "SATA Annual Div. Liability", value: formatCurrency(sataDivLiability), accent: "text-destructive" },
             { label: "Div / BTC Reserve", value: formatPercent(divToBtcNavRatio, 2), accent: divToBtcNavRatio < 2 ? "text-primary" : "text-amber-400" },
-            { label: "Amplification Ratio", value: `${ASST_DEFAULTS.amplification_ratio}x`, accent: "text-purple-400" },
+            { label: "Amplification (Debt+Pref÷BTC Reserve)", value: `${((ASST_DEFAULTS.sata_notional_M * 1e6 / btcNav) * 100).toFixed(1)}%`, accent: "text-purple-400" },
           ].map((r) => (
             <div key={r.label} className="flex justify-between py-1.5 border-b border-border/40 text-xs">
               <span className="text-muted-foreground">{r.label}</span>

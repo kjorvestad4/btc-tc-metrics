@@ -8,6 +8,7 @@ export default function MSTRModelTab({ params, preferreds, projections }) {
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const mnav = calcMNAV(params.mstr_btc_holdings, params.btc_price, totalPrefLiq, params.mstr_shares_outstanding);
   const premiumToNav = mnav > 0 ? ((params.mstr_price / mnav) - 1) * 100 : 0;
+  const mnavMultiple = mnav > 0 ? params.mstr_price / mnav : 0;
   const y5 = projections.find((p) => p.quarter === 20);
 
   // Earnings-based valuation (50% CAGR)
@@ -34,10 +35,11 @@ export default function MSTRModelTab({ params, preferreds, projections }) {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <MetricCard title="mNAV/Share" value={formatCurrency(mnav)} icon={DollarSign} accentClass="text-blue-400"
-            tooltip="mNAV = (BTC Holdings × BTC Price – Pref Liquidation) ÷ Shares Outstanding" />
-          <MetricCard title="Premium to mNAV" value={formatPercent(premiumToNav)} icon={Activity} accentClass={premiumToNav >= 0 ? "text-green-400" : "text-red-400"} />
-          <MetricCard title="Amplification" value={`${params.amplification_ratio.toFixed(1)}x`} icon={TrendingUp} accentClass="text-primary"
-            tooltip="The amplification ratio = Market Cap ÷ BTC NAV. Reflexive: higher premium → more capital → more BTC → higher NAV" />
+            tooltip="mNAV per share = (BTC Holdings × BTC Price – Pref Liquidation) ÷ Basic Shares Outstanding. This is the Bitcoin NAV attributable to each common share." />
+          <MetricCard title="mNAV Multiple" value={`${mnavMultiple.toFixed(2)}x`} icon={Activity} accentClass={premiumToNav >= 0 ? "text-green-400" : "text-red-400"}
+            tooltip="mNAV Multiple = EV ÷ BTC Reserve = how many times the market values Strategy above its raw Bitcoin reserve. Also = MSTR Price ÷ mNAV/share. Currently ~1.15x means the market pays a 15% premium over pure BTC NAV." />
+          <MetricCard title="Premium to mNAV" value={formatPercent(premiumToNav)} icon={TrendingUp} accentClass={premiumToNav >= 0 ? "text-amber-400" : "text-red-400"}
+            tooltip="Premium to mNAV = (MSTR Price ÷ mNAV/share − 1) × 100. The extra % you pay over raw BTC NAV per share. This premium reflects the capital-markets flywheel value." />
           <MetricCard title="5Y Price Target" value={y5 ? formatCurrency(y5.mstr_price) : "—"} icon={BarChart3} accentClass="text-emerald-400" />
         </div>
       </div>
@@ -74,12 +76,15 @@ export default function MSTRModelTab({ params, preferreds, projections }) {
             <p className="text-xs font-mono text-primary mt-1">= {formatCurrency(mnav)}/share</p>
           </div>
           <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-            <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">Price Projection</p>
+            <p className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">mNAV Multiple & Price</p>
             <code className="text-xs font-mono text-foreground block">
-              MSTR_Price = mNAV × Amplification × Premium
+              mNAV Multiple = EV ÷ BTC Reserve (= MSTR Price ÷ mNAV/share)
             </code>
             <p className="text-[10px] text-muted-foreground mt-1">
-              = {formatCurrency(mnav)} × {params.amplification_ratio} × {params.premium_multiple}
+              Current: ${params.mstr_price} ÷ {formatCurrency(mnav)} = {mnavMultiple.toFixed(2)}x
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Model price = mNAV × {params.amplification_ratio.toFixed(2)}x amplification × {params.premium_multiple} premium
             </p>
             <p className="text-xs font-mono text-blue-400 mt-1">= {formatCurrency(mnav * params.amplification_ratio * params.premium_multiple)}/share</p>
           </div>

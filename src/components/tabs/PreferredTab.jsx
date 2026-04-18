@@ -6,8 +6,10 @@ import { Layers, DollarSign, TrendingUp, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatPercent, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
 
 export default function PreferredTab({ params, preferreds, projections }) {
-  const totalLiq = calcTotalPrefLiquidation(preferreds);
-  const totalDiv = calcTotalAnnualDividend(preferreds);
+  // Exclude STRC — it has its own dedicated tab
+  const filteredPreferreds = preferreds.filter(p => p.ticker !== "STRC");
+  const totalLiq = calcTotalPrefLiquidation(filteredPreferreds);
+  const totalDiv = calcTotalAnnualDividend(filteredPreferreds);
   const btcNav = params.mstr_btc_holdings * params.btc_price;
   const divAsPctOfNav = btcNav > 0 ? (totalDiv / btcNav) * 100 : 0;
 
@@ -25,8 +27,8 @@ export default function PreferredTab({ params, preferreds, projections }) {
       <div className="bg-card border border-border rounded-xl p-4">
         <h3 className="text-sm font-semibold text-foreground mb-1">Perpetual Preferred Stock Simulator</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Strategy's perpetual preferreds (STRC, STRF, STRE, STRK, STRD) are "digital credit" — permanent capital that funds BTC accumulation.
-          No maturity date = no repayment obligation, only perpetual dividends.
+          Strategy's perpetual preferreds (STRF, STRE, STRK, STRD) are "digital credit" — permanent capital that funds BTC accumulation.
+          STRC has its own dedicated tab. No maturity date = no repayment obligation, only perpetual dividends.
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -54,7 +56,7 @@ export default function PreferredTab({ params, preferreds, projections }) {
             </tr>
           </thead>
           <tbody>
-            {preferreds.map((p) => {
+            {filteredPreferreds.map((p) => {
               const annDiv = p.notional_amount * 1e6 * (p.dividend_rate / 100);
               return (
                 <tr key={p.ticker} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
