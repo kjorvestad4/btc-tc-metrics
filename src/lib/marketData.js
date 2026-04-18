@@ -115,9 +115,8 @@ export async function fetchPolygonPrice(ticker, apiKey) {
   );
   if (!res.ok) throw new Error(`Polygon price ${ticker}: ${res.status}`);
   const data = await res.json();
-  if (data.status !== "OK" && data.resultsCount === 0) throw new Error(`Polygon: no data for ${ticker}`);
   const price = data.results?.[0]?.c ?? null; // closing price
-  if (!price) throw new Error(`Polygon: no close price for ${ticker}`);
+  if (!price) throw new Error(`Polygon: no close price for ${ticker} (status: ${data.status})`);
   return price;
 }
 
@@ -205,9 +204,12 @@ export async function fetchAllMarketData(polygonKey = null) {
     if (settled[i].status === "fulfilled") {
       results[key] = settled[i].value;
     } else {
-      errors.push(`${key.toUpperCase()}: ${settled[i].reason?.message ?? "failed"}`);
+      const msg = settled[i].reason?.message ?? "failed";
+      errors.push(`${key.toUpperCase()}: ${msg}`);
+      console.warn(`[marketData] ${key} failed:`, msg);
     }
   });
+  console.log("[marketData] results:", Object.fromEntries(keys.map((k, i) => [k, settled[i].status])));
 
   // Preferred prices: strategy.com scraper first, Polygon fallback
   const prefs = results.preferreds ?? {};
