@@ -37,9 +37,9 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
                 MSTR ${liveData.mstr_price.toFixed(2)}
               </span>
           }
-            {liveData.msty_price &&
-          <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-0.5">
-                MSTY ${liveData.msty_price.toFixed(2)}
+            {liveData.asst_price &&
+          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5">
+                ASST ${liveData.asst_price.toFixed(2)}
               </span>
           }
             {liveData.errors?.length === 0 ?
