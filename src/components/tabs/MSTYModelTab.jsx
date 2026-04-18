@@ -4,7 +4,7 @@ import MetricCard from "../dashboard/MetricCard";
 import { BarChart3, DollarSign, Percent, Activity, RefreshCw, Wifi, Users } from "lucide-react";
 // Investment calculator moved to Projections page
 import { Button } from "@/components/ui/button";
-import { formatCurrency, calcMSTYDividend } from "@/lib/calculations";
+import { formatCurrency, formatPercent, calcMSTYDividend } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 
 // MSTY fund-level facts (April 2026)
@@ -23,6 +23,7 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
 
   // Model-driven monthly dividend (PunterJeff formula)
   const monthlyDivPerShare = calcMSTYDividend(params.mstr_price, params.mstr_iv, params.msty_participation_rate);
+  const modelYield = mstySharePrice > 0 ? (monthlyDivPerShare * 12 / mstySharePrice) * 100 : 0;
 
   // (Investment calculator moved to Projections page)
 
