@@ -19,35 +19,35 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
             <Zap className="w-4 h-4 text-primary" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-sm font-bold tracking-tight text-foreground leading-none">PunterJeff</h1>
+            <h1 className="text-sm font-bold tracking-tight text-foreground leading-none hidden">PunterJeff</h1>
             <p className="text-[10px] text-muted-foreground leading-none mt-0.5">MSTR Projection Engine</p>
           </div>
         </div>
 
         {/* Live data status pills */}
-        {liveData && (
-          <div className="hidden md:flex items-center gap-2 ml-2">
-            {liveData.btc_price && (
-              <span className="text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5">
+        {liveData &&
+        <div className="hidden md:flex items-center gap-2 ml-2">
+            {liveData.btc_price &&
+          <span className="text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5">
                 BTC ${liveData.btc_price.toLocaleString()}
               </span>
-            )}
-            {liveData.mstr_price && (
-              <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5">
+          }
+            {liveData.mstr_price &&
+          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5">
                 MSTR ${liveData.mstr_price.toFixed(2)}
               </span>
-            )}
-            {liveData.msty_price && (
-              <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-0.5">
+          }
+            {liveData.msty_price &&
+          <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-0.5">
                 MSTY ${liveData.msty_price.toFixed(2)}
               </span>
-            )}
-            {liveData.errors?.length === 0
-              ? <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-              : <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-            }
+          }
+            {liveData.errors?.length === 0 ?
+          <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> :
+          <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+          }
           </div>
-        )}
+        }
       </div>
 
       <div className="flex items-center gap-2">
@@ -62,18 +62,18 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
           </SelectContent>
         </Select>
 
-        {!hasPolygonKey && !liveData && (
-          <span className="hidden lg:inline text-[10px] text-amber-400/70 font-medium">
+        {!hasPolygonKey && !liveData &&
+        <span className="hidden lg:inline text-[10px] text-amber-400/70 font-medium">
             Add Polygon key ↙ for full live data
           </span>
-        )}
+        }
         <Button
           variant="default"
           size="sm"
           className="h-8 text-xs gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           onClick={handleRefresh}
-          disabled={refreshing}
-        >
+          disabled={refreshing}>
+          
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">{refreshing ? "Fetching…" : "Refresh Live"}</span>
         </Button>
@@ -83,6 +83,6 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
           <span className="hidden sm:inline">Export</span>
         </Button>
       </div>
-    </header>
-  );
+    </header>);
+
 }
