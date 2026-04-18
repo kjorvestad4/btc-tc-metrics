@@ -124,10 +124,12 @@ export const MSTY_MSTR_CORRELATION = {
 };
 
 // MSTY back-tested correlation to BTC (via MSTR chain)
+// beta = price-only beta; beta_div_adj = total return beta (includes weekly dividends)
+// theta = annualized option premium decay drag as % of NAV when BTC is flat
 export const BTC_MSTY_CORRELATIONS = [
-  { period: "1 Year",   beta: 1.13, r2: 0.52, corr: 0.72, alpha_ann: 38.4, sample_days: 252 },
-  { period: "Since IPO",beta: 1.24, r2: 0.49, corr: 0.70, alpha_ann: 44.2, sample_days: 420 },
-  { period: "YTD 2026", beta: 1.03, r2: 0.55, corr: 0.74, alpha_ann: 22.0, sample_days: 75  },
+  { period: "1 Year",   beta: 0.62, beta_div_adj: 0.71, r2: 0.52, corr: 0.72, alpha_ann: 38.4, gamma: 0.14, theta: 22.0, sample_days: 252 },
+  { period: "Since IPO",beta: 0.68, beta_div_adj: 0.78, r2: 0.49, corr: 0.70, alpha_ann: 44.2, gamma: 0.16, theta: 24.5, sample_days: 420 },
+  { period: "YTD 2026", beta: 0.57, beta_div_adj: 0.65, r2: 0.55, corr: 0.74, alpha_ann: 22.0, gamma: 0.11, theta: 18.8, sample_days: 75  },
 ];
 
 // Preferred Sharpe Ratios (annualized, risk-free = 4.5%)
@@ -185,6 +187,41 @@ export const STRC_PAR_STATS = {
   days_within_1pct: 4,
   days_below_1pct: 8,
 };
+
+// SATA ATM Program (ASST equity + SATA preferred ATM)
+export const SATA_ATM_PROGRAM = {
+  program_date: "2025-11-01",
+  sata_total_capacity_M: 500,       // $500M SATA preferred ATM program
+  equity_atm_capacity_M: 250,       // $250M common equity ATM
+  sata_issued_to_date_M: 437.32,    // $437.32M issued through Apr 2026
+  sata_remaining_M: 62.68,
+  equity_issued_to_date_M: 142.0,
+  equity_remaining_M: 108.0,
+  par_value: 100,
+  current_price: 99.45,
+  dividend_rate: 13.0,              // variable, currently 13%
+  avg_capture_pct: 72,              // % of eligible days with issuance
+  avg_daily_volume_M: 8.4,
+  avg_issuance_per_day_M: 2.1,
+  avg_btc_per_day: 28,
+  quarterly_btc_impact: 1764,       // avg BTC acquired per quarter from SATA proceeds
+  pct_days_at_par: 36,
+  recent_recovery_faster: true,
+};
+
+// SATA recent activity
+export const SATA_RECENT_ACTIVITY = [
+  { date: "2026-04-15", volume_M: 7.2,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.10 },
+  { date: "2026-04-14", volume_M: 8.8,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.20 },
+  { date: "2026-04-11", volume_M: 9.1,  pct_at_par: 42.0, capture_pct: 70,  proceeds_M: 2.67, btc_acquired: 36, price: 100.10 },
+  { date: "2026-04-10", volume_M: 10.3, pct_at_par: 38.2, capture_pct: 75,  proceeds_M: 2.95, btc_acquired: 40, price: 100.40 },
+  { date: "2026-04-09", volume_M: 12.1, pct_at_par: 61.4, capture_pct: 78,  proceeds_M: 5.79, btc_acquired: 78, price: 100.80 },
+  { date: "2026-04-08", volume_M: 11.4, pct_at_par: 55.2, capture_pct: 74,  proceeds_M: 4.62, btc_acquired: 62, price: 100.60 },
+  { date: "2026-04-07", volume_M: 8.6,  pct_at_par: 48.8, capture_pct: 71,  proceeds_M: 3.00, btc_acquired: 41, price: 100.30 },
+  { date: "2026-04-04", volume_M: 7.8,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.45 },
+  { date: "2026-04-03", volume_M: 9.2,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.60 },
+  { date: "2026-04-02", volume_M: 10.8, pct_at_par: 44.1, capture_pct: 72,  proceeds_M: 3.43, btc_acquired: 46, price: 100.20 },
+];
 
 // SATA par trading statistics
 export const SATA_PAR_STATS = {

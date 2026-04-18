@@ -14,7 +14,7 @@ import {
   BTC_MSTY_CORRELATIONS,
   generateScatterData,
   MSTY_MSTR_CORRELATION, STRC_ATM_PROGRAM, STRC_RECENT_ACTIVITY, STRC_PAR_STATS,
-  SATA_PAR_STATS, PREFERRED_SHARPE_RATIOS,
+  SATA_PAR_STATS, SATA_ATM_PROGRAM, SATA_RECENT_ACTIVITY, PREFERRED_SHARPE_RATIOS,
   ALPHA_OVER_TIME, GAMMA_OVER_TIME, THETA_OVER_TIME,
 } from "@/lib/correlationData";
 import {
@@ -281,32 +281,7 @@ function MSTYCorrelPanel() {
     <Card>
       <SectionHeader icon={BarChart3} title="BTC → MSTY & MSTY ↔ MSTR Correlation" color="text-amber-400" />
       {/* BTC→MSTY table */}
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">BTC → MSTY (via MSTR chain)</p>
-      <div className="overflow-x-auto mb-3">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th className="text-left py-1.5 pr-2 font-medium">Period</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Beta</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Alpha (div-adj)</th>
-              <th className="text-right py-1.5 pr-2 font-medium">R²</th>
-              <th className="text-right py-1.5 font-medium">Corr</th>
-            </tr>
-          </thead>
-          <tbody>
-            {BTC_MSTY_CORRELATIONS.map((row) => (
-              <tr key={row.period} className="border-b border-border/30 hover:bg-secondary/30">
-                <td className="py-1.5 pr-2 font-semibold text-foreground">{row.period}</td>
-                <td className="py-1.5 pr-2 text-right font-mono text-amber-400">{row.beta.toFixed(2)}x</td>
-                <td className="py-1.5 pr-2 text-right font-mono text-green-400">+{row.alpha_ann.toFixed(1)}%</td>
-                <td className="py-1.5 pr-2 text-right font-mono text-cyan-400">{(row.r2 * 100).toFixed(0)}%</td>
-                <td className="py-1.5 text-right font-mono text-amber-400">{row.corr.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {/* MSTY↔MSTR summary */}
+      {/* MSTY↔MSTR beta boxes */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="p-2 bg-secondary/50 rounded-lg border border-border text-center">
           <p className="text-[10px] text-muted-foreground">MSTY Price Beta (MSTR)</p>
@@ -314,10 +289,37 @@ function MSTYCorrelPanel() {
           <p className="text-[9px] text-muted-foreground">R² = {(c.price_r2*100).toFixed(0)}%</p>
         </div>
         <div className="p-2 bg-secondary/50 rounded-lg border border-border text-center">
-          <p className="text-[10px] text-muted-foreground">Total Return Beta (div-adj)</p>
+          <p className="text-[10px] text-muted-foreground">Div-Adjusted Beta (MSTR)</p>
           <p className="text-lg font-bold font-mono text-primary">{c.total_return_beta}x</p>
           <p className="text-[9px] text-muted-foreground">R² = {(c.total_return_r2*100).toFixed(0)}%</p>
         </div>
+      </div>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">BTC → MSTY (via MSTR chain) — Alpha / Gamma / Theta</p>
+      <div className="overflow-x-auto mb-3">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="text-left py-1.5 pr-2 font-medium">Period</th>
+              <th className="text-right py-1.5 pr-2 font-medium">β Price</th>
+              <th className="text-right py-1.5 pr-2 font-medium">β Div-Adj</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Alpha</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Gamma</th>
+              <th className="text-right py-1.5 font-medium">Theta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {BTC_MSTY_CORRELATIONS.map((row) => (
+              <tr key={row.period} className="border-b border-border/30 hover:bg-secondary/30">
+                <td className="py-1.5 pr-2 font-semibold text-foreground">{row.period}</td>
+                <td className="py-1.5 pr-2 text-right font-mono text-amber-400">{row.beta.toFixed(2)}x</td>
+                <td className="py-1.5 pr-2 text-right font-mono text-amber-300">{row.beta_div_adj.toFixed(2)}x</td>
+                <td className="py-1.5 pr-2 text-right font-mono text-green-400">+{row.alpha_ann.toFixed(1)}%</td>
+                <td className="py-1.5 pr-2 text-right font-mono text-purple-400">{row.gamma.toFixed(2)}</td>
+                <td className="py-1.5 text-right font-mono text-red-400">{row.theta.toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <p className="text-[10px] text-muted-foreground mb-2">Daily Return Scatter — 1Y MSTY vs BTC</p>
       <ResponsiveContainer width="100%" height={160}>
@@ -675,6 +677,103 @@ function STRCATMPanel({ params }) {
   );
 }
 
+// ── SATA ATM Program panel ────────────────────────────────────────────────────
+function SATAATMPanel({ params }) {
+  const prog = SATA_ATM_PROGRAM;
+  const [captureRate, setCaptureRate] = useState(prog.avg_capture_pct);
+  const [issuanceRate, setIssuanceRate] = useState(prog.avg_daily_volume_M);
+  const dailyProceeds = issuanceRate * (captureRate / 100);
+  const dailyBtcImpact = params.btc_price > 0 ? (dailyProceeds * 1e6) / params.btc_price : 0;
+  const quarterlyBtcImpact = dailyBtcImpact * 63;
+  const sataUsedPct = ((prog.sata_issued_to_date_M / prog.sata_total_capacity_M) * 100).toFixed(1);
+  const equityUsedPct = ((prog.equity_issued_to_date_M / prog.equity_atm_capacity_M) * 100).toFixed(1);
+
+  return (
+    <Card className="col-span-1 lg:col-span-2">
+      <SectionHeader icon={Layers} title="SATA ATM Program — $500M Preferred + $250M Equity" color="text-violet-400" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        {[
+          { label: "SATA Capacity", value: "$500M", sub: `$${prog.sata_issued_to_date_M}M issued (${sataUsedPct}%)`, color: "text-violet-400" },
+          { label: "SATA Remaining", value: `$${prog.sata_remaining_M.toFixed(0)}M`, sub: "dry powder", color: "text-cyan-400" },
+          { label: "Equity ATM", value: "$250M", sub: `$${prog.equity_issued_to_date_M}M issued (${equityUsedPct}%)`, color: "text-blue-400" },
+          { label: "SATA Div Rate", value: `${prog.dividend_rate}%`, sub: "variable rate", color: "text-amber-400" },
+        ].map((item) => (
+          <div key={item.label} className="p-2.5 bg-secondary/50 rounded-lg border border-border text-center">
+            <p className="text-[10px] text-muted-foreground">{item.label}</p>
+            <p className={`text-base font-bold font-mono ${item.color}`}>{item.value}</p>
+            <p className="text-[9px] text-muted-foreground">{item.sub}</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="p-3 bg-secondary/40 rounded-lg border border-border space-y-3">
+          <p className="text-xs font-semibold text-foreground">Reflexive Impact Simulator (SATA)</p>
+          <div className="space-y-1.5">
+            <div className="flex justify-between">
+              <Label className="text-[10px] text-muted-foreground">Daily SATA Volume ($M)</Label>
+              <span className="text-[10px] font-mono text-violet-400">${issuanceRate.toFixed(1)}M</span>
+            </div>
+            <Slider value={[issuanceRate]} onValueChange={([v]) => setIssuanceRate(v)} min={1} max={30} step={0.5} />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between">
+              <Label className="text-[10px] text-muted-foreground">Capture Rate (% of vol ≥ par)</Label>
+              <span className="text-[10px] font-mono text-amber-400">{captureRate}%</span>
+            </div>
+            <Slider value={[captureRate]} onValueChange={([v]) => setCaptureRate(v)} min={10} max={100} step={5} />
+          </div>
+        </div>
+        <div className="p-3 bg-secondary/40 rounded-lg border border-border space-y-2">
+          <p className="text-xs font-semibold text-foreground">Projected Output (ASST BTC Accumulation)</p>
+          {[
+            { label: "Daily Proceeds", value: `$${dailyProceeds.toFixed(2)}M` },
+            { label: "Daily BTC Acquired", value: `~${Math.round(dailyBtcImpact)} BTC` },
+            { label: "Quarterly BTC Impact", value: `~${Math.round(quarterlyBtcImpact).toLocaleString()} BTC`, highlight: true },
+            { label: "Annual BTC Impact", value: `~${Math.round(quarterlyBtcImpact * 4).toLocaleString()} BTC`, highlight: true },
+          ].map((item) => (
+            <div key={item.label} className="flex justify-between text-xs">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className={`font-mono font-bold ${item.highlight ? "text-violet-400" : "text-foreground"}`}>{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Recent Daily SATA Activity (Last 10 Trading Days)</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="text-left py-1.5 pr-2 font-medium">Date</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Price</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Vol ($M)</th>
+              <th className="text-right py-1.5 pr-2 font-medium">% ≥ Par</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Cap%</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Proceeds</th>
+              <th className="text-right py-1.5 font-medium">BTC</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SATA_RECENT_ACTIVITY.map((row) => {
+              const atPar = row.price >= 100;
+              return (
+                <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-violet-400/5" : ""}`}>
+                  <td className="py-1 pr-2 font-mono text-foreground">{row.date}</td>
+                  <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-violet-400 font-bold" : "text-muted-foreground"}`}>${row.price.toFixed(2)}{atPar ? " ✓" : ""}</td>
+                  <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M.toFixed(1)}</td>
+                  <td className={`py-1 pr-2 text-right font-mono ${row.pct_at_par > 0 ? "text-violet-400" : "text-muted-foreground"}`}>{row.pct_at_par > 0 ? `${row.pct_at_par.toFixed(1)}%` : "—"}</td>
+                  <td className={`py-1 pr-2 text-right font-mono ${row.capture_pct > 0 ? "text-amber-400" : "text-muted-foreground"}`}>{row.capture_pct > 0 ? `${row.capture_pct}%` : "—"}</td>
+                  <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
+                  <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-violet-400 font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
 // ── Par Stats helper ──────────────────────────────────────────────────────────
 function ParStatsPanel({ title, color, stats }) {
   const s = stats;
@@ -760,14 +859,29 @@ export default function CorrelationsTab({ params, onParamsChange }) {
 
       {activeSection === "correlations" && <>
 
-        {/* Summary metric cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {/* Summary metric cards — MSTR */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <MetricCard title="MSTR Beta (1Y)" value="1.82x" subtitle="to BTC" icon={TrendingUp} accentClass="text-primary" />
-          <MetricCard title="ASST Beta (1Y)" value="1.48x" subtitle="to BTC" icon={TrendingUp} accentClass="text-blue-400" />
           <MetricCard title="MSTR Alpha (1Y)" value="+12.4%" subtitle="ann. excess return" icon={Activity} accentClass="text-green-400" />
           <MetricCard title="MSTR Gamma (1Y)" value="0.31" subtitle="beta convexity" icon={Activity} accentClass="text-purple-400" />
           <MetricCard title="MSTR Theta" value="5.1%" subtitle="carry cost / BTC NAV" icon={AlertTriangle} accentClass="text-red-400" />
+          <MetricCard title="STRC Sharpe" value="0.77" subtitle="risk-adj. yield" icon={BarChart3} accentClass="text-purple-400" />
           <MetricCard title="SATA Sharpe" value="2.52" subtitle="best risk-adj. yield" icon={BarChart3} accentClass="text-cyan-400" />
+        </div>
+        {/* Summary metric cards — ASST */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <MetricCard title="ASST Beta (1Y)" value="1.48x" subtitle="to BTC" icon={TrendingUp} accentClass="text-blue-400" />
+          <MetricCard title="ASST Alpha (1Y)" value="+6.2%" subtitle="ann. excess return" icon={Activity} accentClass="text-green-400" />
+          <MetricCard title="ASST Gamma (1Y)" value="0.22" subtitle="beta convexity" icon={Activity} accentClass="text-purple-400" />
+          <MetricCard title="ASST Theta" value="14.6%" subtitle="carry cost / BTC NAV" icon={AlertTriangle} accentClass="text-red-400" />
+          <MetricCard title="MSTY Beta (Price)" value="0.62x" subtitle="to MSTR" icon={TrendingUp} accentClass="text-amber-400" />
+          <MetricCard title="MSTY Beta (Div-Adj)" value="0.71x" subtitle="total return" icon={TrendingUp} accentClass="text-amber-300" />
+        </div>
+        {/* Summary metric cards — MSTY */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <MetricCard title="MSTY Alpha (1Y)" value="+38.4%" subtitle="div-adj excess return" icon={Activity} accentClass="text-green-400" />
+          <MetricCard title="MSTY Gamma (1Y)" value="0.14" subtitle="beta convexity" icon={Activity} accentClass="text-purple-400" />
+          <MetricCard title="MSTY Theta" value="22.0%" subtitle="option decay drag / NAV" icon={AlertTriangle} accentClass="text-red-400" />
         </div>
 
         {/* BTC→MSTR and BTC→ASST */}
@@ -801,6 +915,11 @@ export default function CorrelationsTab({ params, onParamsChange }) {
         {/* STRC ATM — full width */}
         <div className="grid grid-cols-1 gap-4">
           <STRCATMPanel params={params} />
+        </div>
+
+        {/* SATA ATM — full width */}
+        <div className="grid grid-cols-1 gap-4">
+          <SATAATMPanel params={params} />
         </div>
 
         {/* Par trading stats — STRC + SATA */}
