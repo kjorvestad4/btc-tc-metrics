@@ -24,10 +24,11 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   const totalAnnualDiv = calcTotalAnnualDividend(preferreds);
   const mstrBtcNav = params.mstr_btc_holdings * params.btc_price;
 
-  // mNAV per share = (BTC Reserve – Debt – Pref Notional) / shares
-  // Official approach: mNAV = BTC Reserve / shares (Strategy shows 1.25x = price ÷ (BTC Reserve/share))
-  const mstrBtcNavPerShare = mstrBtcNav / (params.mstr_shares_outstanding * 1e6);
-  const mstrMnavMultiple = mstrBtcNavPerShare > 0 ? params.mstr_price / mstrBtcNavPerShare : 0;
+  // mNAV = EV ÷ BTC Reserve (official definition, e.g. strategy.com shows 1.25x)
+  // EV = Market Cap + Debt + Pref
+  const mstrMarketCap = params.mstr_price * params.mstr_shares_outstanding * 1e6;
+  const mstrEV = mstrMarketCap + MSTR_DEBT_PREF_M * 1e6;
+  const mstrMnav = mstrBtcNav > 0 ? mstrEV / mstrBtcNav : 0;
 
   // Amplification = (Debt + Pref) ÷ BTC Reserve — official formula, strategy.com shows 33%
   const mstrAmplificationPct = mstrBtcNav > 0 ? (MSTR_DEBT_PREF_M * 1e6 / mstrBtcNav) * 100 : 0;
@@ -35,8 +36,10 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   // ASST calcs — from official treasury.strive.com data
   const asstPrice = liveData?.asst_price ?? ASST_DEFAULTS.price;
   const asstBtcNav = ASST_DEFAULTS.btc_holdings * params.btc_price;
-  const asstNavPerBasicShare = asstBtcNav / (ASST_DEFAULTS.shares_outstanding_M * 1e6);
-  const asstMnavMultiple = asstNavPerBasicShare > 0 ? asstPrice / asstNavPerBasicShare : 0;
+  // EV = Market Cap + Debt + Pref
+  const asstMarketCap = asstPrice * ASST_DEFAULTS.shares_outstanding_M * 1e6;
+  const asstEV = asstMarketCap + ASST_DEFAULTS.total_debt_pref_M * 1e6;
+  const asstMnav = asstBtcNav > 0 ? asstEV / asstBtcNav : 0;
   // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
 
@@ -158,20 +161,20 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
       {/* Row 3: mNAVs */}
       <div className="grid grid-cols-2 gap-3">
         <MetricCard
-          title="MSTR mNAV / Share"
-          value={formatCurrency(mstrBtcNavPerShare, 2)}
+          title="MSTR mNAV"
+          value={`${mstrMnav.toFixed(2)}x`}
           icon={Shield}
           accentClass="text-green-400"
-          subtitle="BTC Reserve ÷ Shares"
-          tooltip="mNAV per share = (BTC Holdings × BTC Price) ÷ Shares Outstanding. The raw Bitcoin NAV attributable to each MSTR share, before any premium."
+          subtitle="EV ÷ BTC Reserve"
+          tooltip="mNAV = Enterprise Value ÷ BTC Reserve. EV = Market Cap + Debt + Preferred Notional. strategy.com shows 1.25x at Apr 17 2026 prices."
         />
         <MetricCard
-          title="ASST mNAV / Share"
-          value={formatCurrency(asstNavPerBasicShare, 2)}
+          title="ASST mNAV"
+          value={`${asstMnav.toFixed(2)}x`}
           icon={Shield}
           accentClass="text-blue-400"
-          subtitle="BTC Reserve ÷ Basic Shares"
-          tooltip="ASST mNAV per basic share = (BTC Holdings × BTC Price) ÷ Basic Shares Outstanding. Official treasury.strive.com shows $15.21 at Apr 17 2026 prices."
+          subtitle="EV ÷ BTC Reserve"
+          tooltip="mNAV = Enterprise Value ÷ BTC Reserve. EV = Market Cap + Debt + Preferred. treasury.strive.com shows 1.32x at Apr 17 2026 prices."
         />
       </div>
 
