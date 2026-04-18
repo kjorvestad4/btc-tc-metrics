@@ -235,8 +235,8 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-center">
               <p className="text-[10px] text-muted-foreground">Model Monthly/Share</p>
-              <p className="text-base font-bold text-amber-400 font-mono">{formatCurrency(monthlyDivPerShare, 4)}</p>
-              <p className="text-[9px] text-muted-foreground">PunterJeff formula</p>
+              <p className="text-base font-bold text-amber-400 font-mono">{formatCurrency(((mstySharePrice * (params.mstr_iv / 100)) / 52) * 4.33, 4)}</p>
+              <p className="text-[9px] text-muted-foreground">IV heuristic × 4.33</p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-center">
               <p className="text-[10px] text-muted-foreground">Model Ann. Yield</p>
