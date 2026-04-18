@@ -11,7 +11,7 @@ import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import ProjectionChart from "../dashboard/ProjectionChart";
 import ProjectionsTable from "./ProjectionsTable";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from "recharts";
 
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
@@ -78,7 +78,6 @@ export default function ProjectionsPage({ liveData }) {
   const mstySharePrice = liveData?.msty_price ?? 22.50;
   const latestWeeklyDiv = liveData?.msty_latest_div ?? 0.2500; // ~$1.00/mo ÷ 4 weeks
   const annualDivFromWeekly = latestWeeklyDiv * 52;
-  const monthlyDivPerShare = calcMSTYDividend(params.mstr_price, params.mstr_iv, params.msty_participation_rate);
   const weeklyIncomeActual = shareQty * latestWeeklyDiv;
   const monthlyIncomeActual = shareQty * (latestWeeklyDiv * 4.33);
   const annualIncomeActual = shareQty * annualDivFromWeekly;
@@ -123,7 +122,7 @@ export default function ProjectionsPage({ liveData }) {
           <div>
             <h2 className="text-base font-bold text-foreground">Projections Hub</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Custom scenario builder, CAGR module, MSTY income calculator, and full projection table.
+              Custom scenario builder, CAGR module, portfolio and MSTY calculators, and full projection table.
             </p>
           </div>
           <Button size="sm" className="h-8 gap-2 text-xs" onClick={handleExportCSV}>
@@ -152,7 +151,75 @@ export default function ProjectionsPage({ liveData }) {
         </div>
       </Card>
 
-      {/* Custom sliders — only show when Custom is active */}
+      {/* CAGR Assumptions Table - Moved to top */}
+      <CAGRModule params={params} onParamsChange={() => {}} />
+
+      {/* My Portfolio Investment Calculator - Moved up */}
+      <Card>
+        <SectionHeader icon={Users} title="My Portfolio Investment Calculator" color="text-green-400" />
+        <p className="text-[10px] text-muted-foreground mb-3">
+          Enter your share count for each asset. Income estimates use current dividend rates. Prices update on live refresh.
+        </p>
+        <InvestmentCalculator liveData={liveData} />
+      </Card>
+
+      {/* My MSTY Investment Calculator - Moved below portfolio */}
+      <Card>
+        <SectionHeader icon={Users} title="My MSTY Investment Calculator" color="text-cyan-400" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Number of MSTY Shares</Label>
+              <Input
+                type="number"
+                value={shareQty}
+                onChange={e => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
+                className="h-8 text-sm font-mono bg-secondary border-border mt-1"
+                min={0}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Investment value: <span className="text-foreground font-mono font-semibold">{formatCurrency(investmentValue, 2)}</span> at ${mstySharePrice.toFixed(2)}/share
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-xs space-y-1.5">
+              <p className="font-semibold text-foreground mb-1.5">Distribution History (recent monthly avg: $1.00–$1.25/share)</p>
+              {MSTY_DISTRIBUTION_HISTORY.slice(0, 5).map((d, i) => (
+                <div key={d.ex_date} className="flex justify-between">
+                  <span className="text-muted-foreground font-mono">{d.ex_date}</span>
+                  <span className={`font-mono font-bold ${i === 0 ? "text-primary" : "text-green-400"}`}>${d.amount.toFixed(4)}/sh</span>
+                </div>
+              ))}
+              <div className="pt-1 border-t border-border flex justify-between">
+                <span className="text-muted-foreground">8-week avg/wk</span>
+                <span className="font-mono text-primary font-bold">
+                  ${(MSTY_DISTRIBUTION_HISTORY.reduce((s, d) => s + d.amount, 0) / MSTY_DISTRIBUTION_HISTORY.length).toFixed(4)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Weekly Income</p>
+              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(weeklyIncomeActual, 2)}</p>
+              <p className="text-[9px] text-muted-foreground">at latest rate</p>
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Monthly Income</p>
+              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(monthlyIncomeActual, 2)}</p>
+              <p className="text-[9px] text-muted-foreground">weekly × 4.33</p>
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Annual Income</p>
+              <p className="text-lg font-bold font-mono text-cyan-400">{formatCurrency(annualIncomeActual, 2)}</p>
+              <p className="text-[9px] text-muted-foreground">weekly × 52</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Custom scenario builder - moved after calculators */}
       {activeScenario === "Custom" && (
         <Card>
           <SectionHeader icon={Zap} title="Custom Scenario Builder" color="text-purple-400" />
@@ -218,78 +285,34 @@ export default function ProjectionsPage({ liveData }) {
         />
       </div>
 
-      {/* MSTY Income Calculator */}
-      <Card>
-        <SectionHeader icon={Users} title="My MSTY Investment Calculator" color="text-cyan-400" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Number of MSTY Shares</Label>
-              <Input
-                type="number"
-                value={shareQty}
-                onChange={e => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
-                className="h-8 text-sm font-mono bg-secondary border-border mt-1"
-                min={0}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Investment value: <span className="text-foreground font-mono font-semibold">{formatCurrency(investmentValue, 2)}</span> at ${mstySharePrice.toFixed(2)}/share
-              </p>
-            </div>
+      {/* ASST + MSTY projection charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card>
+          <SectionHeader icon={Bitcoin} title="ASST Price Projection" color="text-blue-400" />
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
+              <XAxis dataKey="label" tick={TICK_STYLE} />
+              <YAxis tick={TICK_STYLE} />
+              <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 2)} />
+              <Area type="monotone" dataKey="asst_price" stroke="#60A5FA" fill="rgba(96, 165, 250, 0.2)" name="ASST Price" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
 
-            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-xs space-y-1.5">
-              <p className="font-semibold text-foreground mb-1.5">Distribution History (recent monthly avg: $1.00–$1.25/share)</p>
-              {MSTY_DISTRIBUTION_HISTORY.slice(0, 5).map((d, i) => (
-                <div key={d.ex_date} className="flex justify-between">
-                  <span className="text-muted-foreground font-mono">{d.ex_date}</span>
-                  <span className={`font-mono font-bold ${i === 0 ? "text-primary" : "text-green-400"}`}>${d.amount.toFixed(4)}/sh</span>
-                </div>
-              ))}
-              <div className="pt-1 border-t border-border flex justify-between">
-                <span className="text-muted-foreground">8-week avg/wk</span>
-                <span className="font-mono text-primary font-bold">
-                  ${(MSTY_DISTRIBUTION_HISTORY.reduce((s, d) => s + d.amount, 0) / MSTY_DISTRIBUTION_HISTORY.length).toFixed(4)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Weekly Income</p>
-              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(weeklyIncomeActual, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">at latest rate</p>
-            </div>
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Monthly Income</p>
-              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(monthlyIncomeActual, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">weekly × 4.33</p>
-            </div>
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Annual Income</p>
-              <p className="text-lg font-bold font-mono text-cyan-400">{formatCurrency(annualIncomeActual, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">weekly × 52</p>
-            </div>
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Model Monthly/sh</p>
-              <p className="text-lg font-bold font-mono text-purple-400">{formatCurrency(monthlyDivPerShare, 4)}</p>
-              <p className="text-[9px] text-muted-foreground">PunterJeff formula</p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Multi-Asset Investment Calculator */}
-      <Card>
-        <SectionHeader icon={Users} title="My Portfolio Investment Calculator" color="text-green-400" />
-        <p className="text-[10px] text-muted-foreground mb-3">
-          Enter your share count for each asset. Income estimates use current dividend rates. Prices update on live refresh.
-        </p>
-        <InvestmentCalculator liveData={liveData} />
-      </Card>
-
-      {/* CAGR Module */}
-      <CAGRModule params={params} onParamsChange={() => {}} />
+        <Card>
+          <SectionHeader icon={BarChart3} title="MSTY Dividend Projection" color="text-amber-400" />
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
+              <XAxis dataKey="label" tick={TICK_STYLE} />
+              <YAxis tick={TICK_STYLE} />
+              <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 4)} />
+              <Area type="monotone" dataKey="msty_dividend_monthly" stroke="#F59E0B" fill="rgba(245, 158, 11, 0.2)" name="Monthly Dividend/Share" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
 
       {/* Full Projection Table */}
       <ProjectionsTable projections={projections} params={params} />
