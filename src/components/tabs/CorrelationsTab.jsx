@@ -912,8 +912,8 @@ export default function CorrelationsTab({ params, onParamsChange, liveData }) {
           <MetricCard title="MSTR Alpha (1Y)" value="+12.4%" subtitle="ann. excess return" icon={Activity} accentClass="text-green-400" />
           <MetricCard title="MSTR Gamma (1Y)" value="0.31" subtitle="beta convexity" icon={Activity} accentClass="text-purple-400" />
           <MetricCard title="MSTR Theta" value="5.1%" subtitle="carry cost / BTC NAV" icon={AlertTriangle} accentClass="text-red-400" />
-          <MetricCard title="STRC Sharpe" value="0.77" subtitle="risk-adj. yield" icon={BarChart3} accentClass="text-purple-400" />
-          <MetricCard title="SATA Sharpe" value="2.52" subtitle="best risk-adj. yield" icon={BarChart3} accentClass="text-cyan-400" />
+          <MetricCard title="STRC Sharpe" value={(() => { const p = PREFERRED_SHARPE_RATIOS.find(x => x.ticker === "STRC"); return p ? p.sharpe.toFixed(2) : "—"; })()} subtitle="risk-adj. yield" icon={BarChart3} accentClass="text-purple-400" />
+          <MetricCard title="SATA Sharpe" value={(() => { const p = PREFERRED_SHARPE_RATIOS.find(x => x.ticker === "SATA"); return p ? p.sharpe.toFixed(2) : "—"; })()} subtitle="best risk-adj. yield" icon={BarChart3} accentClass="text-cyan-400" />
         </div>
         {/* Summary metric cards — ASST */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
