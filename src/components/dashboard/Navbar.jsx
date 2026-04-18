@@ -15,42 +15,42 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
             <Zap className="w-4 h-4 text-primary" />
           </div>
           <div className="hidden sm:block">
-            <p className="text-xs font-bold text-foreground">Strategy Dashboard</p>
-            <p className="text-[10px] text-muted-foreground leading-none mt-0.5">BTC Treasury Analytics</p>
+            <p className="text-xs font-bold text-foreground">Digital Economics</p>
+            <p className="text-[10px] text-muted-foreground leading-none mt-0.5 hidden">BTC Treasury Analytics</p>
           </div>
         </div>
 
         {/* Price pills — always visible */}
         <div className="hidden md:flex items-center gap-2 ml-2">
-          {btcPrice && (
-            <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-0.5">
+          {btcPrice &&
+          <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-0.5">
               BTC ${Math.round(btcPrice).toLocaleString()}
             </span>
-          )}
-          {mstrPrice && (
-            <span className="text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5">
+          }
+          {mstrPrice &&
+          <span className="text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5">
               MSTR ${parseFloat(mstrPrice).toFixed(2)}
             </span>
-          )}
-          {asstPrice && (
-            <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5">
+          }
+          {asstPrice &&
+          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5">
               ASST ${parseFloat(asstPrice).toFixed(2)}
             </span>
-          )}
-          {liveData && (liveData.errors?.length === 0 ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-          ) : (
-            <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-          ))}
+          }
+          {liveData && (liveData.errors?.length === 0 ?
+          <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> :
+
+          <AlertCircle className="w-3.5 h-3.5 text-amber-400" />)
+          }
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        {!hasPolygonKey && (
-          <span className="hidden lg:inline text-[10px] text-amber-400/70 font-medium">
+        {!hasPolygonKey &&
+        <span className="hidden lg:inline text-[10px] text-amber-400/70 font-medium">
             Add Polygon key on Overview for full live data
           </span>
-        )}
+        }
         <div className="hidden sm:flex items-center gap-1 text-[9px] text-muted-foreground">
           <Clock className="w-3 h-3" />
           auto-refresh 60s
@@ -60,12 +60,12 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
           size="sm"
           className="h-8 text-xs gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           onClick={onRefresh}
-          disabled={refreshing}
-        >
+          disabled={refreshing}>
+          
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">{refreshing ? "Fetching…" : "Refresh Now"}</span>
         </Button>
       </div>
-    </header>
-  );
+    </header>);
+
 }
