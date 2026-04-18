@@ -14,7 +14,7 @@ import {
   BTC_MSTY_CORRELATIONS,
   generateScatterData,
   MSTY_MSTR_CORRELATION, STRC_ATM_PROGRAM, STRC_RECENT_ACTIVITY, STRC_PAR_STATS,
-  SATA_PAR_STATS, SATA_ATM_PROGRAM, SATA_RECENT_ACTIVITY, PREFERRED_SHARPE_RATIOS,
+  SATA_PAR_STATS, SATA_ATM_PROGRAM, SATA_RECENT_ACTIVITY, PREFERRED_SHARPE_RATIOS, RISK_FREE_RATE,
   ALPHA_OVER_TIME, GAMMA_OVER_TIME, THETA_OVER_TIME,
 } from "@/lib/correlationData";
 import {
@@ -102,18 +102,23 @@ MSTR vs BTC 1Y correlation ≈ 0.84: strong positive. When BTC rises, MSTR very 
 This means MSTY underperforms MSTR in strong bull markets but provides income compensation via weekly distributions.`,
   },
   sharpe: {
-    short: "Sharpe Ratio — risk-adjusted return: (yield − risk-free rate) ÷ price volatility",
-    full: `Sharpe Ratio = (Annualized Return − Risk-Free Rate) ÷ Annualized Volatility
+    short: "Sharpe Ratio (30D) — risk-adjusted return: (Effective Yield − Risk-Free Rate) ÷ 30D Historical Volatility",
+    full: `A measure used to evaluate the risk-adjusted return of an investment by comparing its excess return over the risk-free rate to its standard deviation.
 
-For preferred stocks here, "return" = current yield (annual dividend ÷ market price).
-Risk-free rate assumed = 4.5% (approximate 10Y Treasury yield, April 2026).
-Volatility = annualized standard deviation of daily price returns.
+With respect to credit and preferred equity instruments:
+  Sharpe (30D) = (Effective Yield − Risk-Free Rate) ÷ Historical Volatility (30D)
 
-• Higher Sharpe = better risk-adjusted income. SATA leads at ~2.52x because it trades near par with low volatility.
-• STRK has the lowest Sharpe (~0.45) due to low yield and meaningful price discount to par.
-• Preferreds trading significantly below par have high current yields but also high volatility — Sharpe captures this trade-off.
+• Effective Yield = annual dividend ÷ current market price (current yield)
+• Risk-Free Rate = 3-Month Treasury Bill rate (4.35% as of April 2026)
+• Historical Volatility (30D) = annualized standard deviation of daily price returns over the past 30 trading days
 
-Note: Sharpe for preferreds captures price risk, NOT credit/default risk or BTC NAV coverage risk.`,
+Interpretation:
+• Higher Sharpe = better income per unit of price risk taken
+• SATA leads (~2.30) because it trades near par with very low 30D volatility (~3.8%)
+• STRK has the lowest Sharpe because its yield is low relative to its price volatility
+• Preferreds trading significantly below par carry high current yields but also elevated 30D vol — Sharpe captures this trade-off
+
+Note: This Sharpe measures price risk only, NOT credit/default risk, BTC NAV coverage risk, or liquidity risk.`,
   },
   parTrading: {
     short: "Par trading — preferred stock price behavior relative to $100 face value",
@@ -527,7 +532,7 @@ function PreferredSharpePanel() {
     <Card className="col-span-1 lg:col-span-2">
       <SectionHeader icon={BarChart3} title="Preferred Stock Sharpe Ratios" color="text-cyan-400" />
       <p className="text-[10px] text-muted-foreground mb-4">
-        Risk-adjusted income: (Current Yield − 4.5% risk-free) ÷ Annualized Price Volatility. Higher = better income per unit of price risk.
+        (Effective Yield − Risk-Free Rate) ÷ 30D Historical Volatility. Risk-free = 3M T-Bill rate (4.35%, Apr 2026). Higher = better risk-adjusted income.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="overflow-x-auto">
@@ -536,9 +541,9 @@ function PreferredSharpePanel() {
               <tr className="border-b border-border text-muted-foreground">
                 <th className="text-left py-1.5 pr-2 font-medium">Ticker</th>
                 <th className="text-right py-1.5 pr-2 font-medium">Price</th>
-                <th className="text-right py-1.5 pr-2 font-medium">Curr. Yield</th>
-                <th className="text-right py-1.5 pr-2 font-medium">Vol (Ann)</th>
-                <th className="text-right py-1.5 font-medium">Sharpe</th>
+                <th className="text-right py-1.5 pr-2 font-medium">Eff. Yield</th>
+                <th className="text-right py-1.5 pr-2 font-medium">Vol (30D)</th>
+                <th className="text-right py-1.5 font-medium">Sharpe (30D)</th>
               </tr>
             </thead>
             <tbody>
@@ -547,7 +552,7 @@ function PreferredSharpePanel() {
                   <td className="py-1.5 pr-2 font-mono font-bold text-primary">{p.ticker}</td>
                   <td className="py-1.5 pr-2 text-right font-mono text-foreground">${p.price.toFixed(2)}</td>
                   <td className="py-1.5 pr-2 text-right font-mono text-green-400">{p.current_yield.toFixed(2)}%</td>
-                  <td className="py-1.5 pr-2 text-right font-mono text-muted-foreground">{p.vol_ann.toFixed(1)}%</td>
+                  <td className="py-1.5 pr-2 text-right font-mono text-muted-foreground">{p.vol_30d.toFixed(1)}%</td>
                   <td className={`py-1.5 text-right font-mono font-bold ${p.sharpe >= 1.5 ? "text-green-400" : p.sharpe >= 0.7 ? "text-amber-400" : "text-destructive"}`}>
                     {p.sharpe.toFixed(2)}
                   </td>

@@ -132,14 +132,18 @@ export const BTC_MSTY_CORRELATIONS = [
   { period: "YTD 2026", beta: 0.57, beta_div_adj: 0.65, r2: 0.55, corr: 0.74, alpha_ann: 22.0, gamma: 0.11, theta: 18.8, sample_days: 75  },
 ];
 
-// Preferred Sharpe Ratios (annualized, risk-free = 4.5%)
+// Preferred Sharpe Ratios — 30-Day window
+// Risk-free rate = 3-Month T-Bill rate (Apr 2026) = 4.35%
+// Formula: (Effective Yield - 4.35%) / Historical Volatility (30D annualized)
+// vol_30d = annualized 30-day historical price volatility
+export const RISK_FREE_RATE = 4.35; // 3M T-Bill, Apr 2026
 export const PREFERRED_SHARPE_RATIOS = [
-  { ticker: "STRC", yield_pct: 10.0, price: 92.50,  par: 100, current_yield: 10.81, ytd_return: -7.5,  vol_ann: 8.2,  sharpe: 0.77, description: "BTC-collateralized perpetual preferred" },
-  { ticker: "STRF", yield_pct: 10.0, price: 89.20,  par: 100, current_yield: 11.21, ytd_return: -10.8, vol_ann: 9.1,  sharpe: 0.74, description: "10% fixed perpetual preferred" },
-  { ticker: "STRE", yield_pct: 13.0, price: 78.00,  par: 100, current_yield: 16.67, ytd_return: -22.0, vol_ann: 14.8, sharpe: 0.82, description: "13% BTC-denominated preferred" },
-  { ticker: "STRK", yield_pct: 8.0,  price: 87.00,  par: 100, current_yield: 9.20,  ytd_return: -13.0, vol_ann: 10.4, sharpe: 0.45, description: "Series A 8% convertible preferred" },
-  { ticker: "STRD", yield_pct: 11.0, price: 82.00,  par: 100, current_yield: 13.41, ytd_return: -18.0, vol_ann: 12.6, sharpe: 0.71, description: "11% BTC-denominated preferred" },
-  { ticker: "SATA", yield_pct: 13.0, price: 99.45,  par: 100, current_yield: 13.07, ytd_return: -0.6,  vol_ann: 3.4,  sharpe: 2.52, description: "ASST variable rate Series A preferred" },
+  { ticker: "STRC", yield_pct: 10.0, price: 92.50, par: 100, current_yield: 10.81, vol_30d: 9.4,  sharpe: parseFloat(((10.81 - 4.35) / 9.4).toFixed(2)),  description: "BTC-collateralized perpetual preferred" },
+  { ticker: "STRF", yield_pct: 10.0, price: 89.20, par: 100, current_yield: 11.21, vol_30d: 10.2, sharpe: parseFloat(((11.21 - 4.35) / 10.2).toFixed(2)), description: "10% fixed perpetual preferred" },
+  { ticker: "STRE", yield_pct: 13.0, price: 78.00, par: 100, current_yield: 16.67, vol_30d: 16.1, sharpe: parseFloat(((16.67 - 4.35) / 16.1).toFixed(2)), description: "13% BTC-denominated preferred" },
+  { ticker: "STRK", yield_pct: 8.0,  price: 87.00, par: 100, current_yield: 9.20,  vol_30d: 11.8, sharpe: parseFloat(((9.20  - 4.35) / 11.8).toFixed(2)), description: "Series A 8% convertible preferred" },
+  { ticker: "STRD", yield_pct: 11.0, price: 82.00, par: 100, current_yield: 13.41, vol_30d: 14.2, sharpe: parseFloat(((13.41 - 4.35) / 14.2).toFixed(2)), description: "11% BTC-denominated preferred" },
+  { ticker: "SATA", yield_pct: 13.0, price: 99.45, par: 100, current_yield: 13.07, vol_30d: 3.8,  sharpe: parseFloat(((13.07 - 4.35) / 3.8).toFixed(2)),  description: "ASST variable rate Series A preferred" },
 ];
 
 // STRC ATM Program
