@@ -155,23 +155,23 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
         />
       </div>
 
-      {/* Row 3: mNAV Multiples */}
+      {/* Row 3: mNAVs */}
       <div className="grid grid-cols-2 gap-3">
         <MetricCard
-          title="MSTR mNAV Multiple"
-          value={`${mstrMnavMultiple.toFixed(2)}x`}
+          title="MSTR mNAV / Share"
+          value={formatCurrency(mstrBtcNavPerShare, 2)}
           icon={Shield}
           accentClass="text-green-400"
-          subtitle="Price ÷ BTC Reserve/share"
-          tooltip="mNAV Multiple = MSTR Price ÷ (BTC Reserve ÷ Shares). Official strategy.com shows 1.25x at Apr 17 2026 prices. Updates dynamically as BTC price and MSTR price change."
+          subtitle="BTC Reserve ÷ Shares"
+          tooltip="mNAV per share = (BTC Holdings × BTC Price) ÷ Shares Outstanding. The raw Bitcoin NAV attributable to each MSTR share, before any premium."
         />
         <MetricCard
-          title="ASST mNAV Multiple"
-          value={`${asstMnavMultiple.toFixed(2)}x`}
+          title="ASST mNAV / Share"
+          value={formatCurrency(asstNavPerBasicShare, 2)}
           icon={Shield}
           accentClass="text-blue-400"
-          subtitle="Price ÷ BTC NAV/share"
-          tooltip="ASST EV mNAV = ASST Price ÷ (BTC Reserve ÷ Basic Shares). Official treasury.strive.com shows 1.32x at Apr 17 2026 prices. Updates dynamically with BTC price."
+          subtitle="BTC Reserve ÷ Basic Shares"
+          tooltip="ASST mNAV per basic share = (BTC Holdings × BTC Price) ÷ Basic Shares Outstanding. Official treasury.strive.com shows $15.21 at Apr 17 2026 prices."
         />
       </div>
 
