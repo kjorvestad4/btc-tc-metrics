@@ -116,7 +116,7 @@ export default function ProjectionsPage({ liveData }) {
 
   // Portfolio valuation projection based on user holdings
   const [portfolioHoldings, setPortfolioHoldings] = useState({
-    MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
+    BTC: 0, MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
   });
 
   const portfolioProjections = useMemo(() => {
