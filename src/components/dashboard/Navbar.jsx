@@ -16,7 +16,7 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
           </div>
           <div className="hidden sm:block">
             <p className="text-xs font-bold text-foreground">Digital Economics</p>
-            <p className="text-[10px] text-muted-foreground leading-none mt-0.5 hidden">BTC Treasury Analytics</p>
+            
           </div>
         </div>
 
