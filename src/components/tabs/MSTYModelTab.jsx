@@ -178,13 +178,7 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
                   At MSTY ~${mstySharePrice.toFixed(2)} &amp; MSTR IV ~{params.mstr_iv}%: ≈ <span className="text-purple-400 font-mono font-bold">${((mstySharePrice * (params.mstr_iv / 100)) / 52).toFixed(4)}/week</span>. Apply 0.8–1.2× calibration factor based on recent premium capture history.
                 </p>
               </div>
-              <div className="p-2 bg-secondary/80 border border-border rounded-lg">
-                <p className="text-[10px] font-bold text-amber-400 mb-0.5">PunterJeff Formula (Monthly)</p>
-                <code className="text-xs font-mono text-foreground block">Monthly Div ≈ MSTR_Price × IV × √(1/12) × Participation%</code>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  = ${params.mstr_price.toLocaleString()} × {params.mstr_iv}% × 0.289 × {params.msty_participation_rate}% = <span className="text-amber-400 font-mono font-bold">{formatCurrency(monthlyDivPerShare, 4)}/share/mo</span>
-                </p>
-              </div>
+
             </div>
           </div>
 
