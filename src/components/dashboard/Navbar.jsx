@@ -20,7 +20,7 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
           </div>
           <div className="hidden sm:block">
             
-            <p className="text-[10px] text-muted-foreground leading-none mt-0.5">MSTR Projection Engine</p>
+            <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Digital Economics Projection Engin</p>
           </div>
         </div>
 
