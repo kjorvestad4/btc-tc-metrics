@@ -135,15 +135,20 @@ export const BTC_MSTY_CORRELATIONS = [
 // Preferred Sharpe Ratios — 30-Day window
 // Risk-free rate = 3-Month T-Bill rate (Apr 2026) = 4.35%
 // Formula: (Effective Yield - 4.35%) / Historical Volatility (30D annualized)
-// vol_30d = annualized 30-day historical price volatility
+// vol_30d = annualized 30-day historical price volatility from strategy.com
+// Static defaults sourced from strategy.com on Apr 17, 2026
 export const RISK_FREE_RATE = 4.35; // 3M T-Bill, Apr 2026
 export const PREFERRED_SHARPE_RATIOS = [
-  { ticker: "STRC", yield_pct: 10.0, price: 92.50, par: 100, current_yield: 10.81, vol_30d: 9.4,  sharpe: parseFloat(((10.81 - 4.35) / 9.4).toFixed(2)),  description: "BTC-collateralized perpetual preferred" },
-  { ticker: "STRF", yield_pct: 10.0, price: 89.20, par: 100, current_yield: 11.21, vol_30d: 10.2, sharpe: parseFloat(((11.21 - 4.35) / 10.2).toFixed(2)), description: "10% fixed perpetual preferred" },
-  { ticker: "STRE", yield_pct: 13.0, price: 78.00, par: 100, current_yield: 16.67, vol_30d: 16.1, sharpe: parseFloat(((16.67 - 4.35) / 16.1).toFixed(2)), description: "13% BTC-denominated preferred" },
-  { ticker: "STRK", yield_pct: 8.0,  price: 87.00, par: 100, current_yield: 9.20,  vol_30d: 11.8, sharpe: parseFloat(((9.20  - 4.35) / 11.8).toFixed(2)), description: "Series A 8% convertible preferred" },
-  { ticker: "STRD", yield_pct: 11.0, price: 82.00, par: 100, current_yield: 13.41, vol_30d: 14.2, sharpe: parseFloat(((13.41 - 4.35) / 14.2).toFixed(2)), description: "11% BTC-denominated preferred" },
-  { ticker: "SATA", yield_pct: 13.0, price: 99.45, par: 100, current_yield: 13.07, vol_30d: 3.8,  sharpe: parseFloat(((13.07 - 4.35) / 3.8).toFixed(2)),  description: "ASST variable rate Series A preferred" },
+  // STRC: Variable rate 11.50%, Price $99.21, 30D Vol 3% (strategy.com Apr 17 2026)
+  { ticker: "STRC", yield_pct: 11.50, price: 99.21, par: 100, current_yield: 11.59, vol_30d: 3.0,  sharpe: parseFloat(((11.59 - 4.35) / 3.0).toFixed(2)),  description: "Variable rate perpetual preferred, monthly dividends" },
+  // STRF: Fixed 10.00%, Price $99.90, 30D Vol 20% (strategy.com Apr 17 2026)
+  { ticker: "STRF", yield_pct: 10.00, price: 99.90, par: 100, current_yield: 10.01, vol_30d: 20.0, sharpe: parseFloat(((10.01 - 4.35) / 20.0).toFixed(2)), description: "10% fixed senior perpetual preferred, quarterly dividends" },
+  // STRK: Fixed 8.00%, Price $76.88, 30D Vol 30% (strategy.com Apr 17 2026)
+  { ticker: "STRK", yield_pct: 8.00,  price: 76.88, par: 100, current_yield: 10.41, vol_30d: 30.0, sharpe: parseFloat(((10.41 - 4.35) / 30.0).toFixed(2)), description: "8% convertible perpetual preferred, quarterly dividends" },
+  // STRD: Fixed 10.00%, Price $77.14, 30D Vol 18% (strategy.com Apr 17 2026)
+  { ticker: "STRD", yield_pct: 10.00, price: 77.14, par: 100, current_yield: 12.96, vol_30d: 18.0, sharpe: parseFloat(((12.96 - 4.35) / 18.0).toFixed(2)), description: "10% fixed perpetual preferred, quarterly dividends" },
+  // SATA: Variable ~13%, Price $99.45, 30D Vol 3.8% (treasury.strive.com Apr 2026)
+  { ticker: "SATA", yield_pct: 13.00, price: 99.45, par: 100, current_yield: 13.07, vol_30d: 3.8,  sharpe: parseFloat(((13.07 - 4.35) / 3.8).toFixed(2)),  description: "ASST variable rate Series A preferred" },
 ];
 
 // STRC ATM Program

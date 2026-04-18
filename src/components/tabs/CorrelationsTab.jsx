@@ -527,28 +527,30 @@ function GreeksChartsPanel() {
 
 // ── Preferred Sharpe Ratios panel ─────────────────────────────────────────────
 function PreferredSharpePanel({ liveData }) {
-  // Map liveData prices by ticker
-  const livePrices = {
-    STRC: liveData?.strc_price ?? null,
-    STRF: liveData?.strf_price ?? null,
-    STRE: liveData?.stre_price ?? null,
-    STRK: liveData?.strk_price ?? null,
-    STRD: liveData?.strd_price ?? null,
-    SATA: liveData?.sata_price ?? null,
+  // Rich data objects from strategy.com scraper (include price + vol_30d + current_yield)
+  const liveDataMap = {
+    STRC: liveData?.strc_data ?? null,
+    STRF: liveData?.strf_data ?? null,
+    STRK: liveData?.strk_data ?? null,
+    STRD: liveData?.strd_data ?? null,
+    // SATA only has price from Polygon
+    SATA: liveData?.sata_price ? { price: liveData.sata_price } : null,
   };
-  const hasLive = Object.values(livePrices).some((v) => v != null);
+  const hasLive = Object.values(liveDataMap).some((v) => v?.price != null);
 
-  // Merge live prices into the static data and recompute yields/sharpe
+  // Merge live data — use strategy.com vol_30d and current_yield when available
   const enriched = PREFERRED_SHARPE_RATIOS.map((p) => {
-    const price = livePrices[p.ticker] ?? p.price;
-    const isLive = livePrices[p.ticker] != null;
-    // Par yield = fixed coupon / $100 par (always constant)
+    const live = liveDataMap[p.ticker];
+    const price = live?.price ?? p.price;
+    const isLive = live?.price != null;
     const par_yield = p.yield_pct;
-    // Effective yield = annual coupon $ / current market price
+    // Use strategy.com effective yield if available, else compute from coupon / price
     const annual_coupon = p.par * (p.yield_pct / 100);
-    const current_yield = (annual_coupon / price) * 100;
-    const sharpe = parseFloat(((current_yield - RISK_FREE_RATE) / p.vol_30d).toFixed(2));
-    return { ...p, price, isLive, par_yield, current_yield: parseFloat(current_yield.toFixed(2)), sharpe };
+    const current_yield = live?.current_yield ?? parseFloat(((annual_coupon / price) * 100).toFixed(2));
+    // Use strategy.com 30D vol if available, else fall back to static
+    const vol_30d = live?.vol_30d ?? p.vol_30d;
+    const sharpe = parseFloat(((current_yield - RISK_FREE_RATE) / vol_30d).toFixed(2));
+    return { ...p, price, isLive, par_yield, current_yield, vol_30d, sharpe };
   });
 
   const barData = enriched.map((p) => ({ ...p, color: p.sharpe >= 1.5 ? "#22C55E" : p.sharpe >= 0.7 ? "#F59E0B" : "#EF4444" }));

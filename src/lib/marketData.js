@@ -59,6 +59,52 @@ export async function fetchStrategyHoldings() {
 }
 
 /**
+ * Scrape a single preferred's price + vol from strategy.com/learn page
+ * Returns { price, vol_30d, current_yield, yield_pct } or null on failure
+ */
+export async function fetchStrategyPreferred(ticker) {
+  const url = `https://corsproxy.io/?url=https://www.strategy.com/${ticker.toLowerCase()}/learn`;
+  try {
+    const res = await fetch(url, { headers: { Accept: "text/html" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+
+    // Extract price — looks like: Price\n\n$99.21
+    const priceMatch = html.match(/Price\s*[^$]*\$([0-9]+\.[0-9]{2})/i);
+    const price = priceMatch ? parseFloat(priceMatch[1]) : null;
+
+    // Extract 30D Historical Volatility — looks like: Hist Volatility (30D)\n\n3%
+    const volMatch = html.match(/Hist\s+Volatility\s+\(30D\)\s*[^0-9]*([0-9]+)%/i);
+    const vol_30d = volMatch ? parseFloat(volMatch[1]) : null;
+
+    // Extract Effective Yield — looks like: Effective Yield\n\n11.59%
+    const yieldMatch = html.match(/Effective\s+Yield\s*[^0-9]*([0-9]+\.[0-9]+)%/i);
+    const current_yield = yieldMatch ? parseFloat(yieldMatch[1]) : null;
+
+    if (!price) throw new Error("Price not found");
+    return { price, vol_30d, current_yield };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch all Strategy.com preferred prices in parallel
+ * Returns object keyed by lowercase ticker, e.g. { strc: { price, vol_30d, current_yield }, ... }
+ */
+export async function fetchStrategyPreferreds() {
+  const tickers = ["STRC", "STRF", "STRK", "STRD"];
+  const results = await Promise.allSettled(tickers.map((t) => fetchStrategyPreferred(t)));
+  const out = {};
+  tickers.forEach((t, i) => {
+    if (results[i].status === "fulfilled" && results[i].value) {
+      out[t.toLowerCase()] = results[i].value;
+    }
+  });
+  return out;
+}
+
+/**
  * Fetch stock price from Polygon.io (requires API key)
  */
 export async function fetchPolygonPrice(ticker, apiKey) {
@@ -125,11 +171,14 @@ export async function fetchPolygonDividends(apiKey) {
 /**
  * Fetch all live market data in parallel
  * polygonKey: optional — if missing, Polygon sources are skipped gracefully
+ * Strategy.com scraper is always attempted for preferred prices (no key needed)
  */
 export async function fetchAllMarketData(polygonKey = null) {
   const tasks = {
     btc: fetchBTCPrice(),
     holdings: fetchStrategyHoldings(),
+    // Always scrape strategy.com for accurate preferred prices + vols
+    preferreds: fetchStrategyPreferreds(),
   };
 
   // Add Polygon tasks only if key is provided
@@ -137,11 +186,11 @@ export async function fetchAllMarketData(polygonKey = null) {
     tasks.mstr = fetchPolygonPrice("MSTR", polygonKey);
     tasks.msty = fetchPolygonPrice("MSTY", polygonKey);
     tasks.asst = fetchPolygonPrice("ASST", polygonKey);
-    tasks.strc = fetchPolygonPrice("STRC", polygonKey);
-    tasks.strf = fetchPolygonPrice("STRF", polygonKey);
-    tasks.stre = fetchPolygonPrice("STRE", polygonKey);
-    tasks.strk = fetchPolygonPrice("STRK", polygonKey);
-    tasks.strd = fetchPolygonPrice("STRD", polygonKey);
+    // Polygon as fallback only for preferreds if scraper fails
+    tasks.strc_poly = fetchPolygonPrice("STRC", polygonKey);
+    tasks.strf_poly = fetchPolygonPrice("STRF", polygonKey);
+    tasks.strk_poly = fetchPolygonPrice("STRK", polygonKey);
+    tasks.strd_poly = fetchPolygonPrice("STRD", polygonKey);
     tasks.sata = fetchPolygonPrice("SATA", polygonKey);
     tasks.iv = fetchPolygonIV(polygonKey);
     tasks.divs = fetchPolygonDividends(polygonKey);
@@ -160,6 +209,13 @@ export async function fetchAllMarketData(polygonKey = null) {
     }
   });
 
+  // Preferred prices: strategy.com scraper first, Polygon fallback
+  const prefs = results.preferreds ?? {};
+  const strc = prefs.strc ?? (results.strc_poly ? { price: results.strc_poly } : null);
+  const strf = prefs.strf ?? (results.strf_poly ? { price: results.strf_poly } : null);
+  const strk = prefs.strk ?? (results.strk_poly ? { price: results.strk_poly } : null);
+  const strd = prefs.strd ?? (results.strd_poly ? { price: results.strd_poly } : null);
+
   // Build unified output
   return {
     btc_price: results.btc ?? null,
@@ -167,11 +223,16 @@ export async function fetchAllMarketData(polygonKey = null) {
     mstr_price: results.mstr ?? null,
     msty_price: results.msty ?? null,
     asst_price: results.asst ?? null,
-    strc_price: results.strc ?? null,
-    strf_price: results.strf ?? null,
-    stre_price: results.stre ?? null,
-    strk_price: results.strk ?? null,
-    strd_price: results.strd ?? null,
+    // Preferred stocks — full object { price, vol_30d, current_yield } from strategy.com
+    strc_data: strc,
+    strf_data: strf,
+    strk_data: strk,
+    strd_data: strd,
+    // Backward-compat price fields
+    strc_price: strc?.price ?? null,
+    strf_price: strf?.price ?? null,
+    strk_price: strk?.price ?? null,
+    strd_price: strd?.price ?? null,
     sata_price: results.sata ?? null,
     mstr_iv: results.iv ?? null,
     msty_dividends: results.divs ?? null,
