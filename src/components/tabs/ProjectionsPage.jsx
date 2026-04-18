@@ -185,7 +185,7 @@ export default function ProjectionsPage({ liveData }) {
       <CAGRModule 
         params={params} 
         onParamsChange={(newParams) => {
-          if (newParams.cagr_btc !== params.cagr_btc) setBtcCagr(newParams.cagr_btc);
+          if (newParams.cagr_btc !== undefined) setBtcCagr(newParams.cagr_btc);
         }} 
       />
 
