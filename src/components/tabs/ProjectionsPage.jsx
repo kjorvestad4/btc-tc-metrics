@@ -182,7 +182,12 @@ export default function ProjectionsPage({ liveData }) {
       </Card>
 
       {/* CAGR Assumptions Table - Moved to top */}
-      <CAGRModule params={params} onParamsChange={() => {}} />
+      <CAGRModule 
+        params={params} 
+        onParamsChange={(newParams) => {
+          if (newParams.cagr_btc !== params.cagr_btc) setBtcCagr(newParams.cagr_btc);
+        }} 
+      />
 
       {/* My Portfolio Investment Calculator - Moved up */}
       <Card>
