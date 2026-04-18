@@ -98,9 +98,11 @@ export default function InvestmentCalculator({ liveData, onHoldingsChange }) {
 
   const totals = useMemo(() => {
     let totalValue = 0, totalAnnualIncome = 0, totalMonthlyIncome = 0;
+    const btcPrice = liveData?.btc_price ?? 84000;
+    
     Object.keys(holdings).forEach(t => {
       const sh = holdings[t];
-      const p = prices[t];
+      const p = t === "BTC" ? btcPrice : prices[t];
       totalValue += sh * p;
       if (ANNUAL_INCOME_PER_SHARE[t]) {
         const inc = sh * ANNUAL_INCOME_PER_SHARE[t];
@@ -110,7 +112,7 @@ export default function InvestmentCalculator({ liveData, onHoldingsChange }) {
     });
     const blendedYield = totalValue > 0 ? (totalAnnualIncome / totalValue) * 100 : 0;
     return { totalValue, totalAnnualIncome, totalMonthlyIncome, blendedYield };
-  }, [holdings, prices]);
+  }, [holdings, prices, liveData]);
 
   const setShares = (ticker, val) => setHoldings(prev => ({ ...prev, [ticker]: val }));
 
