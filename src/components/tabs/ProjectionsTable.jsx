@@ -46,6 +46,7 @@ export default function ProjectionsTable({ projections, params }) {
               <TableHead className="text-[10px] font-semibold text-right">Premium</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">Market Cap</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">BTC NAV</TableHead>
+              <TableHead className="text-[10px] font-semibold text-right">MSTY Share Price</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">MSTY Div/Mo</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">MSTY Yield</TableHead>
             </TableRow>
@@ -69,6 +70,7 @@ export default function ProjectionsTable({ projections, params }) {
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs">{formatCurrency(row.market_cap)}</TableCell>
                 <TableCell className="text-right font-mono text-xs text-amber-400">{formatCurrency(row.btc_nav)}</TableCell>
+                <TableCell className="text-right font-mono text-xs text-yellow-400">{formatCurrency(row.msty_nav, 2)}</TableCell>
                 <TableCell className="text-right font-mono text-xs text-cyan-400">{formatCurrency(row.msty_dividend_monthly, 2)}</TableCell>
                 <TableCell className="text-right font-mono text-xs">{formatPercent(row.msty_yield)}</TableCell>
               </TableRow>
