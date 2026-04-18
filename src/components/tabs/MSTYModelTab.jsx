@@ -239,9 +239,9 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
               <p className="text-[9px] text-muted-foreground">IV heuristic × 4.33</p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Distribution & 30D Yield</p>
-              <p className="text-base font-bold text-green-400 font-mono">{formatPercent(modelYield)}</p>
-              <p className="text-[9px] text-muted-foreground">per yieldmaxetfs.com/our-etfs/msty/</p>
+              <p className="text-[10px] text-muted-foreground">Distribution Rate (w/ option income)</p>
+              <p className="text-base font-bold text-green-400 font-mono">70.37%</p>
+              <p className="text-[9px] text-muted-foreground">30-Day SEC Yield: 1.26%</p>
             </div>
           </div>
 
