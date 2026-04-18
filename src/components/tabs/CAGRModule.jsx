@@ -197,15 +197,13 @@ function CAGRAssumptionSliders({ params, onParamsChange }) {
                 <Label className={`text-xs ${s.color} font-semibold`}>{s.label}</Label>
                 <span className={`text-xs font-mono font-bold ${s.color}`}>{val}%</span>
               </div>
-              <div className="py-1">
-                <Slider
-                  value={[val]}
-                  onValueChange={(vals) => onParamsChange({ ...params, [s.key]: vals[0] })}
-                  min={s.min}
-                  max={s.max}
-                  step={s.step}
-                />
-              </div>
+              <Slider
+                value={[Number(val)]}
+                onValueChange={(vals) => onParamsChange({ ...params, [s.key]: Number(vals[0]) })}
+                min={s.min}
+                max={s.max}
+                step={s.step}
+              />
             </div>
           );
         })}
