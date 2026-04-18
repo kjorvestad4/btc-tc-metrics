@@ -19,7 +19,7 @@ export default function Navbar({ activeScenario, onScenarioChange, onRefresh, on
             <Zap className="w-4 h-4 text-primary" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-sm font-bold tracking-tight text-foreground leading-none hidden">PunterJeff</h1>
+            
             <p className="text-[10px] text-muted-foreground leading-none mt-0.5">MSTR Projection Engine</p>
           </div>
         </div>
