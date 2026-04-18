@@ -239,9 +239,9 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
               <p className="text-[9px] text-muted-foreground">IV heuristic × 4.33</p>
             </div>
             <div className="p-2.5 rounded-lg bg-secondary/50 border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Model Ann. Yield</p>
+              <p className="text-[10px] text-muted-foreground">Distribution & 30D Yield</p>
               <p className="text-base font-bold text-green-400 font-mono">{formatPercent(modelYield)}</p>
-              <p className="text-[9px] text-muted-foreground">annualized</p>
+              <p className="text-[9px] text-muted-foreground">per yieldmaxetfs.com/our-etfs/msty/</p>
             </div>
           </div>
 
