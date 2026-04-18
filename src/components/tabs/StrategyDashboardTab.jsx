@@ -376,10 +376,10 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
           <StatRow label="BTC Yield (QTD)" value={`${OFFICIAL_MSTR_DATA.btc_yield_qtd}%`} sub="official strategy.com/btc" accent="text-primary" />
           <StatRow label="BTC Gain QTD" value={`₿${OFFICIAL_MSTR_DATA.btc_gain_qtd.toLocaleString()}`} sub="official strategy.com/btc" defKey="btcGain" accent="text-primary" />
           <StatRow label="BTC $ Gain QTD" value={`$${OFFICIAL_MSTR_DATA.btc_dollar_gain_qtd_M.toLocaleString()}M`} sub="official strategy.com/btc" defKey="btcDollarGain" accent="text-green-400" />
-          <StatRow label="Net Leverage" value="10%" sub="official strategy.com/credit (Apr 2026)" defKey="netLeverage" accent="text-amber-400" />
+          <StatRow label="Net Leverage" value="10%" sub="official strategy.com (Apr 2026)" defKey="netLeverage" accent="text-amber-400" />
           <StatRow label="BTC Years of Div. Coverage" value={`${btcYearsDivCoverage.toFixed(1)} yrs`} sub="BTC Reserve ÷ Annual Dividends" defKey="btcRating" accent="text-primary" />
           <StatRow label="USD Months of Div. Coverage" value={`${usdMonthsDivCoverage.toFixed(1)} mo`} sub="Cash ÷ (Annual Dividends / 12)" accent="text-cyan-400" />
-          <StatRow label="MSTR IV" value={`${liveData?.mstr_iv ?? 60}%`} sub="implied vol (strategy.com/btc)" live={isLive && !!liveData?.mstr_iv} accent="text-purple-400" />
+          <StatRow label="MSTR IV" value={`${liveData?.mstr_iv ?? 60}%`} sub="implied vol (strategy.com)" live={isLive && !!liveData?.mstr_iv} accent="text-purple-400" />
         </Section>
 
       </div>
