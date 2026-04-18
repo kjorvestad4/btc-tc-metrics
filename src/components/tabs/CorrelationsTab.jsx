@@ -878,6 +878,7 @@ function ParStatsPanel({ title, color, stats }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 export default function CorrelationsTab({ params, liveData }) {
+  const activeSection = "correlations";
 
   return (
     <div className="space-y-4">
