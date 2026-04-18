@@ -177,7 +177,16 @@ export default function Dashboard() {
             </TabsList>
 
             <TabsContent value="overview">
-              <OverviewTab params={params} preferreds={preferreds} projections={projections} liveData={liveData} />
+              <OverviewTab
+                params={params}
+                preferreds={preferreds}
+                projections={projections}
+                liveData={liveData}
+                polygonKey={polygonKey}
+                onPolygonKeyChange={handlePolygonKeyChange}
+                onRefresh={handleRefreshLive}
+                refreshing={refreshing}
+              />
             </TabsContent>
             <TabsContent value="strategy">
               <StrategyDashboardTab

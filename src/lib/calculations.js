@@ -1,15 +1,16 @@
 // PunterJeff MSTR Projection Engine - Core Calculations
 
 export const DEFAULT_PARAMS = {
-  btc_price: 74300,
+  // Official Strategy.com data — April 17 2026
+  btc_price: 77003,
   btc_cagr: 40,
   mstr_btc_holdings: 780897,
-  mstr_shares_outstanding: 220,
-  mstr_price: 296,
-  amplification_ratio: 3.0,
+  mstr_shares_outstanding: 346.9,   // $57,752M mcap ÷ $166.52 = ~346.9M shares
+  mstr_price: 166.52,
+  amplification_ratio: 3.0,         // used in projections formula, not the balance-sheet amplification %
   btc_accumulation_per_quarter: 15000,
   dilution_rate_per_quarter: 1.5,
-  mstr_iv: 65,
+  mstr_iv: 60,                       // official implied vol from strategy.com
   msty_nav: 21.71,
   msty_participation_rate: 35,
   projection_years: 5,

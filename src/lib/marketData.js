@@ -137,6 +137,7 @@ export async function fetchAllMarketData(polygonKey = null) {
     tasks.mstr = fetchPolygonPrice("MSTR", polygonKey);
     tasks.msty = fetchPolygonPrice("MSTY", polygonKey);
     tasks.asst = fetchPolygonPrice("ASST", polygonKey);
+    tasks.strc = fetchPolygonPrice("STRC", polygonKey);
     tasks.sata = fetchPolygonPrice("SATA", polygonKey);
     tasks.iv = fetchPolygonIV(polygonKey);
     tasks.divs = fetchPolygonDividends(polygonKey);
@@ -162,6 +163,7 @@ export async function fetchAllMarketData(polygonKey = null) {
     mstr_price: results.mstr ?? null,
     msty_price: results.msty ?? null,
     asst_price: results.asst ?? null,
+    strc_price: results.strc ?? null,
     sata_price: results.sata ?? null,
     mstr_iv: results.iv ?? null,
     msty_dividends: results.divs ?? null,

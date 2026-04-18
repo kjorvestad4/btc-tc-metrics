@@ -1,41 +1,94 @@
-import React from "react";
+import React, { useState } from "react";
 import MetricCard from "../dashboard/MetricCard";
-import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, BarChart3 } from "lucide-react";
+import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, BarChart3, Key, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, formatNumber, formatPercent, calcMNAV, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
 import { ASST_DEFAULTS } from "./ASSTModelTab";
 
-// SATA static defaults (April 2026)
-const SATA_NOTIONAL_M = 310;
-const SATA_DIVIDEND_RATE = 13.0; // %
+// Official Strategy.com figures (Apr 17 2026)
+const MSTR_DEBT_M = 8254;       // $8,254M debt
+const MSTR_PREF_M = 11355;      // $11,355M preferred notional
+const MSTR_DEBT_PREF_M = MSTR_DEBT_M + MSTR_PREF_M; // $19,609M
+
+// SATA static defaults (Apr 2026)
+const SATA_NOTIONAL_M = 437.32;
+const SATA_DIVIDEND_RATE = 13.0;
 const SATA_ANNUAL_DIV = SATA_NOTIONAL_M * 1e6 * (SATA_DIVIDEND_RATE / 100);
 
-export default function OverviewTab({ params, preferreds, projections, liveData }) {
-  // MSTR calcs
+export default function OverviewTab({ params, preferreds, projections, liveData, polygonKey, onPolygonKeyChange, onRefresh, refreshing }) {
+  const [showKey, setShowKey] = useState(false);
+
+  // MSTR calcs — using official balance sheet figures
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const totalAnnualDiv = calcTotalAnnualDividend(preferreds);
-  const mstrMnav = calcMNAV(params.mstr_btc_holdings, params.btc_price, totalPrefLiq, params.mstr_shares_outstanding);
-  const mstrMnavMultiple = mstrMnav > 0 ? params.mstr_price / mstrMnav : 0;
-
-  // MSTR Amplification = (Debt + Pref Notional) ÷ BTC Reserve
-  // Approx total debt + pref notional from MSTR balance sheet (~$9.1B pref + notes)
-  const mstrDebtPrefNotional = 9_100e6; // ~$9.1B combined
   const mstrBtcNav = params.mstr_btc_holdings * params.btc_price;
-  const mstrAmplificationPct = mstrBtcNav > 0 ? (mstrDebtPrefNotional / mstrBtcNav) * 100 : 0;
 
-  // ASST calcs
+  // mNAV per share = (BTC Reserve – Debt – Pref Notional) / shares
+  // Official approach: mNAV = BTC Reserve / shares (Strategy shows 1.25x = price ÷ (BTC Reserve/share))
+  const mstrBtcNavPerShare = mstrBtcNav / (params.mstr_shares_outstanding * 1e6);
+  const mstrMnavMultiple = mstrBtcNavPerShare > 0 ? params.mstr_price / mstrBtcNavPerShare : 0;
+
+  // Amplification = (Debt + Pref) ÷ BTC Reserve — official formula, strategy.com shows 33%
+  const mstrAmplificationPct = mstrBtcNav > 0 ? (MSTR_DEBT_PREF_M * 1e6 / mstrBtcNav) * 100 : 0;
+
+  // ASST calcs — from official treasury.strive.com data
   const asstPrice = liveData?.asst_price ?? ASST_DEFAULTS.price;
   const asstBtcNav = ASST_DEFAULTS.btc_holdings * params.btc_price;
-  const asstMnavPerShare = asstBtcNav / (ASST_DEFAULTS.shares_outstanding_M * 1e6);
-  const asstMnavMultiple = asstMnavPerShare > 0 ? asstPrice / asstMnavPerShare : 0;
-  const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.sata_notional_M * 1e6 / asstBtcNav) * 100 : 0;
+  const asstNavPerBasicShare = asstBtcNav / (ASST_DEFAULTS.shares_outstanding_M * 1e6);
+  const asstMnavMultiple = asstNavPerBasicShare > 0 ? asstPrice / asstNavPerBasicShare : 0;
+  // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
+  const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
 
   // Prices
   const strcPrice = liveData?.strc_price ?? null;
-  const sataPrice = liveData?.sata_price ?? null;
-  const mstyPrice = liveData?.msty_price ?? null;
+  const sataPrice = liveData?.sata_price ?? 99.45;
+  const mstyPrice = liveData?.msty_price ?? params.msty_nav;
+
+  const hasPolygonKey = !!(polygonKey && polygonKey.trim().length > 0);
 
   return (
     <div className="space-y-4">
+      {/* Polygon API Key Banner */}
+      <div className={`rounded-xl border p-3 flex flex-wrap items-center gap-3 ${hasPolygonKey ? "bg-primary/5 border-primary/20" : "bg-amber-500/5 border-amber-500/20"}`}>
+        <Key className={`w-4 h-4 shrink-0 ${hasPolygonKey ? "text-primary" : "text-amber-400"}`} />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground">
+            {hasPolygonKey ? "Polygon.io connected — live stock prices active" : "Add Polygon.io API key for live stock prices"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {hasPolygonKey ? "MSTR, ASST, STRC, SATA, MSTY prices pulled from Polygon on Refresh" : "Free key at polygon.io — unlocks live MSTR, ASST, STRC, SATA, MSTY prices & IV"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-56">
+            <Input
+              type={showKey ? "text" : "password"}
+              value={polygonKey}
+              onChange={(e) => onPolygonKeyChange(e.target.value)}
+              placeholder="Paste Polygon API key…"
+              className="h-8 text-xs pr-8 bg-secondary border-border font-mono"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            </button>
+          </div>
+          <Button
+            size="sm"
+            className="h-8 text-xs gap-1.5 shrink-0"
+            onClick={onRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Fetching…" : "Refresh Live"}
+          </Button>
+        </div>
+      </div>
+
       {/* Row 1: Prices */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <MetricCard
@@ -64,81 +117,81 @@ export default function OverviewTab({ params, preferreds, projections, liveData 
           value={strcPrice ? formatCurrency(strcPrice, 2) : "—"}
           icon={Layers}
           accentClass="text-purple-400"
-          subtitle={strcPrice ? "Live" : "No Polygon key"}
+          subtitle={strcPrice ? "Live" : "Add Polygon key"}
         />
         <MetricCard
           title="SATA Share Price"
-          value={sataPrice ? formatCurrency(sataPrice, 2) : "$99.45"}
+          value={formatCurrency(sataPrice, 2)}
           icon={Layers}
           accentClass="text-violet-400"
-          subtitle={sataPrice ? "Live" : "Default"}
+          subtitle={liveData?.sata_price ? "Live" : "Default"}
         />
         <MetricCard
           title="MSTY Share Price"
-          value={mstyPrice ? formatCurrency(mstyPrice, 2) : formatCurrency(params.msty_nav, 2)}
+          value={formatCurrency(mstyPrice, 2)}
           icon={BarChart3}
           accentClass="text-cyan-400"
-          subtitle={mstyPrice ? "Live" : "Default"}
+          subtitle={liveData?.msty_price ? "Live" : "Default"}
         />
       </div>
 
       {/* Row 2: Amplification */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <MetricCard
           title="MSTR Amplification"
           value={`${mstrAmplificationPct.toFixed(1)}%`}
           icon={Activity}
           accentClass="text-primary"
-          subtitle="(Debt + Pref) ÷ BTC Reserve"
-          tooltip="MSTR Amplification = (Total Debt + Preferred Notional) ÷ BTC Reserve Value. Measures how much fixed-cost leverage rides on the BTC treasury. ~22% means $1 of debt/pref per ~$4.5 of BTC held."
+          subtitle={`Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M`}
+          tooltip={`Amplification = (Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M) ÷ BTC Reserve. Official strategy.com shows 33% at BTC ~$77K. Updates dynamically with BTC price. Lower BTC = higher amplification.`}
         />
         <MetricCard
           title="ASST Amplification"
           value={`${asstAmplificationPct.toFixed(1)}%`}
           icon={Activity}
           accentClass="text-blue-400"
-          subtitle="SATA Notional ÷ BTC Reserve"
-          tooltip="ASST Amplification = SATA Preferred Notional ÷ BTC Reserve Value. Strive's equivalent of MSTR's amplification — measures the preferred-funded leverage on ASST's Bitcoin treasury."
+          subtitle={`Total Debt+Pref $${ASST_DEFAULTS.total_debt_pref_M}M`}
+          tooltip={`ASST Amplification = Total Debt+Pref ($${ASST_DEFAULTS.total_debt_pref_M}M) ÷ BTC Reserve. Official treasury.strive.com shows 42.2% at BTC ~$77K. Updates dynamically with BTC price.`}
         />
       </div>
 
       {/* Row 3: mNAV Multiples */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <MetricCard
           title="MSTR mNAV Multiple"
           value={`${mstrMnavMultiple.toFixed(2)}x`}
           icon={Shield}
           accentClass="text-green-400"
-          subtitle="Share price ÷ BTC NAV/share"
-          tooltip="MSTR mNAV Multiple = MSTR Price ÷ mNAV per share. 1.0x = trading at BTC NAV. >1x = market premium over raw Bitcoin value, reflecting the capital-markets flywheel."
+          subtitle="Price ÷ BTC Reserve/share"
+          tooltip="mNAV Multiple = MSTR Price ÷ (BTC Reserve ÷ Shares). Official strategy.com shows 1.25x at Apr 17 2026 prices. Updates dynamically as BTC price and MSTR price change."
         />
         <MetricCard
           title="ASST mNAV Multiple"
           value={`${asstMnavMultiple.toFixed(2)}x`}
           icon={Shield}
           accentClass="text-blue-400"
-          subtitle="Share price ÷ BTC NAV/share"
-          tooltip="ASST mNAV Multiple = ASST Price ÷ (BTC Reserve ÷ Shares Outstanding). Equivalent metric to MSTR's mNAV multiple for comparing relative premium-to-NAV."
+          subtitle="Price ÷ BTC NAV/share"
+          tooltip="ASST EV mNAV = ASST Price ÷ (BTC Reserve ÷ Basic Shares). Official treasury.strive.com shows 1.32x at Apr 17 2026 prices. Updates dynamically with BTC price."
         />
       </div>
 
       {/* Row 4: Dividend Liabilities */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <MetricCard
           title="MSTR Pref Div Liability"
           value={formatCurrency(totalAnnualDiv)}
           icon={Percent}
           accentClass="text-purple-400"
           subtitle={`${preferreds.length} preferred series`}
-          tooltip="Total annual preferred dividend obligation across Strategy's perpetual preferred series (STRC, STRF, STRE, STRK, STRD). No maturity = permanent carry cost."
+          tooltip="Total annual preferred dividend obligation across Strategy's perpetual preferred series. Official strategy.com shows $1,237M annual dividends."
         />
         <MetricCard
-          title="SATA Div Liability"
+          title="SATA Div Liability (ASST)"
           value={formatCurrency(SATA_ANNUAL_DIV)}
           icon={Percent}
           accentClass="text-violet-400"
           subtitle={`$${SATA_NOTIONAL_M}M notional @ ${SATA_DIVIDEND_RATE}%`}
-          tooltip="Annual dividend liability from Strive's SATA perpetual preferred program. Variable rate (~13%). Funded by BTC reserve growth — profitable if BTC CAGR > 13%."
+          tooltip={`Annual dividend liability from Strive's SATA preferred program. $${SATA_NOTIONAL_M}M × ${SATA_DIVIDEND_RATE}% = $${(SATA_ANNUAL_DIV / 1e6).toFixed(2)}M/yr. Profitable if BTC CAGR > ${SATA_DIVIDEND_RATE}%.`}
         />
       </div>
     </div>
