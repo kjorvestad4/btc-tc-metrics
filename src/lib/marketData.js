@@ -105,6 +105,21 @@ export async function fetchStrategyPreferreds() {
 }
 
 /**
+ * Fetch stock price from Yahoo Finance (no key required) via CORS proxy
+ */
+export async function fetchYahooPrice(ticker) {
+  const res = await fetch(
+    `https://corsproxy.io/?url=https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`,
+    { headers: { Accept: "application/json" } }
+  );
+  if (!res.ok) throw new Error(`Yahoo ${ticker}: ${res.status}`);
+  const data = await res.json();
+  const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;
+  if (!price) throw new Error(`Yahoo: no price for ${ticker}`);
+  return price;
+}
+
+/**
  * Fetch stock price from Polygon.io (requires API key)
  */
 export async function fetchPolygonPrice(ticker, apiKey) {
@@ -178,9 +193,13 @@ export async function fetchAllMarketData(polygonKey = null) {
     holdings: fetchStrategyHoldings(),
     // Always scrape strategy.com for accurate preferred prices + vols
     preferreds: fetchStrategyPreferreds(),
+    // Always fetch MSTR/ASST/MSTY from Yahoo (free, no key needed)
+    mstr_yahoo: fetchYahooPrice("MSTR"),
+    asst_yahoo: fetchYahooPrice("ASST"),
+    msty_yahoo: fetchYahooPrice("MSTY"),
   };
 
-  // Add Polygon tasks only if key is provided
+  // Add Polygon tasks only if key is provided (higher quality / IV data)
   if (polygonKey) {
     tasks.mstr = fetchPolygonPrice("MSTR", polygonKey);
     tasks.msty = fetchPolygonPrice("MSTY", polygonKey);
@@ -222,9 +241,9 @@ export async function fetchAllMarketData(polygonKey = null) {
   return {
     btc_price: results.btc ?? null,
     btc_holdings: results.holdings ?? null,
-    mstr_price: results.mstr ?? null,
-    msty_price: results.msty ?? null,
-    asst_price: results.asst ?? null,
+    mstr_price: results.mstr ?? results.mstr_yahoo ?? null,
+    msty_price: results.msty ?? results.msty_yahoo ?? null,
+    asst_price: results.asst ?? results.asst_yahoo ?? null,
     // Preferred stocks — full object { price, vol_30d, current_yield } from strategy.com
     strc_data: strc,
     strf_data: strf,
