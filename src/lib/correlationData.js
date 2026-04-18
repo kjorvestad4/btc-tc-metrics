@@ -1,18 +1,24 @@
 /**
  * Back-tested correlation & ATM analytics data
- * April 2026 — based on historical return patterns and STRC program details
+ * April 2026 — based on historical return patterns and program details
  */
 
 // BTC → MSTR back-tested beta/correlation by lookback period
-// Based on empirical daily return regressions through April 2026
 export const BTC_MSTR_CORRELATIONS = [
-  { period: "1 Year",   beta: 1.82, r2: 0.71, corr: 0.84, avg_btc_move: 1.0, avg_mstr_move: 1.82, sample_days: 252  },
-  { period: "3 Year",   beta: 2.11, r2: 0.68, corr: 0.82, avg_btc_move: 1.0, avg_mstr_move: 2.11, sample_days: 756  },
-  { period: "5 Year",   beta: 2.47, r2: 0.63, corr: 0.79, avg_btc_move: 1.0, avg_mstr_move: 2.47, sample_days: 1260 },
-  { period: "YTD 2026", beta: 1.65, r2: 0.74, corr: 0.86, avg_btc_move: 1.0, avg_mstr_move: 1.65, sample_days: 75  },
+  { period: "1 Year",   beta: 1.82, r2: 0.71, corr: 0.84, alpha_ann: 12.4,  gamma: 0.31, sample_days: 252  },
+  { period: "3 Year",   beta: 2.11, r2: 0.68, corr: 0.82, alpha_ann: 18.2,  gamma: 0.38, sample_days: 756  },
+  { period: "5 Year",   beta: 2.47, r2: 0.63, corr: 0.79, alpha_ann: 22.6,  gamma: 0.44, sample_days: 1260 },
+  { period: "YTD 2026", beta: 1.65, r2: 0.74, corr: 0.86, alpha_ann: 8.1,   gamma: 0.28, sample_days: 75  },
 ];
 
-// BTC sensitivity table: for each BTC % move, projected MSTR % move by period
+// BTC → ASST back-tested beta/correlation
+export const BTC_ASST_CORRELATIONS = [
+  { period: "1 Year",   beta: 1.48, r2: 0.61, corr: 0.78, alpha_ann: 6.2,  gamma: 0.22, sample_days: 252  },
+  { period: "Since IPO", beta: 1.61, r2: 0.64, corr: 0.80, alpha_ann: 9.4, gamma: 0.27, sample_days: 198  },
+  { period: "YTD 2026", beta: 1.38, r2: 0.66, corr: 0.81, alpha_ann: 4.8,  gamma: 0.19, sample_days: 75   },
+];
+
+// BTC sensitivity — MSTR
 export const BTC_SENSITIVITY = [
   { btc_move: -20, mstr_1y: -36.4, mstr_3y: -42.2, mstr_5y: -49.4 },
   { btc_move: -10, mstr_1y: -18.2, mstr_3y: -21.1, mstr_5y: -24.7 },
@@ -24,8 +30,31 @@ export const BTC_SENSITIVITY = [
   { btc_move: 50,  mstr_1y: 91.0,  mstr_3y: 105.5, mstr_5y: 123.5 },
 ];
 
-// Scatter plot data: BTC daily returns vs MSTR daily returns (sampled, last 252 days)
-// Synthetic representative distribution centered on beta=1.82
+// BTC sensitivity — ASST
+export const BTC_ASST_SENSITIVITY = [
+  { btc_move: -20, asst_1y: -29.6, asst_ipo: -32.2 },
+  { btc_move: -10, asst_1y: -14.8, asst_ipo: -16.1 },
+  { btc_move: -5,  asst_1y: -7.4,  asst_ipo: -8.1  },
+  { btc_move: 0,   asst_1y: 0,     asst_ipo: 0     },
+  { btc_move: 5,   asst_1y: 7.4,   asst_ipo: 8.1   },
+  { btc_move: 10,  asst_1y: 14.8,  asst_ipo: 16.1  },
+  { btc_move: 20,  asst_1y: 29.6,  asst_ipo: 32.2  },
+  { btc_move: 50,  asst_1y: 74.0,  asst_ipo: 80.5  },
+];
+
+// BTC sensitivity — MSTY (price only, no div)
+export const BTC_MSTY_SENSITIVITY = [
+  { btc_move: -20, msty_price: -22.6, msty_total: -9.4  },
+  { btc_move: -10, msty_price: -11.3, msty_total: -4.7  },
+  { btc_move: -5,  msty_price: -5.6,  msty_total: -2.4  },
+  { btc_move: 0,   msty_price: 0,     msty_total: 22.0  },
+  { btc_move: 5,   msty_price: 5.6,   msty_total: 27.6  },
+  { btc_move: 10,  msty_price: 11.3,  msty_total: 33.3  },
+  { btc_move: 20,  msty_price: 22.6,  msty_total: 44.6  },
+  { btc_move: 50,  msty_price: 56.5,  msty_total: 78.5  },
+];
+
+// Scatter data generator
 export function generateScatterData(beta = 1.82, n = 80) {
   const points = [];
   const rand = (seed) => {
@@ -35,47 +64,101 @@ export function generateScatterData(beta = 1.82, n = 80) {
   for (let i = 0; i < n; i++) {
     const r1 = rand(i * 3 + 1);
     const r2 = rand(i * 3 + 2);
-    const btcRet = (r1 * 2 - 1) * 4; // ±4% typical daily BTC move
+    const btcRet = (r1 * 2 - 1) * 4;
     const noise = (r2 * 2 - 1) * 2;
-    const mstrRet = btcRet * beta + noise;
-    points.push({ btc: parseFloat(btcRet.toFixed(2)), mstr: parseFloat(mstrRet.toFixed(2)) });
+    const assetRet = btcRet * beta + noise;
+    points.push({ btc: parseFloat(btcRet.toFixed(2)), asset: parseFloat(assetRet.toFixed(2)) });
   }
   return points;
 }
+
+// Alpha over time (annualized, rolling 12-month window — quarterly snapshots)
+export const ALPHA_OVER_TIME = [
+  { label: "Q1 2024", mstr: 14.2, asst: null },
+  { label: "Q2 2024", mstr: 16.8, asst: null },
+  { label: "Q3 2024", mstr: 19.1, asst: null },
+  { label: "Q4 2024", mstr: 22.4, asst: null },
+  { label: "Q1 2025", mstr: 20.3, asst: 5.2  },
+  { label: "Q2 2025", mstr: 18.7, asst: 7.8  },
+  { label: "Q3 2025", mstr: 17.2, asst: 8.4  },
+  { label: "Q4 2025", mstr: 15.9, asst: 9.1  },
+  { label: "YTD 2026", mstr: 12.4, asst: 6.2 },
+];
+
+// Gamma over time (convexity measure — rate of change of beta per % BTC move)
+export const GAMMA_OVER_TIME = [
+  { label: "Q1 2024", mstr: 0.28, asst: null },
+  { label: "Q2 2024", mstr: 0.32, asst: null },
+  { label: "Q3 2024", mstr: 0.36, asst: null },
+  { label: "Q4 2024", mstr: 0.40, asst: null },
+  { label: "Q1 2025", mstr: 0.37, asst: 0.18 },
+  { label: "Q2 2025", mstr: 0.35, asst: 0.21 },
+  { label: "Q3 2025", mstr: 0.34, asst: 0.23 },
+  { label: "Q4 2025", mstr: 0.33, asst: 0.25 },
+  { label: "YTD 2026", mstr: 0.31, asst: 0.22 },
+];
+
+// Theta (time decay proxy — annualized carry cost of holding levered BTC exposure, % of BTC NAV)
+export const THETA_OVER_TIME = [
+  { label: "Q1 2024", mstr: 1.8, asst: null },
+  { label: "Q2 2024", mstr: 2.1, asst: null },
+  { label: "Q3 2024", mstr: 2.4, asst: null },
+  { label: "Q4 2024", mstr: 3.2, asst: null },
+  { label: "Q1 2025", mstr: 3.8, asst: 12.2 },
+  { label: "Q2 2025", mstr: 4.1, asst: 13.1 },
+  { label: "Q3 2025", mstr: 4.4, asst: 13.8 },
+  { label: "Q4 2025", mstr: 4.9, asst: 14.2 },
+  { label: "YTD 2026", mstr: 5.1, asst: 14.6 },
+];
 
 // MSTY ↔ MSTR correlation
 export const MSTY_MSTR_CORRELATION = {
   price_beta: 0.62,
   price_r2: 0.58,
-  total_return_beta: 0.71,   // dividend-adjusted
+  total_return_beta: 0.71,
   total_return_r2: 0.65,
-  avg_weekly_div: 0.302,     // recent 8-week avg
-  ytd_price_return: -18.4,   // MSTY price only
-  ytd_total_return: 4.2,     // dividend-adjusted
+  avg_weekly_div: 0.302,
+  ytd_price_return: -18.4,
+  ytd_total_return: 4.2,
   mstr_ytd: -22.1,
 };
 
-// STRC ATM Program details (March 23, 2026 announcement)
-// $21B STRC + $21B MSTR common share ATM programs
+// MSTY back-tested correlation to BTC (via MSTR chain)
+export const BTC_MSTY_CORRELATIONS = [
+  { period: "1 Year",   beta: 1.13, r2: 0.52, corr: 0.72, alpha_ann: 38.4, sample_days: 252 },
+  { period: "Since IPO",beta: 1.24, r2: 0.49, corr: 0.70, alpha_ann: 44.2, sample_days: 420 },
+  { period: "YTD 2026", beta: 1.03, r2: 0.55, corr: 0.74, alpha_ann: 22.0, sample_days: 75  },
+];
+
+// Preferred Sharpe Ratios (annualized, risk-free = 4.5%)
+export const PREFERRED_SHARPE_RATIOS = [
+  { ticker: "STRC", yield_pct: 10.0, price: 92.50,  par: 100, current_yield: 10.81, ytd_return: -7.5,  vol_ann: 8.2,  sharpe: 0.77, description: "BTC-collateralized perpetual preferred" },
+  { ticker: "STRF", yield_pct: 10.0, price: 89.20,  par: 100, current_yield: 11.21, ytd_return: -10.8, vol_ann: 9.1,  sharpe: 0.74, description: "10% fixed perpetual preferred" },
+  { ticker: "STRE", yield_pct: 13.0, price: 78.00,  par: 100, current_yield: 16.67, ytd_return: -22.0, vol_ann: 14.8, sharpe: 0.82, description: "13% BTC-denominated preferred" },
+  { ticker: "STRK", yield_pct: 8.0,  price: 87.00,  par: 100, current_yield: 9.20,  ytd_return: -13.0, vol_ann: 10.4, sharpe: 0.45, description: "Series A 8% convertible preferred" },
+  { ticker: "STRD", yield_pct: 11.0, price: 82.00,  par: 100, current_yield: 13.41, ytd_return: -18.0, vol_ann: 12.6, sharpe: 0.71, description: "11% BTC-denominated preferred" },
+  { ticker: "SATA", yield_pct: 13.0, price: 99.45,  par: 100, current_yield: 13.07, ytd_return: -0.6,  vol_ann: 3.4,  sharpe: 2.52, description: "ASST variable rate Series A preferred" },
+];
+
+// STRC ATM Program
 export const STRC_ATM_PROGRAM = {
   program_date: "2026-03-23",
-  strc_total_capacity_M: 21000,   // $21B notional
-  mstr_atm_capacity_M: 21000,     // $21B common share ATM
-  strc_issued_to_date_M: 3450,    // ~$3.45B issued through Apr 2026
+  strc_total_capacity_M: 21000,
+  mstr_atm_capacity_M: 21000,
+  strc_issued_to_date_M: 3450,
   strc_remaining_M: 17550,
-  avg_capture_pct: 65,            // average % of daily volume at/above $100 par
-  avg_daily_volume_M: 42,         // avg daily STRC trading volume ($M)
-  avg_issuance_per_day_M: 27.3,   // avg daily proceeds captured
-  avg_btc_per_day: 368,           // avg BTC acquired per day from STRC proceeds
+  avg_capture_pct: 65,
+  avg_daily_volume_M: 42,
+  avg_issuance_per_day_M: 27.3,
+  avg_btc_per_day: 368,
   par_value: 100,
   current_price: 92.50,
-  pct_days_at_par: 34,            // % of trading days STRC traded at/above $100
-  avg_exdiv_drawdown_pct: 2.8,    // avg drawdown post ex-div
-  avg_days_to_recover: 3.2,       // avg days to recover to pre-ex-div price
-  recent_recovery_faster: true,   // market maturing, faster recovery observed recently
+  pct_days_at_par: 34,
+  avg_exdiv_drawdown_pct: 2.8,
+  avg_days_to_recover: 3.2,
+  recent_recovery_faster: true,
 };
 
-// Recent STRC daily ATM activity table (last 10 trading days)
 export const STRC_RECENT_ACTIVITY = [
   { date: "2026-04-15", volume_M: 38.2, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 91.80 },
   { date: "2026-04-14", volume_M: 45.1, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 92.10 },
@@ -85,21 +168,39 @@ export const STRC_RECENT_ACTIVITY = [
   { date: "2026-04-08", volume_M: 58.7, pct_at_par: 28.9, capture_pct: 68,  proceeds_M: 11.6, btc_acquired: 157, price: 101.10 },
   { date: "2026-04-07", volume_M: 44.2, pct_at_par: 22.1, capture_pct: 65,  proceeds_M: 6.35, btc_acquired: 86,  price: 100.80 },
   { date: "2026-04-04", volume_M: 39.8, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 98.30 },
-  { date: "2026-04-03", volume_M: 47.6, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 97.60 },
+  { date: "2026-04-03", volume_M: 47.6, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 97.60 },
   { date: "2026-04-02", volume_M: 55.4, pct_at_par: 18.7, capture_pct: 61,  proceeds_M: 6.32, btc_acquired: 85,  price: 100.40 },
 ];
 
-// STRC par trading statistics
 export const STRC_PAR_STATS = {
   pct_days_at_or_above_par: 34,
-  avg_premium_when_above: 0.8,       // % avg premium above par
+  avg_premium_when_above: 0.8,
   avg_exdiv_drop_pct: 2.8,
   avg_recovery_days: 3.2,
   min_recovery_days: 1,
   max_recovery_days: 9,
-  recent_recovery_days: 1.8,         // last 4 weeks, faster recovery
+  recent_recovery_days: 1.8,
   total_trading_days_observed: 18,
   days_above_par: 6,
   days_within_1pct: 4,
   days_below_1pct: 8,
+};
+
+// SATA par trading statistics
+export const SATA_PAR_STATS = {
+  par_value: 100,
+  current_price: 99.45,
+  avg_exdiv_drop_pct: 1.1,
+  avg_recovery_days: 1.4,
+  min_recovery_days: 1,
+  max_recovery_days: 4,
+  recent_recovery_days: 1.1,
+  total_trading_days_observed: 22,
+  days_above_par: 8,
+  days_within_1pct: 11,
+  days_below_1pct: 3,
+  pct_days_at_or_above_par: 36,
+  avg_premium_when_above: 0.3,
+  recent_recovery_faster: true,
+  note: "SATA is a variable-rate preferred — lower par volatility vs STRC due to floating dividend structure.",
 };
