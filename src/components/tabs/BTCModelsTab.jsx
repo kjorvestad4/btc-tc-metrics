@@ -132,7 +132,9 @@ Key predictions:
 
 R² ≈ 0.947 on historical data through 2021. Model diverged significantly in 2022 bear market. Critics argue S2F ignores demand entirely and is spuriously correlated.
 
-Back-test: strong predictor 2012–2021; underperformed 2022–2023. 2024–2026 partially recovering.`,
+Back-test: strong predictor 2012–2021; underperformed 2022–2023. 2024–2026 partially recovering.
+
+Live S2F chart and data: charts.blockhorizon.io/dashboard`,
   },
   powerLaw: {
     short: "Power Law Model — Creator: Giovanni Santostasi (2014+)",
