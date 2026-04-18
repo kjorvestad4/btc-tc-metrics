@@ -328,7 +328,9 @@ export default function ProjectionsPage({ liveData }) {
               <XAxis dataKey="label" tick={TICK_STYLE} />
               <YAxis tick={TICK_STYLE} />
               <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 0)} />
+              <Legend />
               <Line type="monotone" dataKey="portfolio_value" stroke="#22C55E" strokeWidth={2} name="Portfolio Value" dot={false} />
+              <Line type="monotone" dataKey="btc_nav" stroke="#F59E0B" strokeWidth={2} name="BTC Holdings Value" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
