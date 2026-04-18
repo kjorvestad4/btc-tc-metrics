@@ -114,6 +114,26 @@ export default function ProjectionsPage({ liveData }) {
     });
   }, [params]);
 
+  // Portfolio valuation projection based on user holdings
+  const [portfolioHoldings, setPortfolioHoldings] = useState({
+    MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
+  });
+
+  const portfolioProjections = useMemo(() => {
+    return projections.map(p => {
+      let portfolioVal = 0;
+      portfolioVal += portfolioHoldings.MSTR * p.mstr_price;
+      portfolioVal += portfolioHoldings.ASST * (p.btc_price * 0.0789); // ASST ~7.89% BTC exposure per share
+      portfolioVal += portfolioHoldings.STRC * 99.21;
+      portfolioVal += portfolioHoldings.SATA * 99.45;
+      portfolioVal += portfolioHoldings.STRF * 92.50;
+      portfolioVal += portfolioHoldings.STRK * 87.00;
+      portfolioVal += portfolioHoldings.STRD * 77.14;
+      portfolioVal += portfolioHoldings.MSTY * (p.msty_nav || 22.50);
+      return { ...p, portfolio_value: portfolioVal };
+    });
+  }, [projections, portfolioHoldings]);
+
   return (
     <div className="space-y-4">
       {/* Header + Export */}
@@ -160,7 +180,7 @@ export default function ProjectionsPage({ liveData }) {
         <p className="text-[10px] text-muted-foreground mb-3">
           Enter your share count for each asset. Income estimates use current dividend rates. Prices update on live refresh.
         </p>
-        <InvestmentCalculator liveData={liveData} />
+        <InvestmentCalculator liveData={liveData} onHoldingsChange={setPortfolioHoldings} />
       </Card>
 
       {/* My MSTY Investment Calculator - Moved below portfolio */}
@@ -285,31 +305,31 @@ export default function ProjectionsPage({ liveData }) {
         />
       </div>
 
-      {/* ASST + MSTY projection charts */}
+      {/* ASST + Personal Portfolio Valuation charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <SectionHeader icon={Bitcoin} title="ASST Price Projection" color="text-blue-400" />
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+            <LineChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
               <XAxis dataKey="label" tick={TICK_STYLE} />
               <YAxis tick={TICK_STYLE} />
               <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 2)} />
-              <Area type="monotone" dataKey="asst_price" stroke="#60A5FA" fill="rgba(96, 165, 250, 0.2)" name="ASST Price" />
-            </AreaChart>
+              <Line type="monotone" dataKey="btc_price" stroke="#60A5FA" strokeWidth={2} name="BTC Price" dot={false} />
+            </LineChart>
           </ResponsiveContainer>
         </Card>
 
         <Card>
-          <SectionHeader icon={BarChart3} title="MSTY Dividend Projection" color="text-amber-400" />
+          <SectionHeader icon={Users} title="Your Portfolio Valuation (by Scenario)" color="text-green-400" />
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+            <LineChart data={portfolioProjections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
               <XAxis dataKey="label" tick={TICK_STYLE} />
               <YAxis tick={TICK_STYLE} />
-              <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 4)} />
-              <Area type="monotone" dataKey="msty_dividend_monthly" stroke="#F59E0B" fill="rgba(245, 158, 11, 0.2)" name="Monthly Dividend/Share" />
-            </AreaChart>
+              <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 0)} />
+              <Line type="monotone" dataKey="portfolio_value" stroke="#22C55E" strokeWidth={2} name="Portfolio Value" dot={false} />
+            </LineChart>
           </ResponsiveContainer>
         </Card>
       </div>

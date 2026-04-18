@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/calculations";
@@ -73,10 +73,15 @@ function AssetRow({ ticker, asset, price, shares, setShares, annualIncome }) {
   );
 }
 
-export default function InvestmentCalculator({ liveData }) {
+export default function InvestmentCalculator({ liveData, onHoldingsChange }) {
   const [holdings, setHoldings] = useState({
     MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
   });
+
+  // Notify parent component of holdings changes
+  useEffect(() => {
+    if (onHoldingsChange) onHoldingsChange(holdings);
+  }, [holdings, onHoldingsChange]);
 
   // Live prices
   const prices = {
