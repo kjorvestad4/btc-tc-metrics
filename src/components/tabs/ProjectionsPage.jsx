@@ -123,14 +123,15 @@ export default function ProjectionsPage({ liveData }) {
     return projections.map(p => {
       let portfolioVal = 0;
       portfolioVal += portfolioHoldings.MSTR * p.mstr_price;
-      portfolioVal += portfolioHoldings.ASST * (p.btc_price * 0.0789); // ASST ~7.89% BTC exposure per share
+      portfolioVal += portfolioHoldings.ASST * (p.btc_price * 0.0789);
       portfolioVal += portfolioHoldings.STRC * 99.21;
       portfolioVal += portfolioHoldings.SATA * 99.45;
       portfolioVal += portfolioHoldings.STRF * 92.50;
       portfolioVal += portfolioHoldings.STRK * 87.00;
       portfolioVal += portfolioHoldings.STRD * 77.14;
       portfolioVal += portfolioHoldings.MSTY * (p.msty_nav || 22.50);
-      return { ...p, portfolio_value: portfolioVal };
+      const btcNavVal = p.btc_holdings * p.btc_price;
+      return { ...p, portfolio_value: portfolioVal, btc_nav: btcNavVal };
     });
   }, [projections, portfolioHoldings]);
 
