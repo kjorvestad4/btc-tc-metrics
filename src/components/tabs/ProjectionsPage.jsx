@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Download, TrendingUp, BarChart3, Activity, Zap, Users, Bitcoin } from "lucide-react";
 import CAGRModule from "./CAGRModule";
 import InvestmentCalculator from "./InvestmentCalculator";
-import { formatCurrency, formatPercent, generateProjections, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, calcMSTYDividend } from "@/lib/calculations";
+import { formatCurrency, formatPercent, formatNumber, generateProjections, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, calcMSTYDividend } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import ProjectionChart from "../dashboard/ProjectionChart";
 import ProjectionsTable from "./ProjectionsTable";
@@ -36,8 +36,11 @@ export default function ProjectionsPage({ liveData }) {
   // Custom CAGR sliders
   const [btcCagr, setBtcCagr] = useState(40);
   const [mstrPremium, setMstrPremium] = useState(1.0);
+  const [mstrAmpRatio, setMstrAmpRatio] = useState(3.0);
   const [dilutionRate, setDilutionRate] = useState(1.5);
   const [accumulation, setAccumulation] = useState(15000);
+  const [asstPremium, setAsstPremium] = useState(1.0);
+  const [asstAmpRatio, setAsstAmpRatio] = useState(2.5);
   const [projectionYears, setProjectionYears] = useState(5);
 
   // MSTY calculator
@@ -255,14 +258,17 @@ export default function ProjectionsPage({ liveData }) {
               { label: "BTC CAGR", value: btcCagr, set: setBtcCagr, min: 5, max: 150, step: 5, suffix: "%", color: "text-amber-400" },
               { label: "Quarterly BTC Accumulation", value: accumulation, set: setAccumulation, min: 1000, max: 100000, step: 1000, suffix: " BTC", color: "text-primary" },
               { label: "MSTR Premium Multiple", value: mstrPremium, set: setMstrPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-cyan-400" },
+              { label: "MSTR Amplification Ratio", value: mstrAmpRatio, set: setMstrAmpRatio, min: 0.5, max: 5.0, step: 0.1, suffix: "x", color: "text-primary" },
+              { label: "ASST Premium Multiple", value: asstPremium, set: setAsstPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-blue-400" },
+              { label: "ASST Amplification Ratio", value: asstAmpRatio, set: setAsstAmpRatio, min: 0.5, max: 5.0, step: 0.1, suffix: "x", color: "text-cyan-400" },
               { label: "Quarterly Dilution Rate", value: dilutionRate, set: setDilutionRate, min: 0.5, max: 5.0, step: 0.25, suffix: "%", color: "text-orange-400" },
             ].map(s => (
               <div key={s.label} className="space-y-2">
                 <div className="flex justify-between">
                   <Label className={`text-xs ${s.color} font-semibold`}>{s.label}</Label>
-                  <span className={`text-xs font-mono font-bold ${s.color}`}>{s.value}{s.suffix}</span>
+                  <span className={`text-xs font-mono font-bold ${s.color}`}>{s.value.toFixed(s.label.includes("CAGR") || s.label.includes("Rate") ? 1 : 2)}{s.suffix}</span>
                 </div>
-                <Slider value={[s.value]} onValueChange={([v]) => s.set(v)} min={s.min} max={s.max} step={s.step} />
+                <Slider value={[s.value]} onValueChange={([v]) => s.set(v)} min={s.min} max={s.max} step={s.step} className="cursor-pointer" />
               </div>
             ))}
             <div className="space-y-2">
@@ -270,7 +276,7 @@ export default function ProjectionsPage({ liveData }) {
                 <Label className="text-xs text-muted-foreground font-semibold">Projection Years</Label>
                 <span className="text-xs font-mono font-bold text-foreground">{projectionYears}Y</span>
               </div>
-              <Slider value={[projectionYears]} onValueChange={([v]) => setProjectionYears(v)} min={1} max={10} step={1} />
+              <Slider value={[projectionYears]} onValueChange={([v]) => setProjectionYears(v)} min={1} max={10} step={1} className="cursor-pointer" />
             </div>
           </div>
         </Card>
@@ -311,6 +317,20 @@ export default function ProjectionsPage({ liveData }) {
           height={260}
         />
       </div>
+
+      {/* Strategy BTC Accumulation Graph */}
+      <Card>
+        <SectionHeader icon={Bitcoin} title="Strategy BTC Accumulation Projection" color="text-amber-400" />
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
+            <XAxis dataKey="label" tick={TICK_STYLE} />
+            <YAxis tick={TICK_STYLE} />
+            <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatNumber(v)} />
+            <Line type="monotone" dataKey="btc_holdings" stroke="#F59E0B" strokeWidth={2.5} name="Total BTC Holdings" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </Card>
 
       {/* ASST + Personal Portfolio Valuation charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

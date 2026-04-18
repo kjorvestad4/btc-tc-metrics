@@ -199,8 +199,9 @@ function CAGRAssumptionSliders({ params, onParamsChange }) {
               </div>
               <Slider
                 value={[val]}
-                onValueChange={([v]) => onParamsChange({ ...params, [s.key]: v })}
+                onValueChange={([newVal]) => onParamsChange({ ...params, [s.key]: newVal })}
                 min={s.min} max={s.max} step={s.step}
+                className="cursor-pointer"
               />
             </div>
           );
