@@ -199,7 +199,10 @@ function CAGRAssumptionSliders({ params, onParamsChange }) {
               </div>
               <Slider
                 value={[Number(val)]}
-                onValueChange={(vals) => onParamsChange({ ...params, [s.key]: Number(vals[0]) })}
+                onValueChange={(vals) => {
+                  console.log("CAGR slider changed:", s.key, vals[0]);
+                  onParamsChange({ ...params, [s.key]: Number(vals[0]) });
+                }}
                 min={s.min}
                 max={s.max}
                 step={s.step}
