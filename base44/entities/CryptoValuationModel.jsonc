@@ -1,0 +1,77 @@
+{
+  "name": "CryptoValuationModel",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Model title"
+    },
+    "model_type": {
+      "type": "string",
+      "enum": [
+        "stock_to_flow",
+        "power_law",
+        "metcalfe",
+        "rainbow_chart",
+        "other"
+      ],
+      "description": "Type of valuation model"
+    },
+    "overview": {
+      "type": "string",
+      "description": "Overview and origin section"
+    },
+    "core_formula": {
+      "type": "string",
+      "description": "Core formula and calculation steps"
+    },
+    "mathematical_regression": {
+      "type": "string",
+      "description": "Mathematical regression and price prediction formula"
+    },
+    "extensions": {
+      "type": "string",
+      "description": "Extensions and variants (e.g., S2FX)"
+    },
+    "historical_performance": {
+      "type": "string",
+      "description": "Application to halvings and historical performance"
+    },
+    "criticisms_limitations": {
+      "type": "string",
+      "description": "Criticisms, limitations, edge cases, and nuances"
+    },
+    "current_status": {
+      "type": "string",
+      "description": "Current status and practical implications"
+    },
+    "sources": {
+      "type": "string",
+      "description": "Sources and last updated date"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "description": "Whether this is the primary reference for queries",
+      "default": false
+    },
+    "author": {
+      "type": "string",
+      "description": "Model author/creator"
+    },
+    "publication_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Original publication date"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date",
+      "description": "Last updated date"
+    }
+  },
+  "required": [
+    "title",
+    "model_type",
+    "overview"
+  ]
+}
