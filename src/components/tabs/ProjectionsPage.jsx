@@ -122,6 +122,7 @@ export default function ProjectionsPage({ liveData }) {
   const portfolioProjections = useMemo(() => {
     return projections.map(p => {
       let portfolioVal = 0;
+      portfolioVal += portfolioHoldings.BTC * p.btc_price;
       portfolioVal += portfolioHoldings.MSTR * p.mstr_price;
       portfolioVal += portfolioHoldings.ASST * (p.btc_price * 0.0789);
       portfolioVal += portfolioHoldings.STRC * 99.21;
