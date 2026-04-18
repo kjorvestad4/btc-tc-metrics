@@ -75,8 +75,9 @@ function AssetRow({ ticker, asset, price, shares, setShares, annualIncome }) {
 
 export default function InvestmentCalculator({ liveData, onHoldingsChange }) {
   const [holdings, setHoldings] = useState({
-    MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
+    BTC: 0, MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
   });
+  const [btcUnit, setBtcUnit] = useState("coins"); // "coins" or "sats"
 
   // Notify parent component of holdings changes
   useEffect(() => {
@@ -139,6 +140,47 @@ export default function InvestmentCalculator({ liveData, onHoldingsChange }) {
       {/* Individual asset rows */}
       <div className="space-y-2">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">Growth Assets</p>
+        
+        {/* BTC Row */}
+        <div className="bg-secondary/30 border border-border rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bitcoin className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-sm font-bold text-amber-400">BTC</span>
+              <span className="text-[10px] text-muted-foreground hidden sm:inline">Bitcoin held</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setBtcUnit(btcUnit === "coins" ? "sats" : "coins")}
+                className="text-[10px] px-2 py-1 rounded border border-border bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
+              >
+                {btcUnit === "coins" ? "SATs" : "Coins"}
+              </button>
+              <span className="text-xs font-mono text-foreground">${(liveData?.btc_price ?? 84000).toLocaleString()}/BTC</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="text-[10px] text-muted-foreground w-14 shrink-0">{btcUnit === "coins" ? "BTC" : "SATs"}</Label>
+            <Input
+              type="number"
+              value={holdings.BTC || ""}
+              onChange={e => setShares("BTC", Math.max(0, parseFloat(e.target.value) || 0))}
+              className="h-7 text-xs font-mono bg-card border-border flex-1"
+              min={0}
+              placeholder="0"
+            />
+            <div className="text-right shrink-0 w-28">
+              <p className="text-xs font-mono font-bold text-amber-400">
+                {btcUnit === "coins" 
+                  ? `₿${holdings.BTC.toFixed(4)}` 
+                  : `${(holdings.BTC * 1e8).toLocaleString(undefined, {maximumFractionDigits: 0})} sats`}
+              </p>
+              <p className="text-[10px] font-mono text-foreground">${formatCurrency(holdings.BTC * (liveData?.btc_price ?? 84000), 0)}</p>
+            </div>
+          </div>
+        </div>
+
         {["MSTR", "ASST"].map(t => (
           <AssetRow key={t} ticker={t} asset={ASSET_DEFAULTS[t]} price={prices[t]}
             shares={holdings[t]} setShares={v => setShares(t, v)} annualIncome={null} />
