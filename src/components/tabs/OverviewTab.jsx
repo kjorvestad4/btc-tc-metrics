@@ -44,7 +44,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
 
   // Prices
-  const strcPrice = liveData?.strc_price ?? null;
+  const strcPrice = liveData?.strc_price ?? liveData?.strc_data?.price ?? null;
   const sataPrice = liveData?.sata_price ?? 99.45;
   const mstyPrice = liveData?.msty_price ?? params.msty_nav;
 
@@ -120,7 +120,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
           value={strcPrice ? formatCurrency(strcPrice, 2) : "—"}
           icon={Layers}
           accentClass="text-purple-400"
-          subtitle={strcPrice ? "Live" : "Add Polygon key"}
+          subtitle={strcPrice ? "Live" : "Refresh to load"}
         />
         <MetricCard
           title="SATA Share Price"
