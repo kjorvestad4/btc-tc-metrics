@@ -111,6 +111,7 @@ export default function Dashboard() {
         refreshing={refreshing}
         liveData={liveData}
         hasPolygonKey={!!polygonKey}
+        params={params}
       />
 
       <main className="p-4 lg:p-6">
