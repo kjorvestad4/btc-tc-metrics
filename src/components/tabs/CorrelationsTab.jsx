@@ -526,13 +526,46 @@ function GreeksChartsPanel() {
 }
 
 // ── Preferred Sharpe Ratios panel ─────────────────────────────────────────────
-function PreferredSharpePanel() {
-  const barData = PREFERRED_SHARPE_RATIOS.map((p) => ({ ...p, color: p.sharpe >= 1.5 ? "#22C55E" : p.sharpe >= 0.7 ? "#F59E0B" : "#EF4444" }));
+function PreferredSharpePanel({ liveData }) {
+  // Map liveData prices by ticker
+  const livePrices = {
+    STRC: liveData?.strc_price ?? null,
+    STRF: liveData?.strf_price ?? null,
+    STRE: liveData?.stre_price ?? null,
+    STRK: liveData?.strk_price ?? null,
+    STRD: liveData?.strd_price ?? null,
+    SATA: liveData?.sata_price ?? null,
+  };
+  const hasLive = Object.values(livePrices).some((v) => v != null);
+
+  // Merge live prices into the static data and recompute yields/sharpe
+  const enriched = PREFERRED_SHARPE_RATIOS.map((p) => {
+    const price = livePrices[p.ticker] ?? p.price;
+    const isLive = livePrices[p.ticker] != null;
+    // Par yield = fixed coupon / $100 par (always constant)
+    const par_yield = p.yield_pct;
+    // Effective yield = annual coupon $ / current market price
+    const annual_coupon = p.par * (p.yield_pct / 100);
+    const current_yield = (annual_coupon / price) * 100;
+    const sharpe = parseFloat(((current_yield - RISK_FREE_RATE) / p.vol_30d).toFixed(2));
+    return { ...p, price, isLive, par_yield, current_yield: parseFloat(current_yield.toFixed(2)), sharpe };
+  });
+
+  const barData = enriched.map((p) => ({ ...p, color: p.sharpe >= 1.5 ? "#22C55E" : p.sharpe >= 0.7 ? "#F59E0B" : "#EF4444" }));
+
   return (
     <Card className="col-span-1 lg:col-span-2">
-      <SectionHeader icon={BarChart3} title="Preferred Stock Sharpe Ratios" color="text-cyan-400" />
+      <div className="flex items-center justify-between mb-1">
+        <SectionHeader icon={BarChart3} title="Preferred Stock Sharpe Ratios" color="text-cyan-400" />
+        {hasLive && (
+          <span className="text-[10px] bg-primary/15 text-primary border border-primary/25 rounded-full px-2 py-0.5 font-medium">
+            Live prices (Polygon)
+          </span>
+        )}
+      </div>
       <p className="text-[10px] text-muted-foreground mb-4">
-        (Effective Yield − Risk-Free Rate) ÷ 30D Historical Volatility. Risk-free = 3M T-Bill rate (4.35%, Apr 2026). Higher = better risk-adjusted income.
+        (Effective Yield − Risk-Free Rate) ÷ 30D Historical Volatility. Risk-free = 3M T-Bill (4.35%). Effective Yield = Annual Coupon ÷ Live Price.
+        {!hasLive && <span className="text-amber-400"> — Add Polygon key &amp; Refresh to load live prices.</span>}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="overflow-x-auto">
@@ -541,16 +574,23 @@ function PreferredSharpePanel() {
               <tr className="border-b border-border text-muted-foreground">
                 <th className="text-left py-1.5 pr-2 font-medium">Ticker</th>
                 <th className="text-right py-1.5 pr-2 font-medium">Price</th>
+                <th className="text-right py-1.5 pr-2 font-medium">Par Yield</th>
                 <th className="text-right py-1.5 pr-2 font-medium">Eff. Yield</th>
                 <th className="text-right py-1.5 pr-2 font-medium">Vol (30D)</th>
-                <th className="text-right py-1.5 font-medium">Sharpe (30D)</th>
+                <th className="text-right py-1.5 font-medium">Sharpe</th>
               </tr>
             </thead>
             <tbody>
-              {PREFERRED_SHARPE_RATIOS.map((p) => (
+              {enriched.map((p) => (
                 <tr key={p.ticker} className="border-b border-border/30 hover:bg-secondary/30">
                   <td className="py-1.5 pr-2 font-mono font-bold text-primary">{p.ticker}</td>
-                  <td className="py-1.5 pr-2 text-right font-mono text-foreground">${p.price.toFixed(2)}</td>
+                  <td className="py-1.5 pr-2 text-right font-mono">
+                    <span className={p.isLive ? "text-cyan-400 font-semibold" : "text-foreground"}>
+                      ${p.price.toFixed(2)}
+                    </span>
+                    {p.isLive && <span className="text-[8px] text-cyan-400/60 ml-0.5">●</span>}
+                  </td>
+                  <td className="py-1.5 pr-2 text-right font-mono text-muted-foreground">{p.par_yield.toFixed(2)}%</td>
                   <td className="py-1.5 pr-2 text-right font-mono text-green-400">{p.current_yield.toFixed(2)}%</td>
                   <td className="py-1.5 pr-2 text-right font-mono text-muted-foreground">{p.vol_30d.toFixed(1)}%</td>
                   <td className={`py-1.5 text-right font-mono font-bold ${p.sharpe >= 1.5 ? "text-green-400" : p.sharpe >= 0.7 ? "text-amber-400" : "text-destructive"}`}>
@@ -836,7 +876,7 @@ function ParStatsPanel({ title, color, stats }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export default function CorrelationsTab({ params, onParamsChange }) {
+export default function CorrelationsTab({ params, onParamsChange, liveData }) {
   const [activeSection, setActiveSection] = useState("correlations");
 
   return (
@@ -914,7 +954,7 @@ export default function CorrelationsTab({ params, onParamsChange }) {
 
         {/* Preferred Sharpe Ratios — full width */}
         <div className="grid grid-cols-1 gap-4">
-          <PreferredSharpePanel />
+          <PreferredSharpePanel liveData={liveData} />
         </div>
 
         {/* STRC ATM — full width */}

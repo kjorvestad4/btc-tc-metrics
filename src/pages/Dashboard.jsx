@@ -217,7 +217,7 @@ export default function Dashboard() {
               <PreferredTab params={params} preferreds={preferreds} projections={projections} />
             </TabsContent>
             <TabsContent value="correlations">
-              <CorrelationsTab params={params} onParamsChange={setParams} />
+              <CorrelationsTab params={params} onParamsChange={setParams} liveData={liveData} />
             </TabsContent>
             <TabsContent value="strc">
               <STRCModelTab
