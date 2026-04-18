@@ -2,10 +2,9 @@ import React, { useState } from "react";
 import ProjectionChart from "../dashboard/ProjectionChart";
 import MetricCard from "../dashboard/MetricCard";
 import { BarChart3, DollarSign, Percent, Activity, RefreshCw, Wifi, Users } from "lucide-react";
+// Investment calculator moved to Projections page
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { formatCurrency, formatPercent, calcMSTYDividend } from "@/lib/calculations";
+import { formatCurrency, calcMSTYDividend } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 
 // MSTY fund-level facts (April 2026)
@@ -13,33 +12,19 @@ const MSTY_SHARES_OUTSTANDING = 275_000_000; // ~275M shares outstanding
 const MSTY_MGMT_FEE = 0.99; // % annual management fee
 
 export default function MSTYModelTab({ params, projections, liveData, onRefresh, refreshing }) {
-  const [shareQty, setShareQty] = useState(1000);
 
   // Live values
   const mstySharePrice = liveData?.msty_price ?? params.msty_nav;
   const latestWeeklyDiv = liveData?.msty_latest_div ?? 0.3051;
   const annualDivFromWeekly = latestWeeklyDiv * 52;
 
-  // MSTY NAV = total fund AUM = share price × shares outstanding
-  // (For an ETF, NAV per share ≈ share price; total NAV = price × shares outstanding)
+  // MSTY Total AUM
   const mstyTotalNavAUM = mstySharePrice * MSTY_SHARES_OUTSTANDING;
-  const mstyNavPerShare = mstySharePrice; // ETF NAV/share ≈ market price for liquid ETFs
 
-  // Current yield based on actual weekly div
-  const currentYield = mstySharePrice > 0 ? (annualDivFromWeekly / mstySharePrice) * 100 : 0;
-
-  // Model-driven monthly dividend (PunterJeff formula) — per share
-  // MSTR price × IV × sqrt(1/12) × participation rate = monthly premium per unit of MSTR
-  // MSTY NAV per share ≈ MSTR price × participation, so scale accordingly
+  // Model-driven monthly dividend (PunterJeff formula)
   const monthlyDivPerShare = calcMSTYDividend(params.mstr_price, params.mstr_iv, params.msty_participation_rate);
-  const annualDivModelPerShare = monthlyDivPerShare * 12;
-  const modelYield = mstySharePrice > 0 ? (annualDivModelPerShare / mstySharePrice) * 100 : 0;
 
-  // User's investment calculator
-  const investmentValue = shareQty * mstySharePrice;
-  const annualIncomeActual = shareQty * annualDivFromWeekly;
-  const annualIncomeModel = shareQty * annualDivModelPerShare;
-  const weeklyIncomeActual = shareQty * latestWeeklyDiv;
+  // (Investment calculator moved to Projections page)
 
   const isLive = !!liveData;
 
@@ -91,72 +76,38 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
             accentClass="text-amber-400"
           />
           <MetricCard
-            title="MSTY Total AUM (NAV)"
+            title="MSTY Total AUM"
             value={formatCurrency(mstyTotalNavAUM)}
             subtitle={`${(MSTY_SHARES_OUTSTANDING / 1e6).toFixed(0)}M shares × price`}
             icon={DollarSign}
             accentClass="text-cyan-400"
-            tooltip="Total fund NAV = Share Price × Shares Outstanding (~275M). This is the total value of all MSTY assets under management, not the per-share price."
           />
           <MetricCard
             title="Latest Weekly Div/Share"
             value={`$${latestWeeklyDiv.toFixed(4)}`}
-            subtitle={`$${annualDivFromWeekly.toFixed(2)}/yr annualized`}
+            subtitle={`~$${(latestWeeklyDiv * 4.33).toFixed(2)}/month`}
             icon={BarChart3}
             accentClass="text-green-400"
-            tooltip="Apr 9, 2026 ex-date distribution per share. Annualized = weekly × 52."
+            tooltip="Recent weekly payout. Monthly ~$1.00–$1.25/share. Annualized run rate shown."
           />
           <MetricCard
-            title="Current Yield"
-            value={formatPercent(currentYield)}
-            subtitle="Weekly div × 52 ÷ share price"
+            title="8-Week Avg Monthly Est."
+            value={`$${((MSTY_DISTRIBUTION_HISTORY.reduce((s,d) => s+d.amount,0)/MSTY_DISTRIBUTION_HISTORY.length)*4.33).toFixed(2)}`}
+            subtitle="per share (back-tested)"
             icon={Percent}
-            accentClass="text-amber-400"
+            accentClass="text-primary"
           />
         </div>
       </div>
 
-      {/* Share Qty Calculator */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-cyan-400" />
-          <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">My MSTY Investment Calculator</h4>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Number of Shares</Label>
-            <Input
-              type="number"
-              value={shareQty}
-              onChange={(e) => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
-              className="h-8 text-sm font-mono bg-secondary border-border"
-              min={0}
-            />
-            <p className="text-[10px] text-muted-foreground">Investment value: <span className="text-foreground font-mono font-semibold">{formatCurrency(investmentValue, 2)}</span></p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2.5 bg-secondary/50 rounded-lg border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Weekly Income</p>
-              <p className="text-base font-bold font-mono text-green-400">{formatCurrency(weeklyIncomeActual, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">at latest rate</p>
-            </div>
-            <div className="p-2.5 bg-secondary/50 rounded-lg border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Annual Income</p>
-              <p className="text-base font-bold font-mono text-green-400">{formatCurrency(annualIncomeActual, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">at latest rate × 52</p>
-            </div>
-            <div className="p-2.5 bg-secondary/50 rounded-lg border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Model Monthly</p>
-              <p className="text-base font-bold font-mono text-cyan-400">{formatCurrency(shareQty * monthlyDivPerShare, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">PunterJeff formula</p>
-            </div>
-            <div className="p-2.5 bg-secondary/50 rounded-lg border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Model Annual</p>
-              <p className="text-base font-bold font-mono text-cyan-400">{formatCurrency(annualIncomeModel, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">model × 12</p>
-            </div>
-          </div>
-        </div>
+      {/* Brief calculator note — full calculator is on Projections page */}
+      <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+        <Users className="w-4 h-4 text-cyan-400 shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          <span className="text-foreground font-medium">MSTY Investment Calculator</span> has moved to the{" "}
+          <button className="text-primary underline underline-offset-2 font-medium">Projections</button>{" "}
+          tab — with full scenario sliders and CSV export.
+        </p>
       </div>
 
       {/* Distribution history + model */}
@@ -218,7 +169,10 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
             <p className="text-[10px] text-muted-foreground mt-1">
               = ${params.mstr_price.toLocaleString()} × {params.mstr_iv}% × 0.289 × {params.msty_participation_rate}%
             </p>
-            <p className="text-xs font-mono text-cyan-400 mt-1">= {formatCurrency(monthlyDivPerShare, 4)}/share/month</p>
+            <p className="text-xs font-mono text-cyan-400 mt-1">
+              = {formatCurrency(monthlyDivPerShare, 4)}/share/month
+              <span className="text-muted-foreground ml-2">(back-tested avg: ~$1.00–$1.25/month)</span>
+            </p>
             <p className="text-[10px] text-muted-foreground/60 mt-1">
               Note: This is a rough model estimate. Actual distributions depend on realized IV, option strike selection, and roll mechanics.
             </p>
@@ -257,24 +211,13 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
         </div>
       </div>
 
-      {/* Projection charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ProjectionChart
-          title="MSTY Monthly Dividend/Share Projection (Model)"
-          data={mstyData}
-          lines={[{ key: "msty_dividend_monthly", name: "Monthly Div/Share ($)", color: "#22C55E" }]}
-          height={260}
-        />
-        <ProjectionChart
-          title="MSTY NAV (per share) & Annualized Yield"
-          data={mstyData}
-          lines={[
-            { key: "msty_nav", name: "NAV/Share ($)", color: "#06B6D4" },
-            { key: "msty_yield", name: "Yield (%)", color: "#F59E0B" },
-          ]}
-          height={260}
-        />
-      </div>
+      {/* Monthly div projection chart */}
+      <ProjectionChart
+        title="MSTY Monthly Dividend/Share Projection (PunterJeff Model)"
+        data={mstyData}
+        lines={[{ key: "msty_dividend_monthly", name: "Monthly Div/Share ($)", color: "#22C55E" }]}
+        height={260}
+      />
     </div>
   );
 }

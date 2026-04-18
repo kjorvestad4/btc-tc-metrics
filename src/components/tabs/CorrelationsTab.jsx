@@ -898,7 +898,7 @@ export default function CorrelationsTab({ params, onParamsChange, liveData }) {
           {["correlations", "cagr"].map((s) => (
             <button key={s} onClick={() => setActiveSection(s)}
               className={`text-xs px-3 py-1 rounded-lg border transition-colors ${activeSection === s ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>
-              {s === "correlations" ? "Correlations & Analytics" : "CAGR Module"}
+              {s === "correlations" ? "Correlations & Analytics" : "CAGR Module (also on Projections tab)"}
             </button>
           ))}
         </div>

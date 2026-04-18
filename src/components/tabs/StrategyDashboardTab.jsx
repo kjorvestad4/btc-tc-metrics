@@ -249,6 +249,9 @@ function Section({ title, icon: Icon, color, children }) {
   );
 }
 
+// Official constants from strategy.com (April 2026)
+const MSTR_CASH_M = 2250; // $2.25B USD cash reserve
+
 export default function StrategyDashboardTab({ params, preferreds, projections, liveData, onRefresh, refreshing }) {
   const now = projections[0] || {};
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
@@ -261,10 +264,10 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
   const dilutedSharesM = params.mstr_shares_outstanding * 1.18; // ~18% dilution from converts + preferred
   const bpsInSats = (params.mstr_btc_holdings / (dilutedSharesM * 1e6)) * 1e8;
 
-  // BTC Yield estimate (annualized, based on accumulation vs dilution)
-  const annualBtcAccum = params.btc_accumulation_per_quarter * 4;
-  const annualDilutedShares = params.mstr_shares_outstanding * (1 + params.dilution_rate_per_quarter / 100 * 4);
-  const btcYieldEst = ((annualBtcAccum / params.mstr_btc_holdings) - (params.dilution_rate_per_quarter * 4 / 100)) * 100;
+  // Official BTC Yield figures (from strategy.com/btc)
+  const btcYieldYTD = 5.6;  // YTD 2026 official
+  const btcYieldQTD = 1.4;  // Q1 2026 approximate
+  const btcYieldEst = btcYieldYTD;
 
   // BTC $ Gain (quarterly)
   const qtrBtcGain = params.btc_accumulation_per_quarter * params.btc_price;
@@ -315,9 +318,9 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
           <StatRow label="BTC Holdings" value={params.mstr_btc_holdings.toLocaleString()} sub="total BTC" accent="text-amber-400" live={isLive && !!liveData?.btc_holdings} />
           <StatRow label="BTC Price" value={formatCurrency(params.btc_price)} sub="USD / BTC" accent="text-amber-400" live={isLive && !!liveData?.btc_price} />
           <StatRow label="BTC Reserve Value" value={formatCurrency(btcReserve)} sub="total USD value" defKey="btcReserve" accent="text-amber-400" />
-          <StatRow label="Avg Cost Basis" value={formatCurrency(43_500)} sub="est. ~$43,500/BTC" accent="text-muted-foreground" />
-          <StatRow label="Unrealized Gain" value={formatPercent(((params.btc_price / 43500) - 1) * 100)} sub="vs avg cost" accent={params.btc_price > 43500 ? "text-primary" : "text-destructive"} />
-          <StatRow label="BTC/Qtr Accumulation" value={params.btc_accumulation_per_quarter.toLocaleString()} sub="BTC per quarter" accent="text-primary" />
+          <StatRow label="Avg Cost Basis" value={formatCurrency(75_577)} sub="official strategy.com" accent="text-muted-foreground" />
+          <StatRow label="Unrealized Gain" value={`+${(((params.btc_price / 75577) - 1) * 100).toFixed(1)}%`} sub="vs $75,577 avg cost" accent={params.btc_price > 75577 ? "text-primary" : "text-destructive"} />
+          <StatRow label="BTC/Qtr Accumulation" value="~15,000" sub="from tnorth.com/tools/strategy-1m-btc" accent="text-primary" />
         </Section>
 
         {/* MSTR Equity */}
@@ -333,14 +336,13 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
 
         {/* KPIs */}
         <Section title="Strategy KPIs" icon={Zap} color="text-cyan-400">
-          <StatRow label="BPS (Satoshis)" value={Math.round(bpsInSats).toLocaleString()} sub="sats per diluted share" defKey="bps" accent="text-amber-400" />
-          <StatRow label="BTC Yield (est. ann.)" value={formatPercent(Math.max(0, btcYieldEst))} sub="accretion vs dilution" defKey="btcYield" accent={btcYieldEst > 0 ? "text-primary" : "text-destructive"} />
-          <StatRow label="BTC $ Gain (Qtr)" value={formatCurrency(qtrBtcGain)} sub="quarterly BTC acq × price" defKey="btcDollarGain" accent="text-primary" />
-          <StatRow label="Net Leverage" value={formatPercent(((totalPrefLiq + 3.7e9 - 700e6) / btcReserve) * 100, 1)} sub="(pref+converts−cash)÷BTC reserve" defKey="netLeverage" accent="text-amber-400" />
+          <StatRow label="BPS (Satoshis)" value="205,000" sub="official strategy.com/btc" defKey="bps" accent="text-amber-400" />
+          <StatRow label="BTC Yield (YTD 2026)" value={`${btcYieldYTD}%`} sub="official strategy.com/btc" defKey="btcYield" accent="text-primary" />
+          <StatRow label="BTC Yield (QTD)" value={`${btcYieldQTD}%`} sub="current quarter estimate" accent="text-primary" />
+          <StatRow label="BTC $ Gain (Qtr est.)" value={formatCurrency(qtrBtcGain)} sub="quarterly BTC acq × price" defKey="btcDollarGain" accent="text-primary" />
+          <StatRow label="Net Leverage" value={formatPercent(((totalPrefLiq + 3.7e9 - MSTR_CASH_M * 1e6) / btcReserve) * 100, 1)} sub="(pref+converts−cash)÷BTC reserve" defKey="netLeverage" accent="text-amber-400" />
           <StatRow label="BTC Coverage Ratio" value={`${(btcReserve / (totalPrefLiq + 3.7e9)).toFixed(1)}x`} sub="BTC reserve ÷ all fixed obligs" defKey="btcRating" accent="text-primary" />
           <StatRow label="MSTR IV" value={`${params.mstr_iv}%`} sub="30-day implied vol" live={isLive && !!liveData?.mstr_iv} accent="text-purple-400" />
-          <StatRow label="Dilution/Qtr" value={`${params.dilution_rate_per_quarter}%`} sub="ATM + convert dilution" accent="text-amber-400" />
-          <StatRow label="Earnings CAGR" value={`${params.earnings_cagr}%`} sub="PunterJeff target" accent="text-foreground" />
         </Section>
 
       </div>
@@ -367,9 +369,9 @@ export default function StrategyDashboardTab({ params, preferreds, projections, 
           <StatRow label="Market Cap (Common)" value={formatCurrency(marketCap)} accent="text-primary" />
           <StatRow label="Preferred Notional" value={formatCurrency(totalPrefLiq)} accent="text-purple-400" />
           <StatRow label="Convertible Notes (est.)" value={formatCurrency(3.7e9)} sub="~$3.7B outstanding" accent="text-amber-400" />
-          <StatRow label="Cash & Equiv. (est.)" value={formatCurrency(700e6)} sub="~$700M" accent="text-muted-foreground" />
-          <StatRow label="Enterprise Value (est.)" value={formatCurrency(marketCap + totalPrefLiq + 3.7e9 - 700e6)} defKey="enterpriseValue" accent="text-cyan-400" />
-          <StatRow label="EV ÷ BTC Reserve" value={`${((marketCap + totalPrefLiq + 3.7e9 - 700e6) / btcReserve).toFixed(2)}x`} sub="premium to pure BTC" accent="text-amber-400" />
+          <StatRow label="USD Cash Reserve" value={formatCurrency(MSTR_CASH_M * 1e6)} sub="$2.25B official" accent="text-muted-foreground" />
+          <StatRow label="Enterprise Value (est.)" value={formatCurrency(marketCap + totalPrefLiq + 3.7e9 - MSTR_CASH_M * 1e6)} defKey="enterpriseValue" accent="text-cyan-400" />
+          <StatRow label="EV ÷ BTC Reserve (mNAV)" value={`${((marketCap + totalPrefLiq + 3.7e9 - MSTR_CASH_M * 1e6) / btcReserve).toFixed(2)}x`} sub="official ~1.26x" accent="text-amber-400" />
         </Section>
       </div>
 
