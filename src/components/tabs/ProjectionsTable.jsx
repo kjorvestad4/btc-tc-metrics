@@ -58,12 +58,12 @@ export default function ProjectionsTable({ projections, params }) {
               className={`${i === 0 ? "bg-primary/5" : "hover:bg-secondary/30"} transition-colors`}>
               
                 <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] font-mono text-xs text-foreground hidden">{row.label}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-amber-400">{formatCurrency(row.btc_price)}</TableCell>
-                <TableCell className="text-right font-mono text-xs">{formatNumber(row.btc_holdings)}</TableCell>
-                <TableCell className="text-right font-mono text-xs">{row.shares_outstanding_m.toFixed(1)}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-blue-400">{formatCurrency(row.mnav)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-amber-400 hidden">{formatCurrency(row.btc_price)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatNumber(row.btc_holdings)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{row.shares_outstanding_m.toFixed(1)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-blue-400 hidden">{formatCurrency(row.mnav)}</TableCell>
                 <TableCell className="text-right font-mono text-xs text-primary">{formatCurrency(row.mstr_price)}</TableCell>
-                <TableCell className="text-right font-mono text-xs">
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">
                   <span className={row.premium_to_nav >= 0 ? "text-green-400" : "text-red-400"}>
                     {formatPercent(row.premium_to_nav)}
                   </span>
