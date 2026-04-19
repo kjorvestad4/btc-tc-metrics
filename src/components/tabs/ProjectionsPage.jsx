@@ -73,7 +73,7 @@ export default function ProjectionsPage({ liveData }) {
       cagr_asst: asstCagrOverride,
       cagr_msty: mstyCagrOverride,
     };
-  }, [activeScenario, btcCagr, mstrPremium, dilutionRate, accumulation, projectionYears, liveData]);
+  }, [activeScenario, btcCagr, mstrCagrOverride, asstCagrOverride, mstyCagrOverride, mstrPremium, dilutionRate, accumulation, projectionYears, liveData]);
 
   const projections = useMemo(
     () => generateProjections(params, DEFAULT_PREFERREDS, params.projection_years * 4),
