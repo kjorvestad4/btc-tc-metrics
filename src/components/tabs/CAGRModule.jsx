@@ -302,7 +302,7 @@ export default function CAGRModule({ params, onParamsChange }) {
       {/* Projection chart full width */}
       <CAGRProjectionChart params={params} />
 
-      <p className="text-[10px] text-muted-foreground/40 text-center">
+      <p className="text-[10px] text-muted-foreground/40 text-center hidden">
         CAGR sensitivity based on OLS regression of annual returns through April 2026. Back-tested correlations are not predictive. Not financial advice.
       </p>
     </div>);

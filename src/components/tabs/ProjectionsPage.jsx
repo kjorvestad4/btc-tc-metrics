@@ -322,7 +322,7 @@ export default function ProjectionsPage({ liveData }) {
         { label: "MSTR @ Y3", val: projections.find((p) => p.quarter === 12), key: "mstr_price", fmt: (v) => formatCurrency(v, 2), color: "text-primary" },
         { label: "MSTR @ Y5", val: projections.find((p) => p.quarter === 20), key: "mstr_price", fmt: (v) => formatCurrency(v, 2), color: "text-primary" }].
         map((item) =>
-        <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center">
+        <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center hidden">
             <p className="text-[10px] text-muted-foreground">{item.label}</p>
             <p className={`text-base font-bold font-mono ${item.color}`}>
               {item.val ? item.fmt(item.val[item.key]) : "—"}
