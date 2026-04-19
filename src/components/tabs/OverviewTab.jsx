@@ -1,5 +1,6 @@
 import React from "react";
 import MetricCard from "../dashboard/MetricCard";
+import ATMMonitorPanel from "./ATMMonitorPanel";
 import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, BarChart3 } from "lucide-react";
 import { formatCurrency, formatNumber, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
 import { ASST_DEFAULTS } from "./ASSTModelTab";
@@ -151,6 +152,9 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
           tooltip={`Annual dividend liability from Strive's SATA preferred program. $${SATA_NOTIONAL_M}M × ${SATA_DIVIDEND_RATE}% = $${(SATA_ANNUAL_DIV / 1e6).toFixed(2)}M/yr. Profitable if BTC CAGR > ${SATA_DIVIDEND_RATE}%.`}
         />
       </div>
+
+      {/* ATM Monitor Panel */}
+      <ATMMonitorPanel liveData={liveData} />
     </div>
   );
 }
