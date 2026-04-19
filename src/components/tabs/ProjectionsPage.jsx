@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, TrendingUp, BarChart3, Activity, Zap, Users, Bitcoin } from "lucide-react";
 import CAGRModule from "./CAGRModule";
+import Bitcoin24Simulator from "./Bitcoin24Simulator";
 import InvestmentCalculator from "./InvestmentCalculator";
 import { formatCurrency, formatPercent, formatNumber, generateProjections, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, calcMSTYDividend } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
@@ -200,6 +201,9 @@ export default function ProjectionsPage({ liveData }) {
           </span>
         </div>
       </Card>
+
+      {/* ── Bitcoin24-Style Dynamic Equity Simulator ── */}
+      <Bitcoin24Simulator liveData={liveData} />
 
       {/* CAGR Assumptions Table - Moved to top */}
       <CAGRModule 
