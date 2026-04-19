@@ -35,6 +35,9 @@ export default function ProjectionsPage({ liveData }) {
 
   // Custom CAGR sliders
   const [btcCagr, setBtcCagr] = useState(40);
+  const [mstrCagrOverride, setMstrCagrOverride] = useState(75);
+  const [asstCagrOverride, setAsstCagrOverride] = useState(60);
+  const [mstyCagrOverride, setMstyCagrOverride] = useState(35);
   const [mstrPremium, setMstrPremium] = useState(1.0);
   const [mstrAmpRatio, setMstrAmpRatio] = useState(3.0);
   const [dilutionRate, setDilutionRate] = useState(1.5);
@@ -66,9 +69,9 @@ export default function ProjectionsPage({ liveData }) {
       earnings_cagr: 50,
       active_scenario: activeScenario,
       cagr_btc: activeScenario === "Custom" ? btcCagr : scenario?.btc_cagr ?? 40,
-      cagr_mstr: 75,
-      cagr_asst: 60,
-      cagr_msty: 35,
+      cagr_mstr: mstrCagrOverride,
+      cagr_asst: asstCagrOverride,
+      cagr_msty: mstyCagrOverride,
     };
   }, [activeScenario, btcCagr, mstrPremium, dilutionRate, accumulation, projectionYears, liveData]);
 
@@ -186,6 +189,9 @@ export default function ProjectionsPage({ liveData }) {
         params={params} 
         onParamsChange={(newParams) => {
           if (newParams.cagr_btc !== undefined) setBtcCagr(newParams.cagr_btc);
+          if (newParams.cagr_mstr !== undefined) setMstrCagrOverride(newParams.cagr_mstr);
+          if (newParams.cagr_asst !== undefined) setAsstCagrOverride(newParams.cagr_asst);
+          if (newParams.cagr_msty !== undefined) setMstyCagrOverride(newParams.cagr_msty);
         }} 
       />
 
