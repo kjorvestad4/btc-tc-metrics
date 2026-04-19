@@ -15,7 +15,7 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
             <Zap className="w-4 h-4 text-primary" />
           </div>
           <div className="hidden sm:block">
-            <p className="text-xs font-bold text-foreground">Digital Economics</p>
+            <p className="text-xs font-bold text-foreground">BTC TC Metrics</p>
             
           </div>
         </div>
