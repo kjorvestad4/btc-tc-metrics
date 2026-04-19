@@ -18,7 +18,7 @@ import {
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 
 function Card({ children, className = "" }) {
-  return null;
+  return <div className={`bg-card border border-border rounded-xl p-4 ${className}`}>{children}</div>;
 }
 
 function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
