@@ -126,26 +126,43 @@ export default function ProjectionsPage({ liveData }) {
   });
 
   const portfolioProjections = useMemo(() => {
+    // Use live/current prices for "Now" (q=0), then scale by growth ratio for future quarters
+    const nowBtc   = liveData?.btc_price  ?? 84000;
+    const nowMstr  = liveData?.mstr_price ?? 322.49;
+    const nowAsst  = liveData?.asst_price ?? 12.50;
+    const nowMsty  = liveData?.msty_price ?? 22.50;
+    const nowStrc  = liveData?.strc_price ?? 99.21;
+    const nowSata  = liveData?.sata_price ?? 99.45;
+    const nowStrf  = liveData?.strf_price ?? 92.50;
+    const nowStrk  = liveData?.strk_price ?? 87.00;
+    const nowStrd  = liveData?.strd_price ?? 77.14;
+
     return projections.map(p => {
-      const btc_val = portfolioHoldings.BTC * p.btc_price;
-      const mstr_val = portfolioHoldings.MSTR * p.mstr_price;
-      const asst_val = portfolioHoldings.ASST * (p.btc_price * 0.0789);
-      const strc_val = portfolioHoldings.STRC * 99.21;
-      const sata_val = portfolioHoldings.SATA * 99.45;
-      const strf_val = portfolioHoldings.STRF * 92.50;
-      const strk_val = portfolioHoldings.STRK * 87.00;
-      const strd_val = portfolioHoldings.STRD * 77.14;
-      const msty_val = portfolioHoldings.MSTY * (p.msty_nav || 22.50);
-      
+      // Scale each price by the ratio vs the q=0 model price
+      const btcRatio  = p.btc_price  / projections[0].btc_price;
+      const mstrRatio = p.mstr_price / projections[0].mstr_price;
+      const mstyRatio = (p.msty_nav  || nowMsty) / (projections[0].msty_nav || nowMsty);
+
+      const btc_val  = portfolioHoldings.BTC  * nowBtc  * btcRatio;
+      const mstr_val = portfolioHoldings.MSTR * nowMstr * mstrRatio;
+      const asst_val = portfolioHoldings.ASST * nowAsst * btcRatio; // ASST tracks BTC
+      const msty_val = portfolioHoldings.MSTY * nowMsty * mstyRatio;
+      // Preferred / fixed-income: use static prices (they don't grow with BTC)
+      const strc_val = portfolioHoldings.STRC * nowStrc;
+      const sata_val = portfolioHoldings.SATA * nowSata;
+      const strf_val = portfolioHoldings.STRF * nowStrf;
+      const strk_val = portfolioHoldings.STRK * nowStrk;
+      const strd_val = portfolioHoldings.STRD * nowStrd;
+
       const total = btc_val + mstr_val + asst_val + strc_val + sata_val + strf_val + strk_val + strd_val + msty_val;
-      
-      return { 
-        ...p, 
+
+      return {
+        ...p,
         btc_val, mstr_val, asst_val, strc_val, sata_val, strf_val, strk_val, strd_val, msty_val,
-        portfolio_value: total 
+        portfolio_value: total,
       };
     });
-  }, [projections, portfolioHoldings]);
+  }, [projections, portfolioHoldings, liveData]);
 
   return (
     <div className="space-y-4">
