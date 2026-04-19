@@ -255,7 +255,7 @@ function CAGRProjectionChart({ params }) {
         Based on your CAGR assumptions above. $1 invested compounds to...
       </p>
       <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }} className="recharts-surface hidden">
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
           <XAxis dataKey="year" tick={{ fontSize: 9, fill: "hsl(215 20% 55%)" }} />
           <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 9, fill: "hsl(215 20% 55%)" }} />
