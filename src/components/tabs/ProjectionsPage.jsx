@@ -337,13 +337,19 @@ export default function ProjectionsPage({ liveData }) {
           type="area"
           height={260}
         />
-        <ProjectionChart
-          title={`MSTR Price Projection — ${activeScenario}`}
-          data={projections}
-          lines={[{ key: "mstr_price", name: "MSTR Price", color: "#22C55E" }]}
-          type="area"
-          height={260}
-        />
+        <div className="bg-card border border-border rounded-xl p-4">
+          <p className="text-xs font-semibold text-foreground mb-1">MSTR Price Projection — {activeScenario}</p>
+          <p className="text-[10px] text-muted-foreground mb-2">
+            Formula: MSTR Price = mNAV × Amplification Ratio × Premium Multiple<br/>
+            where mNAV = (BTC Holdings × BTC Price − Pref Liquidation) ÷ Shares Outstanding
+          </p>
+          <ProjectionChart
+            data={projections}
+            lines={[{ key: "mstr_price", name: "MSTR Price", color: "#22C55E" }]}
+            type="area"
+            height={230}
+          />
+        </div>
       </div>
 
       {/* Strategy BTC Accumulation Graph */}
@@ -364,13 +370,16 @@ export default function ProjectionsPage({ liveData }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <SectionHeader icon={Bitcoin} title="ASST Price Projection" color="text-blue-400" />
-          <ResponsiveContainer width="100%" height={260}>
+          <p className="text-[10px] text-muted-foreground mb-2">
+            Formula: ASST Price = (BTC Holdings × BTC Price ÷ Shares) × mNAV Multiple (1.32x)
+          </p>
+          <ResponsiveContainer width="100%" height={240}>
             <LineChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
               <XAxis dataKey="label" tick={TICK_STYLE} />
-              <YAxis tick={TICK_STYLE} />
+              <YAxis tick={TICK_STYLE} tickFormatter={v => `$${v.toFixed(0)}`} />
               <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 2)} />
-              <Line type="monotone" dataKey="btc_price" stroke="#60A5FA" strokeWidth={2} name="BTC Price" dot={false} />
+              <Line type="monotone" dataKey="asst_price" stroke="#60A5FA" strokeWidth={2} name="ASST Price" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>

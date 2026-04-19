@@ -119,15 +119,27 @@ export function generateProjections(params, preferreds, quarters = 20) {
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const annualDividend = calcTotalAnnualDividend(preferreds);
 
+  // ASST projection constants (from ASST_DEFAULTS)
+  const ASST_BTC_HOLDINGS_NOW = 13767.9;
+  const ASST_SHARES_M = 69.72;
+  const ASST_MNAV_MULTIPLE = 1.32; // EV/BTC NAV multiple
+  const ASST_BTC_ACCUM_PER_Q = 2500;
+  let asstBtcHoldings = ASST_BTC_HOLDINGS_NOW;
+
   for (let q = 0; q <= quarters; q++) {
     if (q > 0) {
       btcPrice = btcPrice * quarterlyBtcGrowth;
       btcHoldings += params.btc_accumulation_per_quarter;
       sharesM = sharesM * (1 + params.dilution_rate_per_quarter / 100);
+      asstBtcHoldings += ASST_BTC_ACCUM_PER_Q;
     }
 
     const mnav = calcMNAV(btcHoldings, btcPrice, totalPrefLiq, sharesM);
     const mstrPrice = calcMSTRPrice(mnav, params.amplification_ratio, params.premium_multiple);
+
+    // ASST price: BTC NAV per share × mNAV multiple (EV/BTC NAV)
+    const asstBtcNavPerShare = (asstBtcHoldings * btcPrice) / (ASST_SHARES_M * 1e6);
+    const asstPrice = asstBtcNavPerShare * ASST_MNAV_MULTIPLE;
     const premiumToNav = mnav > 0 ? ((mstrPrice / mnav) - 1) * 100 : 0;
     const btcNav = btcHoldings * btcPrice;
     const marketCap = mstrPrice * sharesM * 1e6;
@@ -156,6 +168,7 @@ export function generateProjections(params, preferreds, quarters = 20) {
       msty_nav: mstyNav,
       msty_yield: mstyYield,
       amplification: params.amplification_ratio,
+      asst_price: asstPrice,
     });
   }
 
