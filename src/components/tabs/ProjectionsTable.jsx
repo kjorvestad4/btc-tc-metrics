@@ -45,10 +45,10 @@ export default function ProjectionsTable({ projections, params }) {
               <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTR Price</TableHead>
               <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Premium</TableHead>
               <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Market Cap</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">BTC NAV</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">MSTY Share Price</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">MSTY Div/Mo</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">MSTY Yield</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC NAV</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTY Share Price</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTY Div/Mo</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTY Yield</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -57,7 +57,7 @@ export default function ProjectionsTable({ projections, params }) {
               key={row.quarter}
               className={`${i === 0 ? "bg-primary/5" : "hover:bg-secondary/30"} transition-colors`}>
               
-                <TableCell className="font-mono text-xs text-foreground">{row.label}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] font-mono text-xs text-foreground hidden">{row.label}</TableCell>
                 <TableCell className="text-right font-mono text-xs text-amber-400">{formatCurrency(row.btc_price)}</TableCell>
                 <TableCell className="text-right font-mono text-xs">{formatNumber(row.btc_holdings)}</TableCell>
                 <TableCell className="text-right font-mono text-xs">{row.shares_outstanding_m.toFixed(1)}</TableCell>
