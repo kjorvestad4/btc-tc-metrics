@@ -12,13 +12,13 @@ import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import ProjectionChart from "../dashboard/ProjectionChart";
 import ProjectionsTable from "./ProjectionsTable";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
-} from "recharts";
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from
+"recharts";
 
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 
 function Card({ children, className = "" }) {
-  return <div className={`bg-card border border-border rounded-xl p-4 ${className}`}>{children}</div>;
+  return <div className="bg-card border border-border rounded-xl p-4  hidden">{children}</div>;
 }
 
 function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
@@ -26,8 +26,8 @@ function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
     <div className="flex items-center gap-2 mb-3">
       <Icon className={`w-4 h-4 ${color}`} />
       <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{title}</h3>
-    </div>
-  );
+    </div>);
+
 }
 
 export default function ProjectionsPage({ liveData }) {
@@ -52,7 +52,7 @@ export default function ProjectionsPage({ liveData }) {
 
   // Build params from sliders
   const params = useMemo(() => {
-    const scenario = DEFAULT_SCENARIOS.find(s => s.name === activeScenario);
+    const scenario = DEFAULT_SCENARIOS.find((s) => s.name === activeScenario);
     return {
       btc_price: liveData?.btc_price ?? 84000,
       btc_cagr: activeScenario === "Custom" ? btcCagr : scenario?.btc_cagr ?? btcCagr,
@@ -72,7 +72,7 @@ export default function ProjectionsPage({ liveData }) {
       cagr_btc: activeScenario === "Custom" ? btcCagr : scenario?.btc_cagr ?? 40,
       cagr_mstr: mstrCagrOverride,
       cagr_asst: asstCagrOverride,
-      cagr_msty: mstyCagrOverride,
+      cagr_msty: mstyCagrOverride
     };
   }, [activeScenario, btcCagr, mstrCagrOverride, asstCagrOverride, mstyCagrOverride, mstrPremium, dilutionRate, accumulation, projectionYears, liveData]);
 
@@ -92,12 +92,12 @@ export default function ProjectionsPage({ liveData }) {
 
   const handleExportCSV = () => {
     const headers = ["Period", "BTC Price", "BTC Holdings", "Shares (M)", "mNAV", "MSTR Price", "Market Cap", "BTC NAV", "MSTY Div/Mo"];
-    const rows = projections.map(p => [
-      p.label, p.btc_price.toFixed(0), p.btc_holdings.toFixed(0), p.shares_outstanding_m.toFixed(1),
-      p.mnav.toFixed(2), p.mstr_price.toFixed(2), p.market_cap.toFixed(0),
-      p.btc_nav.toFixed(0), p.msty_dividend_monthly.toFixed(2),
-    ]);
-    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const rows = projections.map((p) => [
+    p.label, p.btc_price.toFixed(0), p.btc_holdings.toFixed(0), p.shares_outstanding_m.toFixed(1),
+    p.mnav.toFixed(2), p.mstr_price.toFixed(2), p.market_cap.toFixed(0),
+    p.btc_nav.toFixed(0), p.msty_dividend_monthly.toFixed(2)]
+    );
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -110,9 +110,9 @@ export default function ProjectionsPage({ liveData }) {
   // Scenario comparison chart
   const comparisonData = useMemo(() => {
     const years = [0, 1, 2, 3, 5, 7, 10];
-    return years.map(y => {
+    return years.map((y) => {
       const row = { year: y === 0 ? "Now" : `Y${y}` };
-      DEFAULT_SCENARIOS.forEach(sc => {
+      DEFAULT_SCENARIOS.forEach((sc) => {
         const p = { ...params, btc_cagr: sc.btc_cagr, btc_accumulation_per_quarter: sc.accumulation_rate, premium_multiple: sc.premium_multiple, dilution_rate_per_quarter: sc.dilution_rate };
         const btcP = params.btc_price * Math.pow(1 + sc.btc_cagr / 100, y);
         row[sc.name + "_btc"] = Math.round(btcP);
@@ -123,28 +123,28 @@ export default function ProjectionsPage({ liveData }) {
 
   // Portfolio valuation projection based on user holdings
   const [portfolioHoldings, setPortfolioHoldings] = useState({
-    BTC: 0, MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
+    BTC: 0, MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0
   });
 
   const portfolioProjections = useMemo(() => {
     // Use live/current prices for "Now" (q=0), then scale by growth ratio for future quarters
-    const nowBtc   = liveData?.btc_price  ?? 84000;
-    const nowMstr  = liveData?.mstr_price ?? 322.49;
-    const nowAsst  = liveData?.asst_price ?? 12.50;
-    const nowMsty  = liveData?.msty_price ?? 22.50;
-    const nowStrc  = liveData?.strc_price ?? 99.21;
-    const nowSata  = liveData?.sata_price ?? 99.45;
-    const nowStrf  = liveData?.strf_price ?? 92.50;
-    const nowStrk  = liveData?.strk_price ?? 87.00;
-    const nowStrd  = liveData?.strd_price ?? 77.14;
+    const nowBtc = liveData?.btc_price ?? 84000;
+    const nowMstr = liveData?.mstr_price ?? 322.49;
+    const nowAsst = liveData?.asst_price ?? 12.50;
+    const nowMsty = liveData?.msty_price ?? 22.50;
+    const nowStrc = liveData?.strc_price ?? 99.21;
+    const nowSata = liveData?.sata_price ?? 99.45;
+    const nowStrf = liveData?.strf_price ?? 92.50;
+    const nowStrk = liveData?.strk_price ?? 87.00;
+    const nowStrd = liveData?.strd_price ?? 77.14;
 
-    return projections.map(p => {
+    return projections.map((p) => {
       // Scale each price by the ratio vs the q=0 model price
-      const btcRatio  = p.btc_price  / projections[0].btc_price;
+      const btcRatio = p.btc_price / projections[0].btc_price;
       const mstrRatio = p.mstr_price / projections[0].mstr_price;
-      const mstyRatio = (p.msty_nav  || nowMsty) / (projections[0].msty_nav || nowMsty);
+      const mstyRatio = (p.msty_nav || nowMsty) / (projections[0].msty_nav || nowMsty);
 
-      const btc_val  = portfolioHoldings.BTC  * nowBtc  * btcRatio;
+      const btc_val = portfolioHoldings.BTC * nowBtc * btcRatio;
       const mstr_val = portfolioHoldings.MSTR * nowMstr * mstrRatio;
       const asst_val = portfolioHoldings.ASST * nowAsst * btcRatio; // ASST tracks BTC
       const msty_val = portfolioHoldings.MSTY * nowMsty * mstyRatio;
@@ -160,7 +160,7 @@ export default function ProjectionsPage({ liveData }) {
       return {
         ...p,
         btc_val, mstr_val, asst_val, strc_val, sata_val, strf_val, strk_val, strd_val, msty_val,
-        portfolio_value: total,
+        portfolio_value: total
       };
     });
   }, [projections, portfolioHoldings, liveData]);
@@ -183,19 +183,19 @@ export default function ProjectionsPage({ liveData }) {
 
         {/* Scenario selector */}
         <div className="flex flex-wrap gap-2 mt-4">
-          {[...DEFAULT_SCENARIOS.map(s => s.name), "Custom"].map(s => (
-            <button
-              key={s}
-              onClick={() => setActiveScenario(s)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors font-medium ${
-                activeScenario === s
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:bg-secondary"
-              }`}
-            >
+          {[...DEFAULT_SCENARIOS.map((s) => s.name), "Custom"].map((s) =>
+          <button
+            key={s}
+            onClick={() => setActiveScenario(s)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors font-medium ${
+            activeScenario === s ?
+            "bg-primary text-primary-foreground border-primary" :
+            "border-border text-muted-foreground hover:bg-secondary"}`
+            }>
+            
               {s}
             </button>
-          ))}
+          )}
           <span className="text-[10px] text-muted-foreground self-center ml-2">
             BTC: ${(params.btc_price ?? 0).toLocaleString()} (live)
           </span>
@@ -206,15 +206,15 @@ export default function ProjectionsPage({ liveData }) {
       <Bitcoin24Simulator liveData={liveData} />
 
       {/* CAGR Assumptions Table - Moved to top */}
-      <CAGRModule 
-        params={params} 
+      <CAGRModule
+        params={params}
         onParamsChange={(newParams) => {
           if (newParams.cagr_btc !== undefined) setBtcCagr(newParams.cagr_btc);
           if (newParams.cagr_mstr !== undefined) setMstrCagrOverride(newParams.cagr_mstr);
           if (newParams.cagr_asst !== undefined) setAsstCagrOverride(newParams.cagr_asst);
           if (newParams.cagr_msty !== undefined) setMstyCagrOverride(newParams.cagr_msty);
-        }} 
-      />
+        }} />
+      
 
       {/* My Portfolio Investment Calculator - Moved up */}
       <Card>
@@ -235,10 +235,10 @@ export default function ProjectionsPage({ liveData }) {
               <Input
                 type="number"
                 value={shareQty}
-                onChange={e => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={(e) => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
                 className="h-8 text-sm font-mono bg-secondary border-border mt-1"
-                min={0}
-              />
+                min={0} />
+              
               <p className="text-[10px] text-muted-foreground mt-1">
                 Investment value: <span className="text-foreground font-mono font-semibold">{formatCurrency(investmentValue, 2)}</span> at ${mstySharePrice.toFixed(2)}/share
               </p>
@@ -246,12 +246,12 @@ export default function ProjectionsPage({ liveData }) {
 
             <div className="p-3 rounded-lg bg-secondary/50 border border-border text-xs space-y-1.5">
               <p className="font-semibold text-foreground mb-1.5">Distribution History (recent monthly avg: $1.00–$1.25/share)</p>
-              {MSTY_DISTRIBUTION_HISTORY.slice(0, 5).map((d, i) => (
-                <div key={d.ex_date} className="flex justify-between">
+              {MSTY_DISTRIBUTION_HISTORY.slice(0, 5).map((d, i) =>
+              <div key={d.ex_date} className="flex justify-between">
                   <span className="text-muted-foreground font-mono">{d.ex_date}</span>
                   <span className={`font-mono font-bold ${i === 0 ? "text-primary" : "text-green-400"}`}>${d.amount.toFixed(4)}/sh</span>
                 </div>
-              ))}
+              )}
               <div className="pt-1 border-t border-border flex justify-between">
                 <span className="text-muted-foreground">8-week avg/wk</span>
                 <span className="font-mono text-primary font-bold">
@@ -282,27 +282,27 @@ export default function ProjectionsPage({ liveData }) {
       </Card>
 
       {/* Custom scenario builder - moved after calculators */}
-      {activeScenario === "Custom" && (
-        <Card>
+      {activeScenario === "Custom" &&
+      <Card>
           <SectionHeader icon={Zap} title="Custom Scenario Builder" color="text-purple-400" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { label: "BTC CAGR", value: btcCagr, set: setBtcCagr, min: 5, max: 150, step: 5, suffix: "%", color: "text-amber-400" },
-              { label: "Quarterly BTC Accumulation", value: accumulation, set: setAccumulation, min: 1000, max: 100000, step: 1000, suffix: " BTC", color: "text-primary" },
-              { label: "MSTR Premium Multiple", value: mstrPremium, set: setMstrPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-cyan-400" },
-              { label: "MSTR Amplification % (Debt+Pref / BTC Reserve)", value: mstrAmpRatio, set: setMstrAmpRatio, min: 10, max: 200, step: 5, suffix: "%", color: "text-primary" },
-              { label: "ASST Premium Multiple", value: asstPremium, set: setAsstPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-blue-400" },
-              { label: "ASST Amplification % (Debt+Pref / BTC Reserve)", value: asstAmpRatio, set: setAsstAmpRatio, min: 10, max: 200, step: 5, suffix: "%", color: "text-cyan-400" },
-              { label: "Quarterly Dilution Rate", value: dilutionRate, set: setDilutionRate, min: 0.5, max: 5.0, step: 0.25, suffix: "%", color: "text-orange-400" },
-            ].map(s => (
-              <div key={s.label} className="space-y-2">
+          { label: "BTC CAGR", value: btcCagr, set: setBtcCagr, min: 5, max: 150, step: 5, suffix: "%", color: "text-amber-400" },
+          { label: "Quarterly BTC Accumulation", value: accumulation, set: setAccumulation, min: 1000, max: 100000, step: 1000, suffix: " BTC", color: "text-primary" },
+          { label: "MSTR Premium Multiple", value: mstrPremium, set: setMstrPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-cyan-400" },
+          { label: "MSTR Amplification % (Debt+Pref / BTC Reserve)", value: mstrAmpRatio, set: setMstrAmpRatio, min: 10, max: 200, step: 5, suffix: "%", color: "text-primary" },
+          { label: "ASST Premium Multiple", value: asstPremium, set: setAsstPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-blue-400" },
+          { label: "ASST Amplification % (Debt+Pref / BTC Reserve)", value: asstAmpRatio, set: setAsstAmpRatio, min: 10, max: 200, step: 5, suffix: "%", color: "text-cyan-400" },
+          { label: "Quarterly Dilution Rate", value: dilutionRate, set: setDilutionRate, min: 0.5, max: 5.0, step: 0.25, suffix: "%", color: "text-orange-400" }].
+          map((s) =>
+          <div key={s.label} className="space-y-2">
                 <div className="flex justify-between">
                   <Label className={`text-xs ${s.color} font-semibold`}>{s.label}</Label>
                   <span className={`text-xs font-mono font-bold ${s.color}`}>{s.value.toFixed(s.suffix === "%" || s.suffix === "x" ? 1 : 2)}{s.suffix}</span>
                 </div>
                 <Slider value={[s.value]} onValueChange={([v]) => s.set(v)} min={s.min} max={s.max} step={s.step} className="cursor-pointer" />
               </div>
-            ))}
+          )}
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label className="text-xs text-muted-foreground font-semibold">Projection Years</Label>
@@ -312,24 +312,24 @@ export default function ProjectionsPage({ liveData }) {
             </div>
           </div>
         </Card>
-      )}
+      }
 
       {/* Projection summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "BTC @ Y1", val: projections.find(p => p.quarter === 4), key: "btc_price", fmt: v => formatCurrency(v), color: "text-amber-400" },
-          { label: "BTC @ Y3", val: projections.find(p => p.quarter === 12), key: "btc_price", fmt: v => formatCurrency(v), color: "text-amber-400" },
-          { label: "MSTR @ Y3", val: projections.find(p => p.quarter === 12), key: "mstr_price", fmt: v => formatCurrency(v, 2), color: "text-primary" },
-          { label: "MSTR @ Y5", val: projections.find(p => p.quarter === 20), key: "mstr_price", fmt: v => formatCurrency(v, 2), color: "text-primary" },
-        ].map(item => (
-          <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center">
+        { label: "BTC @ Y1", val: projections.find((p) => p.quarter === 4), key: "btc_price", fmt: (v) => formatCurrency(v), color: "text-amber-400" },
+        { label: "BTC @ Y3", val: projections.find((p) => p.quarter === 12), key: "btc_price", fmt: (v) => formatCurrency(v), color: "text-amber-400" },
+        { label: "MSTR @ Y3", val: projections.find((p) => p.quarter === 12), key: "mstr_price", fmt: (v) => formatCurrency(v, 2), color: "text-primary" },
+        { label: "MSTR @ Y5", val: projections.find((p) => p.quarter === 20), key: "mstr_price", fmt: (v) => formatCurrency(v, 2), color: "text-primary" }].
+        map((item) =>
+        <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center">
             <p className="text-[10px] text-muted-foreground">{item.label}</p>
             <p className={`text-base font-bold font-mono ${item.color}`}>
               {item.val ? item.fmt(item.val[item.key]) : "—"}
             </p>
             <p className="text-[9px] text-muted-foreground">{activeScenario}</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* BTC + MSTR projection charts */}
@@ -339,20 +339,20 @@ export default function ProjectionsPage({ liveData }) {
           data={projections}
           lines={[{ key: "btc_price", name: "BTC Price", color: "#F59E0B" }]}
           type="area"
-          height={260}
-        />
+          height={260} />
+        
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-xs font-semibold text-foreground mb-1">MSTR Price Projection — {activeScenario}</p>
           <p className="text-[10px] text-muted-foreground mb-2">
-            Formula: MSTR Price = mNAV × Amplification Ratio × Premium Multiple<br/>
+            Formula: MSTR Price = mNAV × Amplification Ratio × Premium Multiple<br />
             where mNAV = (BTC Holdings × BTC Price − Pref Liquidation) ÷ Shares Outstanding
           </p>
           <ProjectionChart
             data={projections}
             lines={[{ key: "mstr_price", name: "MSTR Price", color: "#22C55E" }]}
             type="area"
-            height={230}
-          />
+            height={230} />
+          
         </div>
       </div>
 
@@ -381,7 +381,7 @@ export default function ProjectionsPage({ liveData }) {
             <LineChart data={projections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
               <XAxis dataKey="label" tick={TICK_STYLE} />
-              <YAxis tick={TICK_STYLE} tickFormatter={v => `$${v.toFixed(0)}`} />
+              <YAxis tick={TICK_STYLE} tickFormatter={(v) => `$${v.toFixed(0)}`} />
               <Tooltip contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }} formatter={(v) => formatCurrency(v, 2)} />
               <Line type="monotone" dataKey="asst_price" stroke="#60A5FA" strokeWidth={2} name="ASST Price" dot={false} />
             </LineChart>
@@ -414,6 +414,6 @@ export default function ProjectionsPage({ liveData }) {
 
       {/* Full Projection Table */}
       <ProjectionsTable projections={projections} params={params} />
-    </div>
-  );
+    </div>);
+
 }
