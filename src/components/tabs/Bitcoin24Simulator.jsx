@@ -352,7 +352,7 @@ export default function Bitcoin24Simulator({ liveData }) {
               <XAxis dataKey="year" tick={{ fontSize: 8, fill: "hsl(215 20% 55%)" }} />
               <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 8, fill: "hsl(215 20% 55%)" }} />
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={v => [`${v}%`, "Growth Rate"]} labelFormatter={l => `Year ${l}`} />
-              <ReferenceLine y={terminal} stroke="hsl(215 20% 40%)" strokeDasharray="4 2" label={{ value: "Floor", fontSize: 8, fill: "hsl(215 20% 55%)" }} />
+              <ReferenceLine y={terminal} stroke="hsl(215 20% 40%)" strokeDasharray="4 2" label="Floor" />
               <Line type="monotone" dataKey="growthRate" name="Annual Growth %" stroke="#F59E0B" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
