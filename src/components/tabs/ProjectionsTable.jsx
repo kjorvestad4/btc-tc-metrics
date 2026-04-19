@@ -40,11 +40,11 @@ export default function ProjectionsTable({ projections, params }) {
               <TableHead className="h-10 px-2 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold hidden">Period</TableHead>
               <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC Price</TableHead>
               <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC Holdings</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">Shares (M)</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">mNAV</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">MSTR Price</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">Premium</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">Market Cap</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Shares (M)</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">mNAV</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTR Price</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Premium</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Market Cap</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">BTC NAV</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">MSTY Share Price</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">MSTY Div/Mo</TableHead>
