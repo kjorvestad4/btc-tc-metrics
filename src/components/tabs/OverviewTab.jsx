@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import MetricCard from "../dashboard/MetricCard";
-import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, BarChart3, Key, Eye, EyeOff, RefreshCw } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { formatCurrency, formatNumber, formatPercent, calcMNAV, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
+import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, BarChart3 } from "lucide-react";
+import { formatCurrency, formatNumber, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
 import { ASST_DEFAULTS } from "./ASSTModelTab";
 
 // Official Strategy.com figures (Apr 17 2026)
@@ -16,9 +14,7 @@ const SATA_NOTIONAL_M = 437.32;
 const SATA_DIVIDEND_RATE = 13.0;
 const SATA_ANNUAL_DIV = SATA_NOTIONAL_M * 1e6 * (SATA_DIVIDEND_RATE / 100);
 
-export default function OverviewTab({ params, preferreds, projections, liveData, polygonKey, onPolygonKeyChange, onRefresh, refreshing }) {
-  const [showKey, setShowKey] = useState(false);
-
+export default function OverviewTab({ params, preferreds, projections, liveData, onRefresh, refreshing }) {
   // MSTR calcs — using official balance sheet figures
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const totalAnnualDiv = calcTotalAnnualDividend(preferreds);
@@ -48,50 +44,8 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   const sataPrice = liveData?.sata_price ?? 99.45;
   const mstyPrice = liveData?.msty_price ?? params.msty_nav;
 
-  const hasPolygonKey = !!(polygonKey && polygonKey.trim().length > 0);
-
   return (
     <div className="space-y-4">
-      {/* Polygon API Key Banner */}
-      <div className={`rounded-xl border p-3 flex flex-wrap items-center gap-3 ${hasPolygonKey ? "bg-primary/5 border-primary/20" : "bg-amber-500/5 border-amber-500/20"}`}>
-        <Key className={`w-4 h-4 shrink-0 ${hasPolygonKey ? "text-primary" : "text-amber-400"}`} />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground">
-            {hasPolygonKey ? "Polygon.io connected — live stock prices active" : "Add Polygon.io API key for live stock prices"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {hasPolygonKey ? "MSTR, ASST, STRC, SATA, MSTY prices pulled from Polygon on Refresh" : "Free key at polygon.io — unlocks live MSTR, ASST, STRC, SATA, MSTY prices & IV"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-56">
-            <Input
-              type={showKey ? "text" : "password"}
-              value={polygonKey}
-              onChange={(e) => onPolygonKeyChange(e.target.value)}
-              placeholder="Paste Polygon API key…"
-              className="h-8 text-xs pr-8 bg-secondary border-border font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey(!showKey)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              {showKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            </button>
-          </div>
-          <Button
-            size="sm"
-            className="h-8 text-xs gap-1.5 shrink-0"
-            onClick={onRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Fetching…" : "Refresh Live"}
-          </Button>
-        </div>
-      </div>
-
       {/* Row 1: Prices */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <MetricCard
