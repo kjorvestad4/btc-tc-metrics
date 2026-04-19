@@ -39,11 +39,11 @@ export default function ProjectionsPage({ liveData }) {
   const [asstCagrOverride, setAsstCagrOverride] = useState(60);
   const [mstyCagrOverride, setMstyCagrOverride] = useState(35);
   const [mstrPremium, setMstrPremium] = useState(1.0);
-  const [mstrAmpRatio, setMstrAmpRatio] = useState(3.0);
+  const [mstrAmpRatio, setMstrAmpRatio] = useState(60);
   const [dilutionRate, setDilutionRate] = useState(1.5);
   const [accumulation, setAccumulation] = useState(15000);
   const [asstPremium, setAsstPremium] = useState(1.0);
-  const [asstAmpRatio, setAsstAmpRatio] = useState(2.5);
+  const [asstAmpRatio, setAsstAmpRatio] = useState(30);
   const [projectionYears, setProjectionYears] = useState(5);
 
   // MSTY calculator
@@ -286,15 +286,15 @@ export default function ProjectionsPage({ liveData }) {
               { label: "BTC CAGR", value: btcCagr, set: setBtcCagr, min: 5, max: 150, step: 5, suffix: "%", color: "text-amber-400" },
               { label: "Quarterly BTC Accumulation", value: accumulation, set: setAccumulation, min: 1000, max: 100000, step: 1000, suffix: " BTC", color: "text-primary" },
               { label: "MSTR Premium Multiple", value: mstrPremium, set: setMstrPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-cyan-400" },
-              { label: "MSTR Amplification Ratio", value: mstrAmpRatio, set: setMstrAmpRatio, min: 0.5, max: 5.0, step: 0.1, suffix: "x", color: "text-primary" },
+              { label: "MSTR Amplification % (Debt+Pref / BTC Reserve)", value: mstrAmpRatio, set: setMstrAmpRatio, min: 10, max: 200, step: 5, suffix: "%", color: "text-primary" },
               { label: "ASST Premium Multiple", value: asstPremium, set: setAsstPremium, min: 0.5, max: 3.0, step: 0.1, suffix: "x", color: "text-blue-400" },
-              { label: "ASST Amplification Ratio", value: asstAmpRatio, set: setAsstAmpRatio, min: 0.5, max: 5.0, step: 0.1, suffix: "x", color: "text-cyan-400" },
+              { label: "ASST Amplification % (Debt+Pref / BTC Reserve)", value: asstAmpRatio, set: setAsstAmpRatio, min: 10, max: 200, step: 5, suffix: "%", color: "text-cyan-400" },
               { label: "Quarterly Dilution Rate", value: dilutionRate, set: setDilutionRate, min: 0.5, max: 5.0, step: 0.25, suffix: "%", color: "text-orange-400" },
             ].map(s => (
               <div key={s.label} className="space-y-2">
                 <div className="flex justify-between">
                   <Label className={`text-xs ${s.color} font-semibold`}>{s.label}</Label>
-                  <span className={`text-xs font-mono font-bold ${s.color}`}>{s.value.toFixed(s.label.includes("CAGR") || s.label.includes("Rate") ? 1 : 2)}{s.suffix}</span>
+                  <span className={`text-xs font-mono font-bold ${s.color}`}>{s.value.toFixed(s.suffix === "%" || s.suffix === "x" ? 1 : 2)}{s.suffix}</span>
                 </div>
                 <Slider value={[s.value]} onValueChange={([v]) => s.set(v)} min={s.min} max={s.max} step={s.step} className="cursor-pointer" />
               </div>
