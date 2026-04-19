@@ -62,7 +62,7 @@ export default function ProjectionsTable({ projections, params }) {
                 <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatNumber(row.btc_holdings)}</TableCell>
                 <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{row.shares_outstanding_m.toFixed(1)}</TableCell>
                 <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-blue-400 hidden">{formatCurrency(row.mnav)}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-primary">{formatCurrency(row.mstr_price)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-primary hidden">{formatCurrency(row.mstr_price)}</TableCell>
                 <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">
                   <span className={row.premium_to_nav >= 0 ? "text-green-400" : "text-red-400"}>
                     {formatPercent(row.premium_to_nav)}
