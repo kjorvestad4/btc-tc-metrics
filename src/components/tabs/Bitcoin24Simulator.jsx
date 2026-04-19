@@ -345,7 +345,7 @@ export default function Bitcoin24Simulator({ liveData }) {
         {/* Growth rate decay */}
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-[11px] font-semibold text-foreground mb-1">BTC Annual Growth Rate Decay</p>
-          <p className="text-[10px] text-muted-foreground mb-2">g_t = max(g_{{t-1}} − δ, g_terminal)</p>
+          <p className="text-[10px] text-muted-foreground mb-2">{"g_t = max(g_{t-1} − δ, g_terminal)"}</p>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={chartData} margin={{ top: 2, right: 8, bottom: 2, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
