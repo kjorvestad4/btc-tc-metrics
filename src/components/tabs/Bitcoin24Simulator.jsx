@@ -370,7 +370,6 @@ export default function Bitcoin24Simulator({ liveData }) {
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={v => [`${v}%`]} labelFormatter={l => `Year ${l}`} />
               <Line type="monotone" dataKey="mstrAmplPct" name="MSTR Ampl%" stroke="#22C55E" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="asstAmplPct" name="ASST Ampl%" stroke="#60A5FA" strokeWidth={2} dot={false} />
-              <Legend wrapperStyle={{ fontSize: 9 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -388,7 +387,6 @@ export default function Bitcoin24Simulator({ liveData }) {
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v, name) => name.includes("%") ? [`${v}%`, name] : [`$${v}T`, name]} labelFormatter={l => `Year ${l}`} />
               <Line yAxisId="left"  type="monotone" dataKey="btcMcapT"         name="BTC MCAP ($T)" stroke="#F59E0B" strokeWidth={2} dot={false} />
               <Line yAxisId="right" type="monotone" dataKey="pctGlobalWealth"  name="% Global Wealth" stroke="#A78BFA" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-              <Legend wrapperStyle={{ fontSize: 9 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
