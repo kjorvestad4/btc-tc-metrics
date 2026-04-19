@@ -14,41 +14,41 @@ export default function ProjectionsTable({ projections, params }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between hidden">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Full Projections Table</h3>
-          <p className="text-xs text-muted-foreground">
-            {params.projection_years}-year projection under{" "}
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono border-primary/30 text-primary">
-              {params.active_scenario}
-            </Badge>{" "}
-            scenario
-          </p>
-        </div>
-        <Tabs value={view} onValueChange={setView}>
-          <TabsList className="h-7 bg-secondary">
-            <TabsTrigger value="quarterly" className="text-xs h-5 px-2">Quarterly</TabsTrigger>
-            <TabsTrigger value="annual" className="text-xs h-5 px-2">Annual</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
 
       <div className="bg-card border border-border rounded-xl overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-secondary/50">
-              <TableHead className="h-10 px-2 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold hidden">Period</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC Price</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC Holdings</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Shares (M)</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">mNAV</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTR Price</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Premium</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">Market Cap</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC NAV</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTY Share Price</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTY Div/Mo</TableHead>
-              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">MSTY Yield</TableHead>
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -57,22 +57,22 @@ export default function ProjectionsTable({ projections, params }) {
               key={row.quarter}
               className={`${i === 0 ? "bg-primary/5" : "hover:bg-secondary/30"} transition-colors`}>
               
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] font-mono text-xs text-foreground hidden">{row.label}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-amber-400 hidden">{formatCurrency(row.btc_price)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatNumber(row.btc_holdings)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{row.shares_outstanding_m.toFixed(1)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-blue-400 hidden">{formatCurrency(row.mnav)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-primary hidden">{formatCurrency(row.mstr_price)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">
-                  <span className={row.premium_to_nav >= 0 ? "text-green-400" : "text-red-400"}>
-                    {formatPercent(row.premium_to_nav)}
-                  </span>
-                </TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatCurrency(row.market_cap)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-amber-400 hidden">{formatCurrency(row.btc_nav)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-yellow-400 hidden">{formatCurrency(row.msty_nav, 2)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-cyan-400 hidden">{formatCurrency(row.msty_dividend_monthly, 2)}</TableCell>
-                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatPercent(row.msty_yield)}</TableCell>
+                
+                
+                
+                
+                
+                
+                
+
+
+
+              
+                
+                
+                
+                
+                
               </TableRow>
             )}
           </TableBody>

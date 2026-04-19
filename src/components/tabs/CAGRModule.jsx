@@ -13,11 +13,11 @@ function Card({ children, className = "" }) {
 }
 
 function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
-  return (
-    <div className="flex items-center gap-2 mb-3 hidden">
-      <Icon className={`w-4 h-4 ${color}`} />
-      <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{title}</h3>
-    </div>);
+  return null;
+
+
+
+
 
 }
 
@@ -185,32 +185,32 @@ function CAGRAssumptionSliders({ params, onParamsChange }) {
   return (
     <Card>
       <SectionHeader icon={Zap} title="CAGR Assumptions (User-Editable)" color="text-purple-400" />
-      <p className="text-[10px] text-muted-foreground mb-3 hidden">
-        Set your own CAGR targets to override the beta-implied defaults. These drive the 1–10Y projections.
-      </p>
-      <div className="space-y-4 hidden">
-        {sliders.map((s) => {
-          const val = params[s.key] ?? (s.key === "cagr_btc" ? 40 : s.key === "cagr_mstr" ? 75 : s.key === "cagr_asst" ? 60 : 35);
-          return (
-            <div key={s.key} className="space-y-1.5">
-              <div className="flex items-center justify-between hidden">
-                <Label className={`text-xs ${s.color} font-semibold`}>{s.label}</Label>
-                <span className={`text-xs font-mono font-bold ${s.color}`}>{val}%</span>
-              </div>
-              <Slider
-                value={[Number(val)]}
-                onValueChange={(vals) => {
-                  console.log("CAGR slider changed:", s.key, vals[0]);
-                  onParamsChange({ ...params, [s.key]: Number(vals[0]) });
-                }}
-                min={s.min}
-                max={s.max}
-                step={s.step} />
-              
-            </div>);
+      
 
-        })}
-      </div>
+      
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
       <div className="mt-4 p-3 rounded-lg bg-secondary/50 border border-border">
         <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mb-2">
           Beta-Implied CAGRs at BTC = {params.cagr_btc || 40}%
@@ -251,21 +251,21 @@ function CAGRProjectionChart({ params }) {
   return (
     <Card>
       <SectionHeader icon={TrendingUp} title="Cumulative Return Projection (User CAGRs)" color="text-primary" />
-      <p className="text-[10px] text-muted-foreground mb-3 hidden">
-        Based on your CAGR assumptions above. $1 invested compounds to...
-      </p>
+      
+
+      
       <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }} className="recharts-surface hidden">
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
-          <XAxis dataKey="year" tick={{ fontSize: 9, fill: "hsl(215 20% 55%)" }} />
-          <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 9, fill: "hsl(215 20% 55%)" }} />
-          <Tooltip formatter={(v, name) => [`+${v}%`, name]} contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", borderRadius: 6, fontSize: 11 }} />
-          <Legend wrapperStyle={{ fontSize: 10 }} />
-          <Line type="monotone" dataKey="BTC" stroke="#F59E0B" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="MSTR" stroke="#22C55E" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="ASST" stroke="#06B6D4" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="MSTY" stroke="#A78BFA" strokeWidth={2} dot={false} />
-        </LineChart>
+        
+
+
+
+
+
+
+
+
+
+        
       </ResponsiveContainer>
     </Card>);
 
@@ -302,9 +302,9 @@ export default function CAGRModule({ params, onParamsChange }) {
       {/* Projection chart full width */}
       <CAGRProjectionChart params={params} />
 
-      <p className="text-[10px] text-muted-foreground/40 text-center hidden">
-        CAGR sensitivity based on OLS regression of annual returns through April 2026. Back-tested correlations are not predictive. Not financial advice.
-      </p>
+      
+
+      
     </div>);
 
 }

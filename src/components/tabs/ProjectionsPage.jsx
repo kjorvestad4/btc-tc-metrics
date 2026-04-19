@@ -18,7 +18,7 @@ import {
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 
 function Card({ children, className = "" }) {
-  return <div className="bg-card border border-border rounded-xl p-4  hidden">{children}</div>;
+  return null;
 }
 
 function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
@@ -321,14 +321,14 @@ export default function ProjectionsPage({ liveData }) {
         { label: "BTC @ Y3", val: projections.find((p) => p.quarter === 12), key: "btc_price", fmt: (v) => formatCurrency(v), color: "text-amber-400" },
         { label: "MSTR @ Y3", val: projections.find((p) => p.quarter === 12), key: "mstr_price", fmt: (v) => formatCurrency(v, 2), color: "text-primary" },
         { label: "MSTR @ Y5", val: projections.find((p) => p.quarter === 20), key: "mstr_price", fmt: (v) => formatCurrency(v, 2), color: "text-primary" }].
-        map((item) =>
-        <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center hidden">
-            <p className="text-[10px] text-muted-foreground">{item.label}</p>
-            <p className={`text-base font-bold font-mono ${item.color}`}>
-              {item.val ? item.fmt(item.val[item.key]) : "—"}
-            </p>
-            <p className="text-[9px] text-muted-foreground">{activeScenario}</p>
-          </div>
+        map((item) => null
+
+
+
+
+
+
+
         )}
       </div>
 
@@ -341,19 +341,19 @@ export default function ProjectionsPage({ liveData }) {
           type="area"
           height={260} />
         
-        <div className="bg-card border border-border rounded-xl p-4 hidden">
-          <p className="text-xs font-semibold text-foreground mb-1">MSTR Price Projection — {activeScenario}</p>
-          <p className="text-[10px] text-muted-foreground mb-2">
-            Formula: MSTR Price = mNAV × Amplification Ratio × Premium Multiple<br />
-            where mNAV = (BTC Holdings × BTC Price − Pref Liquidation) ÷ Shares Outstanding
-          </p>
-          <ProjectionChart
-            data={projections}
-            lines={[{ key: "mstr_price", name: "MSTR Price", color: "#22C55E" }]}
-            type="area"
-            height={230} />
-          
-        </div>
+        
+
+
+
+
+
+
+
+
+
+
+
+        
       </div>
 
       {/* Strategy BTC Accumulation Graph */}
