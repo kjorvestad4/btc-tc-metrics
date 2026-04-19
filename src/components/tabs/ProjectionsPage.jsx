@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Users, Bitcoin } from "lucide-react";
 import InvestmentCalculator from "./InvestmentCalculator";
+import Bitcoin24Simulator from "./Bitcoin24Simulator";
 import { formatCurrency } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import {
@@ -171,6 +172,9 @@ export default function ProjectionsPage({ liveData }) {
           </div>
         </div>
       </Card>
+
+      {/* ── Bitcoin24 Dynamic Equity Simulator ── */}
+      <Bitcoin24Simulator liveData={liveData} />
 
       {/* ── My Portfolio Investment Calculator ── */}
       <Card>
