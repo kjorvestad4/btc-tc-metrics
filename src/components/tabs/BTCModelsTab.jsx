@@ -27,20 +27,32 @@ function daysSinceGenesis(date) {
 }
 
 // Stock-to-Flow model price for a given # of days from genesis
-// S2F = supply in circulation / annual new issuance
-// Simplified: P = exp(3.36 * ln(SF) + 14.6) but normalized
+// S2F = stock (circulating supply) / flow (annual new issuance)
+// Formula: Market Cap = e^14.6 × S2F^3.3, then divide by supply to get price
 function s2fPrice(days) {
-  // Halving epochs determine SF
+  // Determine epoch and block reward
   let epoch = 0;
   for (let i = 0; i < HALVINGS.length; i++) {
     if (daysSinceGenesis(HALVINGS[i]) <= days) epoch = i + 1;
   }
-  const blockReward = 50 / Math.pow(2, epoch); // BTC
-  const annualIssuance = blockReward * 6 * 24 * 365;
-  const circulatingApprox = Math.min(21e6 * 0.95, 50 * Math.pow(2, 0) * (days / 10) + epoch * 21e6 * 0.03);
-  const sf = circulatingApprox / annualIssuance;
+  const blockReward = 50 / Math.pow(2, epoch); // BTC per block
+  const annualFlow = blockReward * 144 * 365.25; // blocks per day * days per year
+  
+  // Approximate circulating supply (grows roughly linearly over time)
+  // ~21M BTC total, grows toward 99.8% of total (asymptotic)
+  const totalSupply = 21e6;
+  const circulatingSupply = Math.min(totalSupply * 0.998, blockReward * 144 * 365.25 * days);
+  
+  // S2F ratio
+  const sf = circulatingSupply / annualFlow;
   if (sf <= 0) return null;
-  return Math.exp(3.36 * Math.log(sf) + 14.6) * 1e-8; // rough scale
+  
+  // PlanB formula: Market Cap = e^14.6 × S2F^3.3
+  // Price = Market Cap / Supply
+  const marketCap = Math.exp(14.6) * Math.pow(sf, 3.3);
+  const price = marketCap / circulatingSupply;
+  
+  return price;
 }
 
 // Power Law model: P = exp(a * ln(days) + b)
