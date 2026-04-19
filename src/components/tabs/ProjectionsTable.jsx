@@ -68,11 +68,11 @@ export default function ProjectionsTable({ projections, params }) {
                     {formatPercent(row.premium_to_nav)}
                   </span>
                 </TableCell>
-                <TableCell className="text-right font-mono text-xs">{formatCurrency(row.market_cap)}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-amber-400">{formatCurrency(row.btc_nav)}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-yellow-400">{formatCurrency(row.msty_nav, 2)}</TableCell>
-                <TableCell className="text-right font-mono text-xs text-cyan-400">{formatCurrency(row.msty_dividend_monthly, 2)}</TableCell>
-                <TableCell className="text-right font-mono text-xs">{formatPercent(row.msty_yield)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatCurrency(row.market_cap)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-amber-400 hidden">{formatCurrency(row.btc_nav)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-yellow-400 hidden">{formatCurrency(row.msty_nav, 2)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs text-cyan-400 hidden">{formatCurrency(row.msty_dividend_monthly, 2)}</TableCell>
+                <TableCell className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-right font-mono text-xs hidden">{formatPercent(row.msty_yield)}</TableCell>
               </TableRow>
             )}
           </TableBody>
