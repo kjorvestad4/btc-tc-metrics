@@ -77,8 +77,12 @@ function runSimulation(p) {
   let mstrBtcHold   = p.mstrBtcHoldings;
   let asstBtcHold   = ASST_DEFAULTS.btc_holdings;
   let mstrSharesM   = p.mstrShares;
+  let asstSharesM   = p.asstShares ?? ASST_DEFAULTS.shares_diluted_M;
   let growthRate    = p.initARR / 100;
   const terminal    = p.terminal / 100;
+  const asstDilYr   = p.asstDilutionYr ?? 2;
+  const asstPrefGr  = p.asstPrefGrowthYr ?? 0;
+  const ASST_INIT_PREF_M = 437.32; // SATA notional
 
   for (let i = 0; i <= HORIZON; i++) {
     const year = START_YEAR + i;
@@ -90,25 +94,24 @@ function runSimulation(p) {
       mstrBtcHold += p.mstrAccumYr;
       asstBtcHold += p.asstAccumYr;
       mstrSharesM = mstrSharesM * (1 + p.mstrDilutionYr / 100);
+      asstSharesM = asstSharesM * (1 + asstDilYr / 100);
     }
 
     // MSTR equity price
-    // Total BTC reserve value
     const mstrBtcNav = mstrBtcHold * btcPrice;
-    // Preferred capital raised over time (additional beyond initial)
     const extraPrefM = i * p.prefGrowthYr;
     const totalPrefM = MSTR_TOTAL_PREF_M + extraPrefM;
-    // mNAV per share (net of preferred)
     const mstrNavPerShare = (mstrBtcNav - totalPrefM * 1e6) / (mstrSharesM * 1e6);
     const mstrPrice = Math.max(0, mstrNavPerShare * p.mstrMnav);
-    // Amplification % = pref / btc reserve
     const mstrAmplPct = mstrBtcNav > 0 ? (totalPrefM * 1e6 / mstrBtcNav) * 100 : 0;
 
-    // ASST equity price
-    const asstBtcNavPerShare = (asstBtcHold * btcPrice) / (ASST_DEFAULTS.shares_diluted_M * 1e6);
-    const asstPrice = asstBtcNavPerShare * p.asstMnav;
-    // ASST amplification (SATA ~$437M)
-    const asstAmplPct = (asstBtcHold * btcPrice) > 0 ? (437.32 * 1e6 / (asstBtcHold * btcPrice)) * 100 : 0;
+    // ASST equity price (net of preferred liabilities)
+    const asstBtcNav = asstBtcHold * btcPrice;
+    const asstExtraPrefM = i * asstPrefGr;
+    const asstTotalPrefM = ASST_INIT_PREF_M + asstExtraPrefM;
+    const asstBtcNavPerShare = (asstBtcNav - asstTotalPrefM * 1e6) / (asstSharesM * 1e6);
+    const asstPrice = Math.max(0, asstBtcNavPerShare * p.asstMnav);
+    const asstAmplPct = asstBtcNav > 0 ? (asstTotalPrefM * 1e6 / asstBtcNav) * 100 : 0;
 
     // BTC market cap
     const btcMcapT = (btcPrice * 21e6) / 1e12;
@@ -125,9 +128,10 @@ function runSimulation(p) {
       mstrNavPerShare: +mstrNavPerShare.toFixed(2),
       mstrPrice:  +mstrPrice.toFixed(2),
       mstrAmplPct: +mstrAmplPct.toFixed(1),
-      asstBtcHold: +asstBtcHold.toFixed(0),
-      asstPrice:  +asstPrice.toFixed(2),
-      asstAmplPct: +asstAmplPct.toFixed(1),
+      asstBtcHold:  +asstBtcHold.toFixed(0),
+      asstSharesM:  +asstSharesM.toFixed(1),
+      asstPrice:    +asstPrice.toFixed(2),
+      asstAmplPct:  +asstAmplPct.toFixed(1),
     });
   }
   return rows;
@@ -146,7 +150,10 @@ export default function Bitcoin24Simulator({ liveData }) {
   const [mstrMnav,      setMstrMnav]      = useState(PRESETS.Base.mstrMnav);
   const [asstMnav,      setAsstMnav]      = useState(PRESETS.Base.asstMnav);
   const [mstrAccumYr,   setMstrAccumYr]   = useState(PRESETS.Base.mstrAccumYr);
-  const [asstAccumYr,   setAsstAccumYr]   = useState(PRESETS.Base.asstAccumYr);
+  const [asstAccumYr,    setAsstAccumYr]    = useState(PRESETS.Base.asstAccumYr);
+  const [asstDilutionYr, setAsstDilutionYr] = useState(2);
+  const [asstShares,     setAsstShares]     = useState(97);
+  const [asstPrefGrowthYr, setAsstPrefGrowthYr] = useState(0);
   const [mstrDilutionYr,setMstrDilutionYr]= useState(PRESETS.Base.mstrDilutionYr);
   const [mstrShares,    setMstrShares]    = useState(PRESETS.Base.mstrShares);
   const [prefGrowthYr,  setPrefGrowthYr]  = useState(PRESETS.Base.prefGrowthYr);
@@ -175,8 +182,10 @@ export default function Bitcoin24Simulator({ liveData }) {
     mstrAccumYr, asstAccumYr,
     mstrDilutionYr, mstrShares,
     prefGrowthYr, mstrBtcHoldings,
+    asstDilutionYr, asstShares, asstPrefGrowthYr,
   }), [btcStart, initARR, declineRate, terminal, mstrMnav, asstMnav,
-       mstrAccumYr, asstAccumYr, mstrDilutionYr, mstrShares, prefGrowthYr, mstrBtcHoldings]);
+       mstrAccumYr, asstAccumYr, mstrDilutionYr, mstrShares, prefGrowthYr, mstrBtcHoldings,
+       asstDilutionYr, asstShares, asstPrefGrowthYr]);
 
   const last  = rows[rows.length - 1];
   const now   = rows[0];
@@ -296,8 +305,11 @@ export default function Bitcoin24Simulator({ liveData }) {
               <h3 className="text-[11px] font-semibold uppercase tracking-wider text-foreground">ASST Parameters</h3>
             </div>
             <div className="space-y-3">
-              <SliderRow label="mNAV Multiple"           value={asstMnav}    set={setAsstMnav}    min={0.5} max={5}      step={0.1}  fmt={v => `${v.toFixed(1)}x`} color="text-blue-400" />
-              <SliderRow label="Annual BTC Accumulation" value={asstAccumYr} set={setAsstAccumYr} min={0}   max={50000}  step={1000} fmt={v => formatNumber(v) + " BTC"} color="text-cyan-400" />
+              <SliderRow label="mNAV Multiple"              value={asstMnav}        set={setAsstMnav}        min={0.5} max={5}      step={0.1}  fmt={v => `${v.toFixed(1)}x`} color="text-blue-400" />
+              <SliderRow label="Annual BTC Accumulation"    value={asstAccumYr}     set={setAsstAccumYr}     min={0}   max={50000}  step={1000} fmt={v => formatNumber(v) + " BTC"} color="text-cyan-400" />
+              <SliderRow label="Annual Share Dilution"      value={asstDilutionYr}  set={setAsstDilutionYr}  min={0}   max={20}     step={0.5}  fmt={v => `${v}%`} color="text-orange-400" />
+              <SliderRow label="Diluted Shares Now (M)"     value={asstShares}      set={setAsstShares}      min={50}  max={500}    step={5}    fmt={v => `${v}M`} color="text-muted-foreground" />
+              <SliderRow label="New Pref Raised/Year ($M)"  value={asstPrefGrowthYr} set={setAsstPrefGrowthYr} min={0} max={2000}  step={50}   fmt={v => `$${v}M`} color="text-purple-400" />
             </div>
           </div>
         </div>
