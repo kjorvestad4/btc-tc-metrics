@@ -26,17 +26,10 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [liveData, setLiveData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [polygonKey, setPolygonKey] = useState(() => sessionStorage.getItem("polygon_api_key") || "");
-
-  const handlePolygonKeyChange = useCallback((key) => {
-    setPolygonKey(key);
-    sessionStorage.setItem("polygon_api_key", key);
-  }, []);
-
   const handleRefreshLive = useCallback(async () => {
     setRefreshing(true);
     try {
-      const data = await fetchAllMarketData(polygonKey || null);
+      const data = await fetchAllMarketData();
       setLiveData(data);
 
       // Update params with live prices
@@ -55,14 +48,7 @@ export default function Dashboard() {
       if (data.msty_price) parts.push(`MSTY $${data.msty_price.toFixed(2)}`);
 
       const hasErrors = data.errors?.length > 0;
-      if (hasErrors && !polygonKey) {
-        toast.warning(
-          parts.length > 0
-            ? `BTC refreshed — ${parts.join(" · ")} | Add Polygon key for stock prices`
-            : "Enter Polygon.io API key for live MSTR/MSTY prices",
-          { duration: 5000 }
-        );
-      } else if (hasErrors) {
+      if (hasErrors) {
         toast.warning(`Partial data — ${parts.join(" · ")}`, { duration: 4000 });
       } else {
         toast.success(`Live data synced — ${parts.join(" · ")}`, { duration: 3000 });
@@ -74,7 +60,7 @@ export default function Dashboard() {
     } finally {
       setRefreshing(false);
     }
-  }, [polygonKey]);
+  }, []);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
@@ -110,7 +96,7 @@ export default function Dashboard() {
         onToggleSidebar={() => {}}
         refreshing={refreshing}
         liveData={liveData}
-        hasPolygonKey={!!polygonKey}
+        hasPolygonKey={true}
         params={params}
       />
 
@@ -135,8 +121,6 @@ export default function Dashboard() {
               preferreds={preferreds}
               projections={projections}
               liveData={liveData}
-              polygonKey={polygonKey}
-              onPolygonKeyChange={handlePolygonKeyChange}
               onRefresh={handleRefreshLive}
               refreshing={refreshing}
             />

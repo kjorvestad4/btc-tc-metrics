@@ -184,35 +184,21 @@ export async function fetchPolygonDividends(apiKey) {
 
 /**
  * Fetch all live market data in parallel
- * polygonKey: optional — if missing, Polygon sources are skipped gracefully
- * Strategy.com scraper is always attempted for preferred prices (no key needed)
+ * Always uses the backend Polygon proxy (no user key needed).
+ * Strategy.com scraper is also attempted for preferred prices + vols.
  */
-export async function fetchAllMarketData(polygonKey = null) {
+export async function fetchAllMarketData() {
   const tasks = {
     btc: fetchBTCPrice(),
     holdings: fetchStrategyHoldings(),
-    // Always scrape strategy.com for accurate preferred prices + vols
     preferreds: fetchStrategyPreferreds(),
-    // Always fetch MSTR/ASST/MSTY from Yahoo (free, no key needed)
     mstr_yahoo: fetchYahooPrice("MSTR"),
     asst_yahoo: fetchYahooPrice("ASST"),
     msty_yahoo: fetchYahooPrice("MSTY"),
+    polygon: import("@/api/base44Client").then(({ base44 }) =>
+      base44.functions.invoke("polygonProxy", {}).then(r => r.data)
+    ),
   };
-
-  // Add Polygon tasks only if key is provided (higher quality / IV data)
-  if (polygonKey) {
-    tasks.mstr = fetchPolygonPrice("MSTR", polygonKey);
-    tasks.msty = fetchPolygonPrice("MSTY", polygonKey);
-    tasks.asst = fetchPolygonPrice("ASST", polygonKey);
-    // Polygon as fallback only for preferreds if scraper fails
-    tasks.strc_poly = fetchPolygonPrice("STRC", polygonKey);
-    tasks.strf_poly = fetchPolygonPrice("STRF", polygonKey);
-    tasks.strk_poly = fetchPolygonPrice("STRK", polygonKey);
-    tasks.strd_poly = fetchPolygonPrice("STRD", polygonKey);
-    tasks.sata = fetchPolygonPrice("SATA", polygonKey);
-    tasks.iv = fetchPolygonIV(polygonKey);
-    tasks.divs = fetchPolygonDividends(polygonKey);
-  }
 
   const keys = Object.keys(tasks);
   const settled = await Promise.allSettled(Object.values(tasks));
@@ -228,37 +214,36 @@ export async function fetchAllMarketData(polygonKey = null) {
       console.warn(`[marketData] ${key} failed:`, msg);
     }
   });
-  console.log("[marketData] results:", Object.fromEntries(keys.map((k, i) => [k, settled[i].status])));
+
+  const poly = results.polygon ?? {};
+  const polyPrices = poly.prices ?? {};
 
   // Preferred prices: strategy.com scraper first, Polygon fallback
   const prefs = results.preferreds ?? {};
-  const strc = prefs.strc ?? (results.strc_poly ? { price: results.strc_poly } : null);
-  const strf = prefs.strf ?? (results.strf_poly ? { price: results.strf_poly } : null);
-  const strk = prefs.strk ?? (results.strk_poly ? { price: results.strk_poly } : null);
-  const strd = prefs.strd ?? (results.strd_poly ? { price: results.strd_poly } : null);
+  const strc = prefs.strc ?? (polyPrices.STRC ? { price: polyPrices.STRC } : null);
+  const strf = prefs.strf ?? (polyPrices.STRF ? { price: polyPrices.STRF } : null);
+  const strk = prefs.strk ?? (polyPrices.STRK ? { price: polyPrices.STRK } : null);
+  const strd = prefs.strd ?? (polyPrices.STRD ? { price: polyPrices.STRD } : null);
 
-  // Build unified output
   return {
     btc_price: results.btc ?? null,
     btc_holdings: results.holdings ?? null,
-    mstr_price: results.mstr ?? results.mstr_yahoo ?? null,
-    msty_price: results.msty ?? results.msty_yahoo ?? null,
-    asst_price: results.asst ?? results.asst_yahoo ?? null,
-    // Preferred stocks — full object { price, vol_30d, current_yield } from strategy.com
+    mstr_price: polyPrices.MSTR ?? results.mstr_yahoo ?? null,
+    msty_price: polyPrices.MSTY ?? results.msty_yahoo ?? null,
+    asst_price: polyPrices.ASST ?? results.asst_yahoo ?? null,
     strc_data: strc,
     strf_data: strf,
     strk_data: strk,
     strd_data: strd,
-    // Backward-compat price fields
     strc_price: strc?.price ?? null,
     strf_price: strf?.price ?? null,
     strk_price: strk?.price ?? null,
     strd_price: strd?.price ?? null,
-    sata_price: results.sata ?? null,
-    mstr_iv: results.iv ?? null,
-    msty_dividends: results.divs ?? null,
-    msty_latest_div: results.divs?.[0]?.amount ?? null,
-    polygon_used: !!polygonKey,
+    sata_price: polyPrices.SATA ?? null,
+    mstr_iv: poly.iv ?? null,
+    msty_dividends: poly.divs ?? null,
+    msty_latest_div: poly.divs?.[0]?.amount ?? null,
+    polygon_used: true,
     errors,
   };
 }
