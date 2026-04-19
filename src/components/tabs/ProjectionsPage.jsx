@@ -341,7 +341,7 @@ export default function ProjectionsPage({ liveData }) {
           type="area"
           height={260} />
         
-        <div className="bg-card border border-border rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4 hidden">
           <p className="text-xs font-semibold text-foreground mb-1">MSTR Price Projection — {activeScenario}</p>
           <p className="text-[10px] text-muted-foreground mb-2">
             Formula: MSTR Price = mNAV × Amplification Ratio × Premium Multiple<br />

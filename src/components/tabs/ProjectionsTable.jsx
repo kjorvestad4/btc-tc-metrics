@@ -8,13 +8,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function ProjectionsTable({ projections, params }) {
   const [view, setView] = useState("quarterly");
 
-  const data = view === "annual"
-    ? projections.filter((p) => p.quarter % 4 === 0)
-    : projections;
+  const data = view === "annual" ?
+  projections.filter((p) => p.quarter % 4 === 0) :
+  projections;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between hidden">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Full Projections Table</h3>
           <p className="text-xs text-muted-foreground">
@@ -37,9 +37,9 @@ export default function ProjectionsTable({ projections, params }) {
         <Table>
           <TableHeader>
             <TableRow className="bg-secondary/50">
-              <TableHead className="text-[10px] font-semibold">Period</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">BTC Price</TableHead>
-              <TableHead className="text-[10px] font-semibold text-right">BTC Holdings</TableHead>
+              <TableHead className="h-10 px-2 text-left align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold hidden">Period</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC Price</TableHead>
+              <TableHead className="h-10 px-2 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-[10px] font-semibold text-right hidden">BTC Holdings</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">Shares (M)</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">mNAV</TableHead>
               <TableHead className="text-[10px] font-semibold text-right">MSTR Price</TableHead>
@@ -52,11 +52,11 @@ export default function ProjectionsTable({ projections, params }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, i) => (
-              <TableRow
-                key={row.quarter}
-                className={`${i === 0 ? "bg-primary/5" : "hover:bg-secondary/30"} transition-colors`}
-              >
+            {data.map((row, i) =>
+            <TableRow
+              key={row.quarter}
+              className={`${i === 0 ? "bg-primary/5" : "hover:bg-secondary/30"} transition-colors`}>
+              
                 <TableCell className="font-mono text-xs text-foreground">{row.label}</TableCell>
                 <TableCell className="text-right font-mono text-xs text-amber-400">{formatCurrency(row.btc_price)}</TableCell>
                 <TableCell className="text-right font-mono text-xs">{formatNumber(row.btc_holdings)}</TableCell>
@@ -74,10 +74,10 @@ export default function ProjectionsTable({ projections, params }) {
                 <TableCell className="text-right font-mono text-xs text-cyan-400">{formatCurrency(row.msty_dividend_monthly, 2)}</TableCell>
                 <TableCell className="text-right font-mono text-xs">{formatPercent(row.msty_yield)}</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
-    </div>
-  );
+    </div>);
+
 }
