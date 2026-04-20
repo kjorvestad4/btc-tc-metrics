@@ -188,8 +188,7 @@ export async function fetchPolygonDividends(apiKey) {
  * BTC comes from CoinGecko public API directly. Holdings scraped from strategy.com.
  */
 export async function fetchAllMarketData() {
-  const [btcResult, holdingsResult, polyResult] = await Promise.allSettled([
-    fetchBTCPrice(),
+  const [holdingsResult, polyResult] = await Promise.allSettled([
     fetchStrategyHoldings(),
     import("@/api/base44Client").then(({ base44 }) =>
       base44.functions.invoke("polygonProxy", {}).then(r => r.data)
@@ -197,7 +196,6 @@ export async function fetchAllMarketData() {
   ]);
 
   const errors = [];
-  if (btcResult.status === "rejected") errors.push(`BTC: ${btcResult.reason?.message}`);
   if (holdingsResult.status === "rejected") errors.push(`HOLDINGS: ${holdingsResult.reason?.message}`);
   if (polyResult.status === "rejected") errors.push(`PROXY: ${polyResult.reason?.message}`);
 
@@ -205,7 +203,7 @@ export async function fetchAllMarketData() {
   const prices = poly.prices ?? {};
 
   return {
-    btc_price: btcResult.status === "fulfilled" ? btcResult.value : null,
+    btc_price: poly.btc ?? null,
     btc_holdings: holdingsResult.status === "fulfilled" ? holdingsResult.value : null,
     mstr_price: prices.MSTR ?? null,
     msty_price: prices.MSTY ?? null,

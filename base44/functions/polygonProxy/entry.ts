@@ -47,14 +47,37 @@ async function getPrice(ticker) {
   }
 }
 
+async function fetchBTC() {
+  // Try CoinGecko first, fall back to Polygon BTC/USD
+  try {
+    const data = await fetchJSON("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+    const price = data?.bitcoin?.usd;
+    if (price) return price;
+  } catch { /* fall through */ }
+
+  // Polygon fallback for BTC
+  if (POLYGON_KEY) {
+    const data = await fetchJSON(
+      `https://api.polygon.io/v2/snapshot/locale/global/markets/crypto/tickers/X:BTCUSD?apiKey=${POLYGON_KEY}`
+    );
+    const price = data?.ticker?.day?.c || data?.ticker?.prevDay?.c || null;
+    if (price) return price;
+  }
+
+  throw new Error("BTC price unavailable");
+}
+
 Deno.serve(async (req) => {
   try {
     // No auth required — public price data endpoint
 
     const tickers = ["MSTR", "MSTY", "ASST", "STRC", "STRF", "STRK", "STRD", "SATA"];
 
-    // Fetch all prices in parallel (Yahoo primary, Polygon fallback)
-    const priceResults = await Promise.all(tickers.map(getPrice));
+    // Fetch BTC + all stock prices in parallel
+    const [btcResult, ...priceResults] = await Promise.all([
+      fetchBTC().catch(() => null),
+      ...tickers.map(getPrice),
+    ]);
 
     // IV from Polygon options
     const ivPromise = POLYGON_KEY
@@ -96,7 +119,7 @@ Deno.serve(async (req) => {
       sources[ticker] = source;
     });
 
-    return Response.json({ prices, sources, iv, divs });
+    return Response.json({ btc: btcResult, prices, sources, iv, divs });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
