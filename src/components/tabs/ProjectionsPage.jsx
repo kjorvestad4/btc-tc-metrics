@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Users, Bitcoin } from "lucide-react";
 import InvestmentCalculator from "./InvestmentCalculator";
 import Bitcoin24Simulator from "./Bitcoin24Simulator";
+import DRIPSimulator from "./DRIPSimulator";
 import { formatCurrency } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import {
@@ -183,6 +184,22 @@ export default function ProjectionsPage({ liveData }) {
           Enter your holdings below. Growth assets (BTC, MSTR, ASST) are projected using the Bitcoin24 model. Preferred stocks are held at current price.
         </p>
         <InvestmentCalculator liveData={liveData} onHoldingsChange={setPortfolioHoldings} />
+      </Card>
+
+      {/* ── DRIP Simulator ── */}
+      <Card>
+        <SectionHeader icon={Users} title="Preferred & Income DRIP Simulator" color="text-green-400" />
+        <p className="text-[10px] text-muted-foreground mb-3">
+          Simulate dividend reinvestment (DRIP) for your preferred stock and income holdings. Adjust rates to model different yield scenarios.
+        </p>
+        <DRIPSimulator
+          holdings={portfolioHoldings}
+          prices={{
+            STRC: nowStrc, SATA: nowSata, STRF: nowStrf,
+            STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty,
+          }}
+          liveData={liveData}
+        />
       </Card>
 
       {/* ── My MSTY Investment Calculator ── */}
