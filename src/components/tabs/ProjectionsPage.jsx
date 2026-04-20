@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Users, Bitcoin } from "lucide-react";
 import InvestmentCalculator from "./InvestmentCalculator";
 import Bitcoin24Simulator from "./Bitcoin24Simulator";
-import DRIPSimulator from "./DRIPSimulator";
+import DRIPSimulator, { DRIP_ASSETS, runDRIP } from "./DRIPSimulator";
 import { formatCurrency } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import {
@@ -91,6 +91,16 @@ export default function ProjectionsPage({ liveData }) {
     BTC: 0, MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
   });
 
+  // DRIP state — owned here so portfolio chart can use compounded share counts
+  const [dripEnabled, setDripEnabled] = useState(true);
+  const [dripYears, setDripYears] = useState(10);
+  const [dripRates, setDripRates] = useState({
+    STRC: 11.5, SATA: 13.0, STRF: 10.0, STRK: 8.0, STRD: 10.0,
+  });
+  const [mstyWeeklyDiv, setMstyWeeklyDiv] = useState(
+    liveData?.msty_latest_div ?? 0.25
+  );
+
   // Current (now) prices
   const nowBtc  = liveData?.btc_price  ?? 84000;
   const nowMstr = liveData?.mstr_price ?? 166.52;
@@ -112,31 +122,52 @@ export default function ProjectionsPage({ liveData }) {
     });
   }, [activePreset, nowBtc, liveData]);
 
-  // Build yearly portfolio projections using sim ratios
+  // Pre-compute DRIP share counts per income asset per year (indexed by year offset 0..HORIZON)
+  const dripSharesByYear = useMemo(() => {
+    const incomeAssets = {
+      STRC: { price: nowStrc, rate: dripRates.STRC ?? 11.5 },
+      SATA: { price: nowSata, rate: dripRates.SATA ?? 13.0 },
+      STRF: { price: nowStrf, rate: dripRates.STRF ?? 10.0 },
+      STRK: { price: nowStrk, rate: dripRates.STRK ?? 8.0  },
+      STRD: { price: nowStrd, rate: dripRates.STRD ?? 10.0 },
+      MSTY: { price: nowMsty, rate: ((mstyWeeklyDiv * 52) / nowMsty) * 100 },
+    };
+    const out = {};
+    for (const [ticker, { price, rate }] of Object.entries(incomeAssets)) {
+      const sh = portfolioHoldings[ticker] ?? 0;
+      if (sh <= 0) { out[ticker] = Array(HORIZON + 1).fill(0); continue; }
+      const sim = runDRIP({ shares: sh, price, annualRatesPct: rate, years: HORIZON, dripEnabled });
+      out[ticker] = sim.map(r => r.shares);
+    }
+    return out;
+  }, [portfolioHoldings, dripEnabled, dripRates, mstyWeeklyDiv, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty]);
+
+  // Build yearly portfolio projections using sim ratios + DRIP-compounded share counts
   const portfolioProjections = useMemo(() => {
     const base = simRows[0];
-    return simRows.map(r => {
+    return simRows.map((r, i) => {
       const btcRatio  = r.btcPrice  / base.btcPrice;
-      const mstrRatio = r.mstrPrice / base.mstrPrice;
-      const asstRatio = r.asstPrice / base.asstPrice;
+      const mstrRatio = r.mstrPrice / Math.max(base.mstrPrice, 0.01);
+      const asstRatio = r.asstPrice / Math.max(base.asstPrice, 0.01);
 
       const btc_val  = portfolioHoldings.BTC  * nowBtc  * btcRatio;
       const mstr_val = portfolioHoldings.MSTR * nowMstr * mstrRatio;
       const asst_val = portfolioHoldings.ASST * nowAsst * asstRatio;
-      // Preferred / fixed-income: static (don't grow with BTC)
-      const strc_val = portfolioHoldings.STRC * nowStrc;
-      const sata_val = portfolioHoldings.SATA * nowSata;
-      const strf_val = portfolioHoldings.STRF * nowStrf;
-      const strk_val = portfolioHoldings.STRK * nowStrk;
-      const strd_val = portfolioHoldings.STRD * nowStrd;
-      // MSTY tracks MSTR approximately
-      const msty_val = portfolioHoldings.MSTY * nowMsty * mstrRatio;
+
+      // Preferred: DRIP-compounded shares × current price (par-stable)
+      const strc_val = (dripSharesByYear.STRC?.[i] ?? portfolioHoldings.STRC) * nowStrc;
+      const sata_val = (dripSharesByYear.SATA?.[i] ?? portfolioHoldings.SATA) * nowSata;
+      const strf_val = (dripSharesByYear.STRF?.[i] ?? portfolioHoldings.STRF) * nowStrf;
+      const strk_val = (dripSharesByYear.STRK?.[i] ?? portfolioHoldings.STRK) * nowStrk;
+      const strd_val = (dripSharesByYear.STRD?.[i] ?? portfolioHoldings.STRD) * nowStrd;
+      // MSTY: DRIP shares × MSTY price tracks MSTR
+      const msty_val = (dripSharesByYear.MSTY?.[i] ?? portfolioHoldings.MSTY) * nowMsty * mstrRatio;
 
       const portfolio_value = btc_val + mstr_val + asst_val + strc_val + sata_val + strf_val + strk_val + strd_val + msty_val;
 
       return { year: r.year, btc_val, mstr_val, asst_val, strc_val, sata_val, strf_val, strk_val, strd_val, msty_val, portfolio_value };
     });
-  }, [simRows, portfolioHoldings, nowBtc, nowMstr, nowAsst, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty]);
+  }, [simRows, portfolioHoldings, dripSharesByYear, nowBtc, nowMstr, nowAsst, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty]);
 
   // MSTY income metrics
   const latestWeeklyDiv   = liveData?.msty_latest_div ?? 0.2500;
@@ -194,11 +225,12 @@ export default function ProjectionsPage({ liveData }) {
         </p>
         <DRIPSimulator
           holdings={portfolioHoldings}
-          prices={{
-            STRC: nowStrc, SATA: nowSata, STRF: nowStrf,
-            STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty,
-          }}
+          prices={{ STRC: nowStrc, SATA: nowSata, STRF: nowStrf, STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty }}
           liveData={liveData}
+          dripEnabled={dripEnabled}   setDripEnabled={setDripEnabled}
+          years={dripYears}           setYears={setDripYears}
+          rates={dripRates}           setRates={setDripRates}
+          mstyWeeklyDiv={mstyWeeklyDiv} setMstyWeeklyDiv={setMstyWeeklyDiv}
         />
       </Card>
 
@@ -262,7 +294,7 @@ export default function ProjectionsPage({ liveData }) {
       <Card>
         <SectionHeader icon={Users} title="Your Portfolio Valuation — Bitcoin24 Projection" color="text-green-400" />
         <p className="text-[10px] text-muted-foreground mb-3">
-          BTC, MSTR & ASST prices derived from the Bitcoin24 decelerating-growth engine ({activePreset} scenario). Preferred stocks held at current price.
+          BTC, MSTR & ASST prices from Bitcoin24 ({activePreset} scenario). Preferred & MSTY use DRIP-compounded share counts from the simulator above ({dripEnabled ? "DRIP ON" : "DRIP OFF"}).
         </p>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={portfolioProjections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>

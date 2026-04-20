@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/calculations";
@@ -7,7 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 
-const DRIP_ASSETS = [
+export const DRIP_ASSETS = [
   { ticker: "STRC", label: "STRC", color: "#4ADE80", defaultRate: 11.5, desc: "11.5% variable preferred" },
   { ticker: "SATA", label: "SATA", color: "#A78BFA", defaultRate: 13.0, desc: "13% variable preferred (ASST)" },
   { ticker: "STRF", label: "STRF", color: "#22D3EE", defaultRate: 10.0, desc: "10% fixed preferred" },
@@ -16,48 +16,38 @@ const DRIP_ASSETS = [
   { ticker: "MSTY", label: "MSTY", color: "#E879F9", defaultRate: null, desc: "YieldMax MSTR Income ETF" },
 ];
 
-const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
-
-function runDRIP({ shares, price, annualRatesPct, years, dripEnabled }) {
-  const rows = [{ year: 0, shares, value: shares * price, totalDivs: 0, totalShares: shares }];
+/**
+ * Run DRIP simulation for a single asset.
+ * Returns array of { year, shares, value, totalDivs } from year 0..years.
+ */
+export function runDRIP({ shares, price, annualRatesPct, years, dripEnabled }) {
+  const rows = [{ year: 0, shares, value: shares * price, totalDivs: 0 }];
   let currentShares = shares;
   let totalDivs = 0;
 
   for (let y = 1; y <= years; y++) {
-    const rate = annualRatesPct / 100;
-    const annualDivPerShare = price * rate; // assumes price stays flat (par-ish)
-    const annualDivIncome = currentShares * annualDivPerShare;
+    const annualDivIncome = currentShares * price * (annualRatesPct / 100);
     totalDivs += annualDivIncome;
-
     if (dripEnabled) {
-      const newShares = annualDivIncome / price;
-      currentShares += newShares;
+      currentShares += annualDivIncome / price;
     }
-
-    rows.push({
-      year: y,
-      shares: currentShares,
-      value: currentShares * price,
-      totalDivs,
-      totalShares: currentShares,
-    });
+    rows.push({ year: y, shares: currentShares, value: currentShares * price, totalDivs });
   }
   return rows;
 }
 
-export default function DRIPSimulator({ holdings, prices, liveData }) {
-  const [dripEnabled, setDripEnabled] = useState(true);
-  const [years, setYears] = useState(10);
-  const [rates, setRates] = useState({
-    STRC: 11.5, SATA: 13.0, STRF: 10.0, STRK: 8.0, STRD: 10.0, MSTY: null,
-  });
-  const [mstyWeeklyDiv, setMstyWeeklyDiv] = useState(
-    liveData?.msty_latest_div ?? 0.25
-  );
+const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 
+export default function DRIPSimulator({
+  holdings, prices,
+  // Controlled state from parent
+  dripEnabled, setDripEnabled,
+  years, setYears,
+  rates, setRates,
+  mstyWeeklyDiv, setMstyWeeklyDiv,
+}) {
   const setRate = (ticker, val) => setRates(prev => ({ ...prev, [ticker]: val }));
 
-  // Determine which assets have shares
   const activeAssets = DRIP_ASSETS.filter(a => (holdings?.[a.ticker] ?? 0) > 0);
 
   const simResults = useMemo(() => {
@@ -66,34 +56,22 @@ export default function DRIPSimulator({ holdings, prices, liveData }) {
       const sh = holdings?.[asset.ticker] ?? 0;
       if (sh <= 0) continue;
       const price = prices?.[asset.ticker] ?? 99;
+      const annualRate = asset.ticker === "MSTY"
+        ? ((mstyWeeklyDiv * 52) / price) * 100
+        : (rates[asset.ticker] ?? asset.defaultRate);
 
-      let annualRate;
-      if (asset.ticker === "MSTY") {
-        annualRate = ((mstyWeeklyDiv * 52) / price) * 100;
-      } else {
-        annualRate = rates[asset.ticker] ?? asset.defaultRate;
-      }
-
-      out[asset.ticker] = runDRIP({
-        shares: sh,
-        price,
-        annualRatesPct: annualRate,
-        years,
-        dripEnabled,
-      });
+      out[asset.ticker] = runDRIP({ shares: sh, price, annualRatesPct: annualRate, years, dripEnabled });
     }
     return out;
   }, [holdings, prices, rates, mstyWeeklyDiv, years, dripEnabled]);
 
-  // Aggregate total value across all assets by year
   const aggregateRows = useMemo(() => {
     const rows = [];
     for (let y = 0; y <= years; y++) {
-      let totalValue = 0;
-      let totalDivs = 0;
+      let totalValue = 0, totalDivs = 0;
       for (const ticker of Object.keys(simResults)) {
         totalValue += simResults[ticker]?.[y]?.value ?? 0;
-        totalDivs += simResults[ticker]?.[y]?.totalDivs ?? 0;
+        totalDivs  += simResults[ticker]?.[y]?.totalDivs ?? 0;
       }
       rows.push({ year: y, totalValue, totalDivs });
     }
@@ -131,6 +109,11 @@ export default function DRIPSimulator({ holdings, prices, liveData }) {
             min={1} max={30}
           />
         </div>
+        {dripEnabled && (
+          <span className="text-[10px] text-green-400 ml-1">
+            ✓ DRIP shares feed into the Portfolio Valuation chart below
+          </span>
+        )}
       </div>
 
       {/* Rate editors */}
@@ -190,13 +173,12 @@ export default function DRIPSimulator({ holdings, prices, liveData }) {
 
       {hasAnyHoldings && (
         <>
-          {/* Aggregate chart */}
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Total Portfolio Value (Preferred + Income)</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Total Income Portfolio Value (Preferred + MSTY)</p>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={aggregateRows} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
-                <XAxis dataKey="year" tick={TICK_STYLE} label={{ value: "Year", position: "insideBottom", offset: -2, style: TICK_STYLE }} />
+                <XAxis dataKey="year" tick={TICK_STYLE} />
                 <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
                 <Tooltip
                   contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
@@ -205,12 +187,11 @@ export default function DRIPSimulator({ holdings, prices, liveData }) {
                 />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
                 <Line type="monotone" dataKey="totalValue" stroke="#4ADE80" strokeWidth={2} name={dripEnabled ? "Portfolio Value (DRIP)" : "Portfolio Value"} dot={false} />
-                <Line type="monotone" dataKey="totalDivs" stroke="#FBBF24" strokeWidth={1.5} name="Cumulative Dividends Received" dot={false} strokeDasharray="4 2" />
+                <Line type="monotone" dataKey="totalDivs"  stroke="#FBBF24" strokeWidth={1.5} name="Cumulative Dividends Received" dot={false} strokeDasharray="4 2" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Per-asset breakdown at end of horizon */}
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Per-Asset at Year {years}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -219,7 +200,7 @@ export default function DRIPSimulator({ holdings, prices, liveData }) {
                 if (!sim) return null;
                 const last = sim[years];
                 const first = sim[0];
-                const sharesGained = last.totalShares - first.shares;
+                const sharesGained = last.shares - first.shares;
                 return (
                   <div key={asset.ticker} className="bg-secondary/30 border border-border rounded-lg p-2.5">
                     <p className="text-xs font-bold mb-1" style={{ color: asset.color }}>{asset.ticker}</p>
