@@ -16,6 +16,10 @@ const SATA_DIVIDEND_RATE = 13.0;
 const SATA_ANNUAL_DIV = SATA_NOTIONAL_M * 1e6 * (SATA_DIVIDEND_RATE / 100);
 
 export default function OverviewTab({ params, preferreds, projections, liveData, onRefresh, refreshing }) {
+  // Prices — prefer liveData, fall back to params (declared first so calcs below can use them)
+  const btcPrice = liveData?.btc_price ?? params.btc_price;
+  const mstrPrice = liveData?.mstr_price ?? params.mstr_price;
+
   // MSTR calcs — using official balance sheet figures
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const totalAnnualDiv = calcTotalAnnualDividend(preferreds);
@@ -23,7 +27,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
 
   // mNAV = EV ÷ BTC Reserve (official definition, e.g. strategy.com shows 1.25x)
   // EV = Market Cap + Debt + Pref
-  const mstrMarketCap = params.mstr_price * params.mstr_shares_outstanding * 1e6;
+  const mstrMarketCap = mstrPrice * params.mstr_shares_outstanding * 1e6;
   const mstrEV = mstrMarketCap + MSTR_DEBT_PREF_M * 1e6;
   const mstrMnav = mstrBtcNav > 0 ? mstrEV / mstrBtcNav : 0;
 
@@ -32,18 +36,14 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
 
   // ASST calcs — from official treasury.strive.com data
   const asstPrice = liveData?.asst_price ?? ASST_DEFAULTS.price;
-  const asstBtcNav = ASST_DEFAULTS.btc_holdings * params.btc_price;
+  const asstBtcNav = ASST_DEFAULTS.btc_holdings * btcPrice;
   // EV = Market Cap + Debt + Pref
   const asstMarketCap = asstPrice * ASST_DEFAULTS.shares_outstanding_M * 1e6;
   const asstEV = asstMarketCap + ASST_DEFAULTS.total_debt_pref_M * 1e6;
   const asstMnav = asstBtcNav > 0 ? asstEV / asstBtcNav : 0;
   // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
-
-  // Prices — prefer liveData, fall back to params
-  const btcPrice = liveData?.btc_price ?? params.btc_price;
-  const mstrPrice = liveData?.mstr_price ?? params.mstr_price;
-  const asstPriceDisplay = liveData?.asst_price ?? asstPrice;
+  const asstPriceDisplay = asstPrice;
   const strcPrice = liveData?.strc_price ?? liveData?.strc_data?.price ?? params.strc_price ?? 99.21;
   const sataPrice = liveData?.sata_price ?? params.sata_price ?? 99.45;
   const mstyPrice = liveData?.msty_price ?? params.msty_nav;
