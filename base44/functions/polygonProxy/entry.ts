@@ -18,11 +18,19 @@ Deno.serve(async (req) => {
 
     const tickers = ["MSTR", "MSTY", "ASST", "STRC", "STRF", "STRK", "STRD", "SATA"];
 
-    // Fetch prev close for all tickers + IV + dividends in parallel
+    // Try snapshot first (live price), fall back to prev close
     const pricePromises = tickers.map(t =>
-      fetchJSON(`https://api.polygon.io/v2/aggs/ticker/${t}/prev?adjusted=true&apiKey=${POLYGON_KEY}`)
-        .then(d => ({ ticker: t, price: d.results?.[0]?.c ?? null }))
-        .catch(() => ({ ticker: t, price: null }))
+      fetchJSON(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${t}?apiKey=${POLYGON_KEY}`)
+        .then(d => {
+          const price = d.ticker?.day?.c || d.ticker?.prevDay?.c || d.ticker?.lastTrade?.p || null;
+          if (!price) throw new Error("no snapshot price");
+          return { ticker: t, price };
+        })
+        .catch(() =>
+          fetchJSON(`https://api.polygon.io/v2/aggs/ticker/${t}/prev?adjusted=true&apiKey=${POLYGON_KEY}`)
+            .then(d => ({ ticker: t, price: d.results?.[0]?.c ?? null }))
+            .catch(() => ({ ticker: t, price: null }))
+        )
     );
 
     const today = new Date();

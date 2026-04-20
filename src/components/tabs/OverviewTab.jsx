@@ -40,9 +40,11 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
 
-  // Prices
-  const strcPrice = liveData?.strc_price ?? liveData?.strc_data?.price ?? 99.21;
-  const sataPrice = liveData?.sata_price ?? 99.45;
+  // Prices — prefer liveData, fall back to params (which also gets updated by Dashboard on refresh)
+  const mstrPrice = liveData?.mstr_price ?? params.mstr_price;
+  const asstPriceDisplay = liveData?.asst_price ?? asstPrice;
+  const strcPrice = liveData?.strc_price ?? liveData?.strc_data?.price ?? params.strc_price ?? 99.21;
+  const sataPrice = liveData?.sata_price ?? params.sata_price ?? 99.45;
   const mstyPrice = liveData?.msty_price ?? params.msty_nav;
 
   return (
@@ -58,38 +60,38 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
         />
         <MetricCard
           title="MSTR Share Price"
-          value={formatCurrency(params.mstr_price, 2)}
+          value={formatCurrency(mstrPrice, 2)}
           icon={TrendingUp}
           accentClass="text-primary"
-          subtitle={liveData?.mstr_price ? "Live" : "Param"}
+          subtitle={liveData?.mstr_price ? "Live" : "Loading..."}
         />
         <MetricCard
           title="ASST Share Price"
-          value={formatCurrency(asstPrice, 2)}
+          value={formatCurrency(asstPriceDisplay, 2)}
           icon={DollarSign}
           accentClass="text-blue-400"
-          subtitle={liveData?.asst_price ? "Live" : "Default"}
+          subtitle={liveData?.asst_price ? "Live" : "Loading..."}
         />
         <MetricCard
           title="STRC Share Price"
           value={formatCurrency(strcPrice, 2)}
           icon={Layers}
           accentClass="text-purple-400"
-          subtitle={liveData?.strc_price ?? liveData?.strc_data?.price ? "Live" : "Static default"}
+          subtitle={liveData?.strc_price ? "Live" : "Loading..."}
         />
         <MetricCard
           title="SATA Share Price"
           value={formatCurrency(sataPrice, 2)}
           icon={Layers}
           accentClass="text-violet-400"
-          subtitle={liveData?.sata_price ? "Live" : "Default"}
+          subtitle={liveData?.sata_price ? "Live" : "Loading..."}
         />
         <MetricCard
           title="MSTY Share Price"
           value={formatCurrency(mstyPrice, 2)}
           icon={BarChart3}
           accentClass="text-cyan-400"
-          subtitle={liveData?.msty_price ? "Live" : "Default"}
+          subtitle={liveData?.msty_price ? "Live" : "Loading..."}
         />
       </div>
 

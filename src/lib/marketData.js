@@ -195,6 +195,8 @@ export async function fetchAllMarketData() {
     mstr_yahoo: fetchYahooPrice("MSTR"),
     asst_yahoo: fetchYahooPrice("ASST"),
     msty_yahoo: fetchYahooPrice("MSTY"),
+    strc_yahoo: fetchYahooPrice("STRC"),
+    sata_yahoo: fetchYahooPrice("SATA"),
     polygon: import("@/api/base44Client").then(({ base44 }) =>
       base44.functions.invoke("polygonProxy", {}).then(r => r.data)
     ),
@@ -235,11 +237,11 @@ export async function fetchAllMarketData() {
     strf_data: strf,
     strk_data: strk,
     strd_data: strd,
-    strc_price: strc?.price ?? null,
+    strc_price: strc?.price ?? results.strc_yahoo ?? null,
     strf_price: strf?.price ?? null,
     strk_price: strk?.price ?? null,
     strd_price: strd?.price ?? null,
-    sata_price: polyPrices.SATA ?? null,
+    sata_price: polyPrices.SATA ?? results.sata_yahoo ?? null,
     mstr_iv: poly.iv ?? null,
     msty_dividends: poly.divs ?? null,
     msty_latest_div: poly.divs?.[0]?.amount ?? null,

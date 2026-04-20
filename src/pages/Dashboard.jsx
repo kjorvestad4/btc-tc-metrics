@@ -38,7 +38,10 @@ export default function Dashboard() {
         ...(data.btc_price != null && { btc_price: Math.round(data.btc_price) }),
         ...(data.btc_holdings != null && { mstr_btc_holdings: data.btc_holdings }),
         ...(data.mstr_price != null && { mstr_price: parseFloat(data.mstr_price.toFixed(2)) }),
+        ...(data.asst_price != null && { asst_price: parseFloat(data.asst_price.toFixed(2)) }),
         ...(data.msty_price != null && { msty_nav: parseFloat(data.msty_price.toFixed(2)) }),
+        ...(data.strc_price != null && { strc_price: parseFloat(data.strc_price.toFixed(2)) }),
+        ...(data.sata_price != null && { sata_price: parseFloat(data.sata_price.toFixed(2)) }),
         ...(data.mstr_iv != null && { mstr_iv: data.mstr_iv }),
       }));
 

@@ -17,6 +17,9 @@ export const DEFAULT_PARAMS = {
   premium_multiple: 1.0,
   earnings_cagr: 50,
   active_scenario: "Base",
+  // Live prices (updated by marketData refresh)
+  strc_price: 99.21,
+  sata_price: 99.45,
   // CAGR assumptions (user-editable, drive projections)
   cagr_btc: 40,
   cagr_mstr: 75,
