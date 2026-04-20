@@ -1,5 +1,3 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-
 const POLYGON_KEY = Deno.env.get("POLYGON_API_KEY");
 
 async function fetchJSON(url, headers = {}) {
@@ -51,9 +49,7 @@ async function getPrice(ticker) {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    // No auth required — public price data endpoint
 
     const tickers = ["MSTR", "MSTY", "ASST", "STRC", "STRF", "STRK", "STRD", "SATA"];
 
