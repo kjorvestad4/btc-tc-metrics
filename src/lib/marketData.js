@@ -183,65 +183,43 @@ export async function fetchPolygonDividends(apiKey) {
 }
 
 /**
- * Fetch all live market data in parallel
- * Always uses the backend Polygon proxy (no user key needed).
- * Strategy.com scraper is also attempted for preferred prices + vols.
+ * Fetch all live market data.
+ * All stock prices go through the backend polygonProxy (Yahoo primary, Polygon fallback).
+ * BTC comes from CoinGecko public API directly. Holdings scraped from strategy.com.
  */
 export async function fetchAllMarketData() {
-  const tasks = {
-    btc: fetchBTCPrice(),
-    holdings: fetchStrategyHoldings(),
-    preferreds: fetchStrategyPreferreds(),
-    mstr_yahoo: fetchYahooPrice("MSTR"),
-    asst_yahoo: fetchYahooPrice("ASST"),
-    msty_yahoo: fetchYahooPrice("MSTY"),
-    strc_yahoo: fetchYahooPrice("STRC"),
-    sata_yahoo: fetchYahooPrice("SATA"),
-    polygon: import("@/api/base44Client").then(({ base44 }) =>
+  const [btcResult, holdingsResult, polyResult] = await Promise.allSettled([
+    fetchBTCPrice(),
+    fetchStrategyHoldings(),
+    import("@/api/base44Client").then(({ base44 }) =>
       base44.functions.invoke("polygonProxy", {}).then(r => r.data)
     ),
-  };
+  ]);
 
-  const keys = Object.keys(tasks);
-  const settled = await Promise.allSettled(Object.values(tasks));
-
-  const results = {};
   const errors = [];
-  keys.forEach((key, i) => {
-    if (settled[i].status === "fulfilled") {
-      results[key] = settled[i].value;
-    } else {
-      const msg = settled[i].reason?.message ?? "failed";
-      errors.push(`${key.toUpperCase()}: ${msg}`);
-      console.warn(`[marketData] ${key} failed:`, msg);
-    }
-  });
+  if (btcResult.status === "rejected") errors.push(`BTC: ${btcResult.reason?.message}`);
+  if (holdingsResult.status === "rejected") errors.push(`HOLDINGS: ${holdingsResult.reason?.message}`);
+  if (polyResult.status === "rejected") errors.push(`PROXY: ${polyResult.reason?.message}`);
 
-  const poly = results.polygon ?? {};
-  const polyPrices = poly.prices ?? {};
-
-  // Preferred prices: strategy.com scraper first, Polygon fallback
-  const prefs = results.preferreds ?? {};
-  const strc = prefs.strc ?? (polyPrices.STRC ? { price: polyPrices.STRC } : null);
-  const strf = prefs.strf ?? (polyPrices.STRF ? { price: polyPrices.STRF } : null);
-  const strk = prefs.strk ?? (polyPrices.STRK ? { price: polyPrices.STRK } : null);
-  const strd = prefs.strd ?? (polyPrices.STRD ? { price: polyPrices.STRD } : null);
+  const poly = polyResult.status === "fulfilled" ? (polyResult.value ?? {}) : {};
+  const prices = poly.prices ?? {};
 
   return {
-    btc_price: results.btc ?? null,
-    btc_holdings: results.holdings ?? null,
-    mstr_price: polyPrices.MSTR ?? results.mstr_yahoo ?? null,
-    msty_price: polyPrices.MSTY ?? results.msty_yahoo ?? null,
-    asst_price: polyPrices.ASST ?? results.asst_yahoo ?? null,
-    strc_data: strc,
-    strf_data: strf,
-    strk_data: strk,
-    strd_data: strd,
-    strc_price: strc?.price ?? results.strc_yahoo ?? null,
-    strf_price: strf?.price ?? null,
-    strk_price: strk?.price ?? null,
-    strd_price: strd?.price ?? null,
-    sata_price: polyPrices.SATA ?? results.sata_yahoo ?? null,
+    btc_price: btcResult.status === "fulfilled" ? btcResult.value : null,
+    btc_holdings: holdingsResult.status === "fulfilled" ? holdingsResult.value : null,
+    mstr_price: prices.MSTR ?? null,
+    msty_price: prices.MSTY ?? null,
+    asst_price: prices.ASST ?? null,
+    strc_price: prices.STRC ?? null,
+    strf_price: prices.STRF ?? null,
+    strk_price: prices.STRK ?? null,
+    strd_price: prices.STRD ?? null,
+    sata_price: prices.SATA ?? null,
+    strc_data: prices.STRC ? { price: prices.STRC } : null,
+    strf_data: prices.STRF ? { price: prices.STRF } : null,
+    strk_data: prices.STRK ? { price: prices.STRK } : null,
+    strd_data: prices.STRD ? { price: prices.STRD } : null,
+    price_sources: poly.sources ?? {},
     mstr_iv: poly.iv ?? null,
     msty_dividends: poly.divs ?? null,
     msty_latest_div: poly.divs?.[0]?.amount ?? null,
