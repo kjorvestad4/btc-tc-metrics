@@ -19,7 +19,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   // MSTR calcs — using official balance sheet figures
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const totalAnnualDiv = calcTotalAnnualDividend(preferreds);
-  const mstrBtcNav = params.mstr_btc_holdings * params.btc_price;
+  const mstrBtcNav = params.mstr_btc_holdings * btcPrice;
 
   // mNAV = EV ÷ BTC Reserve (official definition, e.g. strategy.com shows 1.25x)
   // EV = Market Cap + Debt + Pref
@@ -40,7 +40,8 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
 
-  // Prices — prefer liveData, fall back to params (which also gets updated by Dashboard on refresh)
+  // Prices — prefer liveData, fall back to params
+  const btcPrice = liveData?.btc_price ?? params.btc_price;
   const mstrPrice = liveData?.mstr_price ?? params.mstr_price;
   const asstPriceDisplay = liveData?.asst_price ?? asstPrice;
   const strcPrice = liveData?.strc_price ?? liveData?.strc_data?.price ?? params.strc_price ?? 99.21;
@@ -53,10 +54,10 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <MetricCard
           title="BTC Price"
-          value={formatCurrency(params.btc_price)}
+          value={formatCurrency(btcPrice)}
           icon={Bitcoin}
           accentClass="text-amber-400"
-          subtitle={`${formatNumber(params.mstr_btc_holdings)} BTC held`}
+          subtitle={liveData?.btc_price ? "Live" : "Loading..."}
         />
         <MetricCard
           title="MSTR Share Price"
