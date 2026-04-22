@@ -805,7 +805,7 @@ function SATAATMPanel({ params }) {
                 <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-violet-400/5" : ""}`}>
                   <td className="py-1 pr-2 font-mono text-foreground">{row.date}</td>
                   <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-violet-400 font-bold" : "text-muted-foreground"}`}>${row.price.toFixed(2)}{atPar ? " ✓" : ""}</td>
-                  <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M.toFixed(1)}</td>
+                  <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M != null ? row.volume_M.toFixed(1) : "—"}</td>
                   <td className={`py-1 pr-2 text-right font-mono ${row.pct_at_par > 0 ? "text-violet-400" : "text-muted-foreground"}`}>{row.pct_at_par > 0 ? `${row.pct_at_par.toFixed(1)}%` : "—"}</td>
                   <td className={`py-1 pr-2 text-right font-mono ${row.capture_pct > 0 ? "text-amber-400" : "text-muted-foreground"}`}>{row.capture_pct > 0 ? `${row.capture_pct}%` : "—"}</td>
                   <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
