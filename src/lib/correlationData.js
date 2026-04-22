@@ -171,6 +171,9 @@ export const STRC_ATM_PROGRAM = {
 };
 
 export const STRC_RECENT_ACTIVITY = [
+  { date: "2026-04-22", volume_M: null, pct_at_par: null, capture_pct: null, proceeds_M: 0,   btc_acquired: 0,   price: 99.34 },
+  { date: "2026-04-21", volume_M: 1.9,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 99.29 },
+  { date: "2026-04-20", volume_M: 3.1,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 99.32 },
   { date: "2026-04-17", volume_M: 3.4,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 99.21 },
   { date: "2026-04-16", volume_M: 3.3,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 99.06 },
   { date: "2026-04-15", volume_M: 5.0,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 99.32 },
@@ -178,9 +181,6 @@ export const STRC_RECENT_ACTIVITY = [
   { date: "2026-04-13", volume_M: 11.7, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 100.00 },
   { date: "2026-04-10", volume_M: 5.3,  pct_at_par: 100,  capture_pct: 65,  proceeds_M: 3.44, btc_acquired: 46,  price: 100.00 },
   { date: "2026-04-09", volume_M: 3.1,  pct_at_par: 100,  capture_pct: 71,  proceeds_M: 2.20, btc_acquired: 30,  price: 100.00 },
-  { date: "2026-04-08", volume_M: 58.7, pct_at_par: 28.9, capture_pct: 68,  proceeds_M: 11.6, btc_acquired: 157, price: 101.10 },
-  { date: "2026-04-07", volume_M: 44.2, pct_at_par: 22.1, capture_pct: 65,  proceeds_M: 6.35, btc_acquired: 86,  price: 100.80 },
-  { date: "2026-04-04", volume_M: 39.8, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,   price: 98.30 },
 ];
 
 export const STRC_PAR_STATS = {
@@ -220,6 +220,9 @@ export const SATA_ATM_PROGRAM = {
 
 // SATA recent activity
 export const SATA_RECENT_ACTIVITY = [
+  { date: "2026-04-22", volume_M: null, pct_at_par: null, capture_pct: null, proceeds_M: 0,   btc_acquired: 0,  price: 99.54 },
+  { date: "2026-04-21", volume_M: 0.08, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.54 },
+  { date: "2026-04-20", volume_M: 0.12, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.55 },
   { date: "2026-04-17", volume_M: 0.19, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.58 },
   { date: "2026-04-16", volume_M: 0.12, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.26 },
   { date: "2026-04-15", volume_M: 0.20, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.70 },
@@ -227,9 +230,6 @@ export const SATA_RECENT_ACTIVITY = [
   { date: "2026-04-13", volume_M: 0.17, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 97.50 },
   { date: "2026-04-10", volume_M: 0.06, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 98.21 },
   { date: "2026-04-09", volume_M: 0.06, pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 98.13 },
-  { date: "2026-04-08", volume_M: 11.4, pct_at_par: 55.2, capture_pct: 74,  proceeds_M: 4.62, btc_acquired: 62, price: 100.60 },
-  { date: "2026-04-07", volume_M: 8.6,  pct_at_par: 48.8, capture_pct: 71,  proceeds_M: 3.00, btc_acquired: 41, price: 100.30 },
-  { date: "2026-04-04", volume_M: 7.8,  pct_at_par: 0,    capture_pct: 0,   proceeds_M: 0,    btc_acquired: 0,  price: 99.45 },
 ];
 
 // SATA par trading statistics

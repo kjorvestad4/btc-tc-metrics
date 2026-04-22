@@ -8,11 +8,11 @@ import {
 
 // ── Weekly aggregated data from bitcoinquant.co (STRC) ──────────────────────
 const STRC_WEEKLY = [
-  { week: "This Week (4/13–4/17)", total_vol_B: 3.9,  pct_at_par: 70, est_proceeds_B: 1.8,  est_btc: 23934, days_active: 2 },
-  { week: "Last Week (4/6–4/10)",  total_vol_B: 1.5,  pct_at_par: 84, est_proceeds_B: 1.0,  est_btc: 13926, days_active: 3 },
-  { week: "Mar 30 – Apr 3",       total_vol_B: null, pct_at_par: null, est_proceeds_B: 1.33, est_btc: 19653, days_active: null },
-  { week: "Mar 16–20",            total_vol_B: null, pct_at_par: null, est_proceeds_B: 1.18, est_btc: 16816, days_active: null },
-  { week: "Mar 9–13",             total_vol_B: null, pct_at_par: null, est_proceeds_B: 0.377, est_btc: 5315, days_active: null },
+  { week: "This Week (4/20–4/22)", total_vol_B: 0.005, pct_at_par: 0,  est_proceeds_B: 0,    est_btc: 0,     days_active: 0, note: "Below par — ATM inactive" },
+  { week: "Last Week (4/13–4/17)", total_vol_B: 3.9,  pct_at_par: 0,   est_proceeds_B: 0,    est_btc: 0,     days_active: 0 },
+  { week: "Week of 4/6–4/10",     total_vol_B: 1.5,  pct_at_par: 100,  est_proceeds_B: 1.0,  est_btc: 13926, days_active: 3 },
+  { week: "Mar 30 – Apr 3",       total_vol_B: null, pct_at_par: null,  est_proceeds_B: 1.33, est_btc: 19653, days_active: null },
+  { week: "Mar 16–20",            total_vol_B: null, pct_at_par: null,  est_proceeds_B: 1.18, est_btc: 16816, days_active: null },
 ];
 
 // Confirmed SEC filings (STRC)
@@ -197,14 +197,17 @@ export default function ATMMonitorPanel({ liveData }) {
               <tbody>
                 {STRC_WEEKLY.map((row, i) => (
                   <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
-                    <td className="py-1 pr-2 text-foreground font-medium">{row.week}</td>
-                    <td className="text-right pr-2 font-mono text-foreground">{row.total_vol_B != null ? `$${row.total_vol_B}B` : "—"}</td>
-                    <td className={`text-right pr-2 font-mono font-bold ${row.pct_at_par >= 80 ? "text-green-400" : row.pct_at_par >= 50 ? "text-amber-400" : row.pct_at_par === 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                      {row.pct_at_par != null ? `${row.pct_at_par}%` : "—"}
-                    </td>
-                    <td className="text-right pr-2 font-mono text-purple-400 font-bold">{row.est_proceeds_B != null ? `$${row.est_proceeds_B}B` : "—"}</td>
-                    <td className="text-right font-mono text-amber-400 font-bold">₿{row.est_btc.toLocaleString()}</td>
-                  </tr>
+                     <td className="py-1 pr-2 text-foreground font-medium">
+                       {row.week}
+                       {row.note && <span className="text-[9px] text-red-400 ml-1">({row.note})</span>}
+                     </td>
+                     <td className="text-right pr-2 font-mono text-foreground">{row.total_vol_B != null && row.total_vol_B > 0.01 ? `$${row.total_vol_B}B` : "—"}</td>
+                     <td className={`text-right pr-2 font-mono font-bold ${row.pct_at_par > 0 && row.pct_at_par >= 80 ? "text-green-400" : row.pct_at_par > 0 && row.pct_at_par >= 50 ? "text-amber-400" : row.pct_at_par === 0 ? "text-red-400" : "text-muted-foreground"}`}>
+                       {row.pct_at_par != null ? (row.pct_at_par === 0 ? "0%" : `${row.pct_at_par}%`) : "—"}
+                     </td>
+                     <td className="text-right pr-2 font-mono text-purple-400 font-bold">{row.est_proceeds_B > 0 ? `$${row.est_proceeds_B}B` : "—"}</td>
+                     <td className="text-right font-mono text-amber-400 font-bold">{row.est_btc > 0 ? `₿${row.est_btc.toLocaleString()}` : "—"}</td>
+                   </tr>
                 ))}
               </tbody>
             </table>
@@ -232,9 +235,11 @@ export default function ATMMonitorPanel({ liveData }) {
               <tbody>
                 {SATA_RECENT_ACTIVITY.map((row, i) => (
                   <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
-                    <td className="py-1 pr-2 font-mono text-muted-foreground">{row.date.slice(5)}</td>
+                    <td className="py-1 pr-2 font-mono text-muted-foreground">
+                      {row.date.slice(5)}{i === 0 && <span className="text-[9px] text-primary ml-1">●live</span>}
+                    </td>
                     <td className={`text-right pr-2 font-mono font-bold ${row.price >= 100 ? "text-green-400" : "text-amber-400"}`}>${row.price.toFixed(2)}</td>
-                    <td className="text-right pr-2 font-mono text-foreground">${row.volume_M.toFixed(2)}M</td>
+                    <td className="text-right pr-2 font-mono text-foreground">{row.volume_M != null ? `$${row.volume_M.toFixed(2)}M` : "—"}</td>
                     <td className={`text-right pr-2 font-mono ${row.pct_at_par > 0 ? "text-green-400 font-bold" : "text-muted-foreground"}`}>
                       {row.pct_at_par > 0 ? `${row.pct_at_par}%` : "—"}
                     </td>
