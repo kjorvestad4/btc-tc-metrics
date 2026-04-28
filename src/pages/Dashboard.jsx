@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   LayoutDashboard, Bitcoin, TrendingUp, BarChart3, Layers,
-  GitBranch, Building2, Wallet, LineChart, Target
+  GitBranch, Building2, Wallet, LineChart, Target, Activity
 } from "lucide-react";
 import Navbar from "@/components/dashboard/Navbar";
 import OverviewTab from "@/components/tabs/OverviewTab";
@@ -14,6 +14,7 @@ import CorrelationsTab from "@/components/tabs/CorrelationsTab";
 import StrategyDashboardTab from "@/components/tabs/StrategyDashboardTab";
 import STRCvsSATATab from "@/components/tabs/STRCvsSATATab";
 import ProjectionsPage from "@/components/tabs/ProjectionsPage";
+import OptionsPage from "@/pages/OptionsPage";
 import { DEFAULT_PARAMS, DEFAULT_PREFERREDS, DEFAULT_SCENARIOS, generateProjections } from "@/lib/calculations";
 import { fetchAllMarketData } from "@/lib/marketData";
 import { toast } from "sonner";
@@ -87,6 +88,7 @@ export default function Dashboard() {
     { value: "preferred",     label: "Other Preferreds",icon: Wallet },
     { value: "msty",          label: "MSTY",            icon: BarChart3 },
     { value: "projections",   label: "Projections",     icon: LineChart },
+    { value: "options",       label: "Options",          icon: Activity },
   ];
 
   return (
@@ -182,6 +184,10 @@ export default function Dashboard() {
 
           <TabsContent value="projections">
             <ProjectionsPage liveData={liveData} />
+          </TabsContent>
+
+          <TabsContent value="options">
+            <OptionsPage />
           </TabsContent>
         </Tabs>
 
