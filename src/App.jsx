@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Dashboard from '@/pages/Dashboard';
 import S2FReference from '@/pages/S2FReference';
+import OptionsPage from '@/pages/OptionsPage';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -37,6 +38,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/s2f-reference" element={<S2FReference />} />
+      <Route path="/options" element={<OptionsPage />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
