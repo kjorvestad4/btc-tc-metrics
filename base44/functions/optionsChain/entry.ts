@@ -59,7 +59,16 @@ async function rapidApiOptions(ticker, expiration = null) {
   });
   if (!res.ok) throw new Error(`RapidAPI HTTP ${res.status}`);
   const data = await res.json();
-  return data?.optionChain?.result?.[0];
+  const result = data?.optionChain?.result?.[0];
+  if (!result) throw new Error("RapidAPI: no result");
+
+  // The yh-finance API returns options as "straddles" — extract calls & puts from them
+  const opts = result.options?.[0] ?? {};
+  if (!opts.calls && !opts.puts && opts.straddles) {
+    opts.calls = opts.straddles.map(s => s.call).filter(Boolean);
+    opts.puts  = opts.straddles.map(s => s.put).filter(Boolean);
+  }
+  return result;
 }
 
 // ── Polygon options (requires options add-on) ──────────────────────────────
@@ -177,6 +186,8 @@ Deno.serve(async (req) => {
     // ── FULL CHAIN ──
     let calls = [], puts = [], underlyingPrice = null, source = "";
 
+    const chainErrors = [];
+
     if (useRapid) {
       try {
         const dateTs = expiration ? Math.floor(new Date(expiration).getTime() / 1000) : null;
@@ -186,7 +197,8 @@ Deno.serve(async (req) => {
         calls = (opts.calls ?? []).map(c => normalizeYahoo(c, "call"));
         puts = (opts.puts ?? []).map(c => normalizeYahoo(c, "put"));
         source = "RapidAPI / Yahoo Finance";
-      } catch (e) { /* fall through */ }
+        if (!calls.length) chainErrors.push(`RapidAPI: 0 calls (options keys: ${Object.keys(opts).join(",")})`);
+      } catch (e) { chainErrors.push(`RapidAPI: ${e.message}`); }
     }
 
     if (!calls.length) {
@@ -198,7 +210,8 @@ Deno.serve(async (req) => {
         calls = (opts.calls ?? []).map(c => normalizeYahoo(c, "call"));
         puts = (opts.puts ?? []).map(c => normalizeYahoo(c, "put"));
         source = "Yahoo Finance";
-      } catch (e) { /* fall through */ }
+        if (!calls.length) chainErrors.push(`Yahoo direct: 0 calls`);
+      } catch (e) { chainErrors.push(`Yahoo direct: ${e.message}`); }
     }
 
     if (!calls.length && usePolygon) {
@@ -212,11 +225,12 @@ Deno.serve(async (req) => {
         puts = rawPuts.map(normalizePolygon);
         underlyingPrice = price;
         source = "Polygon.io";
-      } catch (e) { /* fall through */ }
+        if (!calls.length) chainErrors.push(`Polygon: 0 calls`);
+      } catch (e) { chainErrors.push(`Polygon: ${e.message}`); }
     }
 
     if (!calls.length && !puts.length) {
-      throw new Error("No options chain data available. Add a RAPIDAPI_KEY secret (free at rapidapi.com) for Yahoo Finance options access.");
+      throw new Error(`No options chain data: ${chainErrors.join(" | ")}`);
     }
 
     calls.sort((a, b) => a.strike_price - b.strike_price);
