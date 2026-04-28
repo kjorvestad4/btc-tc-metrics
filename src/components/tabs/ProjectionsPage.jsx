@@ -5,6 +5,9 @@ import { Users, Bitcoin } from "lucide-react";
 import InvestmentCalculator from "./InvestmentCalculator";
 import Bitcoin24Simulator from "./Bitcoin24Simulator";
 import DRIPSimulator, { DRIP_ASSETS, runDRIP } from "./DRIPSimulator";
+import MonteCarloSimulator from "./MonteCarloSimulator";
+import FIRECalculator from "./FIRECalculator";
+import TaxAccountAllocator from "./TaxAccountAllocator";
 import { formatCurrency } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 import {
@@ -320,6 +323,41 @@ export default function ProjectionsPage({ liveData }) {
           </LineChart>
         </ResponsiveContainer>
       </Card>
+
+      {/* ── Monte Carlo Simulator ── */}
+      <MonteCarloSimulator
+        portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
+        activePreset={activePreset}
+      />
+
+      {/* ── FIRE Calculator + Withdrawal Strategies ── */}
+      <FIRECalculator
+        portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
+        portfolioMonthlyIncome={(() => {
+          // Monthly income from income assets using DRIP rate data
+          const incomeAssets = {
+            STRC: { shares: portfolioHoldings.STRC, rate: dripRates.STRC ?? 11.5, price: nowStrc },
+            SATA: { shares: portfolioHoldings.SATA, rate: dripRates.SATA ?? 13.0, price: nowSata },
+            STRF: { shares: portfolioHoldings.STRF, rate: dripRates.STRF ?? 10.0, price: nowStrf },
+            STRK: { shares: portfolioHoldings.STRK, rate: dripRates.STRK ?? 8.0,  price: nowStrk },
+            STRD: { shares: portfolioHoldings.STRD, rate: dripRates.STRD ?? 10.0, price: nowStrd },
+            MSTY: { shares: portfolioHoldings.MSTY, rate: (mstyWeeklyDiv * 52) / nowMsty * 100, price: nowMsty },
+          };
+          return Object.values(incomeAssets).reduce((sum, a) => {
+            return sum + (a.shares * a.price * (a.rate / 100)) / 12;
+          }, 0);
+        })()}
+      />
+
+      {/* ── Tax Account Allocator ── */}
+      <TaxAccountAllocator
+        portfolioHoldings={portfolioHoldings}
+        prices={{
+          BTC: nowBtc, MSTR: nowMstr, ASST: nowAsst,
+          STRC: nowStrc, SATA: nowSata, STRF: nowStrf,
+          STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty,
+        }}
+      />
 
     </div>
   );
