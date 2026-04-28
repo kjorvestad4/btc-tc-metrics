@@ -15,7 +15,13 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
 
   // Live values
   const mstySharePrice = liveData?.msty_price ?? params.msty_nav;
-  const latestWeeklyDiv = liveData?.msty_latest_div ?? 0.3051;
+
+  // Use live dividend history from Polygon if available, else fall back to static list
+  const distributionHistory = (liveData?.msty_dividends?.length > 0)
+    ? liveData.msty_dividends
+    : MSTY_DISTRIBUTION_HISTORY;
+
+  const latestWeeklyDiv = distributionHistory[0]?.amount ?? 0.3051;
   const annualDivFromWeekly = latestWeeklyDiv * 52;
 
   // MSTY Total AUM
@@ -93,7 +99,7 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
           />
           <MetricCard
             title="8-Week Avg Monthly Est."
-            value={`$${((MSTY_DISTRIBUTION_HISTORY.reduce((s,d) => s+d.amount,0)/MSTY_DISTRIBUTION_HISTORY.length)*4.33).toFixed(2)}`}
+            value={`$${((distributionHistory.reduce((s,d) => s+d.amount,0)/distributionHistory.length)*4.33).toFixed(2)}`}
             subtitle="per share (back-tested)"
             icon={Percent}
             accentClass="text-primary"
@@ -119,7 +125,7 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
                 </tr>
               </thead>
               <tbody>
-                {MSTY_DISTRIBUTION_HISTORY.map((d, i) => (
+                {distributionHistory.map((d, i) => (
                   <tr key={d.ex_date} className={`border-b border-border/40 ${i === 0 ? "bg-primary/5" : ""}`}>
                     <td className="py-1.5 pr-4 text-foreground font-mono">
                       {d.ex_date}
@@ -132,12 +138,12 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
               </tbody>
               <tfoot>
                 <tr className="border-t border-border">
-                  <td className="py-1.5 text-muted-foreground text-[10px]">8-week avg</td>
+                  <td className="py-1.5 text-muted-foreground text-[10px]">{distributionHistory.length}-week avg</td>
                   <td className="py-1.5 text-right font-mono text-primary">
-                    ${(MSTY_DISTRIBUTION_HISTORY.reduce((s, d) => s + d.amount, 0) / MSTY_DISTRIBUTION_HISTORY.length).toFixed(4)}
+                    ${(distributionHistory.reduce((s, d) => s + d.amount, 0) / distributionHistory.length).toFixed(4)}
                   </td>
                   <td className="py-1.5 text-right font-mono text-primary">
-                    ${((MSTY_DISTRIBUTION_HISTORY.reduce((s, d) => s + d.amount, 0) / MSTY_DISTRIBUTION_HISTORY.length) * 52).toFixed(2)}/yr
+                    ${((distributionHistory.reduce((s, d) => s + d.amount, 0) / distributionHistory.length) * 52).toFixed(2)}/yr
                   </td>
                 </tr>
               </tfoot>
