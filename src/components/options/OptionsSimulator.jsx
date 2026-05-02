@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/calculations";
 import { Plus, Trash2, Copy } from "lucide-react";
-import ASSTPriceProjectionChart from "./ASSTPriceProjectionChart";
+import StockPriceProjectionChart from "./ASSTPriceProjectionChart";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
@@ -520,8 +520,8 @@ export default function OptionsSimulator({ selectedContract, underlyingPrice: li
         </div>
       </Card>
 
-      {/* ASST Price Projection + Options Value */}
-      <ASSTPriceProjectionChart
+      {/* Price Projection + Options Value */}
+      <StockPriceProjectionChart
         legs={legs}
         daysToExpiry={daysToExpiry}
         riskFreeRate={riskFreeRate}
