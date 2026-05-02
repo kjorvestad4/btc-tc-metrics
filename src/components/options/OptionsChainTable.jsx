@@ -119,8 +119,9 @@ export default function OptionsChainTable({ calls, puts, underlyingPrice, onSele
             </button>
           ))}
         </div>
-        <span className="text-[10px] text-muted-foreground ml-auto">
-          Click any contract to load it into the simulator →
+        <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-2">
+          <span className="text-amber-400/70">Δ/Θ require Polygon options access</span>
+          <span>· Click any contract to load into simulator →</span>
         </span>
       </div>
 
