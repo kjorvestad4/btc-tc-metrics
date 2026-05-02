@@ -175,7 +175,7 @@ function LegRow({ leg, idx, color, onChange, onRemove, onDuplicate }) {
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
-export default function OptionsSimulator({ selectedContract, underlyingPrice: liveUnderlyingPrice, selectedExpiry }) {
+export default function OptionsSimulator({ selectedContract, underlyingPrice: liveUnderlyingPrice, selectedExpiry, liveData }) {
   const [underlyingPrice, setUnderlyingPrice] = useState(liveUnderlyingPrice ?? 200);
   const [daysToExpiry, setDaysToExpiry] = useState(() => calcDTE(selectedExpiry));
   const [riskFreeRate, setRiskFreeRate] = useState(5);
@@ -526,6 +526,7 @@ export default function OptionsSimulator({ selectedContract, underlyingPrice: li
         daysToExpiry={daysToExpiry}
         riskFreeRate={riskFreeRate}
         underlyingPrice={underlyingPrice}
+        liveData={liveData}
       />
 
       <p className="text-[9px] text-muted-foreground/50 text-center">

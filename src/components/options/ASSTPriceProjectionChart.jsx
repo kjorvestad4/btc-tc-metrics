@@ -3,7 +3,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/calculations";
-import { base44 } from "@/api/base44Client";
 import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
@@ -97,17 +96,17 @@ function calcMstrNavNow(btcPrice) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30, riskFreeRate = 5 }) {
+export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30, riskFreeRate = 5, liveData }) {
   const [activeTicker, setActiveTicker] = useState("MSTR");
 
-  // Shared BTC params
-  const [btcPriceNow, setBtcPriceNow] = useState(94000);
+  // Shared BTC params — seed from liveData if available
+  const [btcPriceNow, setBtcPriceNow] = useState(() => liveData?.btc_price || 94000);
   const [btcCagr, setBtcCagr]         = useState(55);
   const [activePreset, setActivePreset] = useState("Base");
 
-  // Actual current prices (independent of mNAV — user-entered live prices)
-  const [asstPriceActual, setAsstPriceActual] = useState(12.50);
-  const [mstrPriceActual, setMstrPriceActual] = useState(370.00);
+  // Actual current prices — seed from liveData if available
+  const [asstPriceActual, setAsstPriceActual] = useState(() => liveData?.asst_price || 12.50);
+  const [mstrPriceActual, setMstrPriceActual] = useState(() => liveData?.mstr_price || 370.00);
 
   // ASST-specific
   const [asstMnav, setAsstMnav] = useState(1.3);
@@ -120,15 +119,12 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
 
   const [rfrRate] = useState(riskFreeRate);
 
-  // Fetch live prices from polygonProxy on mount (same source as Overview page)
+  // Sync if liveData arrives/updates after mount
   useEffect(() => {
-    base44.functions.invoke("polygonProxy", {}).then(res => {
-      const d = res.data;
-      if (d?.btc_price)   setBtcPriceNow(d.btc_price);
-      if (d?.mstr_price)  setMstrPriceActual(d.mstr_price);
-      if (d?.asst_price)  setAsstPriceActual(d.asst_price);
-    }).catch(() => {/* silently fall back to defaults */});
-  }, []);
+    if (liveData?.btc_price)  setBtcPriceNow(liveData.btc_price);
+    if (liveData?.mstr_price) setMstrPriceActual(liveData.mstr_price);
+    if (liveData?.asst_price) setAsstPriceActual(liveData.asst_price);
+  }, [liveData]);
 
   // Actual NAV now (computed from BTC price + holdings, no mNAV applied)
   const actualNavNow = activeTicker === "ASST"

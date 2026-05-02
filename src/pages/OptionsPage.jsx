@@ -14,7 +14,7 @@ function Card({ children, className = "" }) {
   return <div className={`bg-card border border-border rounded-xl p-4 ${className}`}>{children}</div>;
 }
 
-export default function OptionsPage() {
+export default function OptionsPage({ liveData }) {
   const [ticker, setTicker] = useState("MSTR");
   const [customTicker, setCustomTicker] = useState("");
   const [expirations, setExpirations] = useState([]);
@@ -270,6 +270,7 @@ export default function OptionsPage() {
           selectedContract={selectedContract}
           underlyingPrice={underlyingPrice ?? 200}
           selectedExpiry={selectedExpiry}
+          liveData={liveData}
         />
       )}
 

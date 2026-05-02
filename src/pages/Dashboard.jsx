@@ -187,7 +187,7 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="options">
-            <OptionsPage />
+            <OptionsPage liveData={liveData} />
           </TabsContent>
         </Tabs>
 
