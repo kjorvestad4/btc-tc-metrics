@@ -71,6 +71,31 @@ export default function ATMMonitorPanel({ liveData }) {
   const strcPrice = liveData?.strc_price ?? STRC_RECENT_ACTIVITY[0]?.price ?? 99.21;
   const sataPrice = liveData?.sata_price ?? SATA_RECENT_ACTIVITY[0]?.price ?? 99.58;
 
+  // Merge live Polygon daily bars on top of static historical rows
+  const liveStrcRows = liveData?.atm_strc ?? null;
+  const liveSataRows = liveData?.atm_sata ?? null;
+
+  // Build merged activity: live rows take precedence over matching static dates
+  function mergeLiveRows(liveRows, staticRows) {
+    if (!liveRows?.length) return staticRows;
+    const liveMap = new Map(liveRows.map(r => [r.date, r]));
+    // Live dates sorted newest first
+    const liveSorted = [...liveRows].sort((a, b) => b.date.localeCompare(a.date));
+    // Static rows that have no live counterpart
+    const staticOnly = staticRows.filter(r => !liveMap.has(r.date));
+    return [...liveSorted, ...staticOnly].slice(0, 12);
+  }
+
+  const strcRows = mergeLiveRows(
+    liveStrcRows?.map(r => ({ date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0, btc_acquired: 0, isLive: true })),
+    STRC_RECENT_ACTIVITY
+  );
+
+  const sataRows = mergeLiveRows(
+    liveSataRows?.map(r => ({ date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0, btc_acquired: 0, isLive: true })),
+    SATA_RECENT_ACTIVITY
+  );
+
   // Live yield
   const strcYield = ((STRC_ATM_PROGRAM.strc_total_capacity_M > 0 ? 11.50 : 11.50) / strcPrice * 100).toFixed(2);
   const sataYield = (12.75 / sataPrice * 100).toFixed(2);
@@ -179,47 +204,15 @@ export default function ATMMonitorPanel({ liveData }) {
         ))}
       </div>
 
-      {/* STRC Weekly Breakdown */}
+      {/* STRC Daily Activity (live) */}
       {tab === "strc" && (
         <div className="space-y-1.5">
-          <p className="text-[10px] text-muted-foreground">Weekly ATM activity — source: <SourceLink href="https://bitcoinquant.co/preferred-equity" label="bitcoinquant.co" /></p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[10px]">
-              <thead>
-                <tr className="text-muted-foreground border-b border-border">
-                  <th className="text-left py-1 pr-2">Week</th>
-                  <th className="text-right pr-2">Total Vol</th>
-                  <th className="text-right pr-2">% ≥ $100</th>
-                  <th className="text-right pr-2">Est. Proceeds</th>
-                  <th className="text-right">Est. BTC ₿</th>
-                </tr>
-              </thead>
-              <tbody>
-                {STRC_WEEKLY.map((row, i) => (
-                  <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
-                     <td className="py-1 pr-2 text-foreground font-medium">
-                       {row.week}
-                       {row.note && <span className="text-[9px] text-red-400 ml-1">({row.note})</span>}
-                     </td>
-                     <td className="text-right pr-2 font-mono text-foreground">{row.total_vol_B != null && row.total_vol_B > 0.01 ? `$${row.total_vol_B}B` : "—"}</td>
-                     <td className={`text-right pr-2 font-mono font-bold ${row.pct_at_par > 0 && row.pct_at_par >= 80 ? "text-green-400" : row.pct_at_par > 0 && row.pct_at_par >= 50 ? "text-amber-400" : row.pct_at_par === 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                       {row.pct_at_par != null ? (row.pct_at_par === 0 ? "0%" : `${row.pct_at_par}%`) : "—"}
-                     </td>
-                     <td className="text-right pr-2 font-mono text-purple-400 font-bold">{row.est_proceeds_B > 0 ? `$${row.est_proceeds_B}B` : "—"}</td>
-                     <td className="text-right font-mono text-amber-400 font-bold">{row.est_btc > 0 ? `₿${row.est_btc.toLocaleString()}` : "—"}</td>
-                   </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <p className="text-[10px] text-muted-foreground">
+              Daily price &amp; volume — {liveStrcRows ? <span className="text-green-400 font-semibold">● Live (Polygon)</span> : <span className="text-muted-foreground">Static fallback</span>}
+            </p>
+            <SourceLink href="https://bitcoinquant.co/preferred-equity" label="bitcoinquant.co" />
           </div>
-          <p className="text-[9px] text-muted-foreground/70">65% ATM capture rate applied to vol ≥ $100. Confirmed figures released weekly via SEC 8-K.</p>
-        </div>
-      )}
-
-      {/* SATA Daily */}
-      {tab === "sata" && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-muted-foreground">Daily activity — source: <SourceLink href="https://bitcointreasuries.net/digital-credit/SATA" label="bitcointreasuries.net/SATA" /></p>
           <div className="overflow-x-auto">
             <table className="w-full text-[10px]">
               <thead>
@@ -227,24 +220,77 @@ export default function ATMMonitorPanel({ liveData }) {
                   <th className="text-left py-1 pr-2">Date</th>
                   <th className="text-right pr-2">Price</th>
                   <th className="text-right pr-2">Vol $M</th>
-                  <th className="text-right pr-2">% ≥ Par</th>
+                  <th className="text-right pr-2">ATM Status</th>
                   <th className="text-right pr-2">Est. Proceeds</th>
                   <th className="text-right">Est. BTC</th>
                 </tr>
               </thead>
               <tbody>
-                {SATA_RECENT_ACTIVITY.map((row, i) => (
-                  <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
+                {strcRows.map((row, i) => (
+                  <tr key={row.date} className={`border-b border-border/40 hover:bg-secondary/30 ${row.isLive ? "bg-green-500/5" : ""}`}>
                     <td className="py-1 pr-2 font-mono text-muted-foreground">
-                      {row.date.slice(5)}{i === 0 && <span className="text-[9px] text-primary ml-1">●live</span>}
+                      {row.date?.slice(5)}
+                      {i === 0 && row.isLive && <span className="text-[9px] text-green-400 ml-1">●live</span>}
                     </td>
-                    <td className={`text-right pr-2 font-mono font-bold ${row.price >= 100 ? "text-green-400" : "text-amber-400"}`}>${row.price.toFixed(2)}</td>
+                    <td className={`text-right pr-2 font-mono font-bold ${(row.price ?? 0) >= 100 ? "text-green-400" : "text-amber-400"}`}>
+                      ${(row.price ?? 0).toFixed(2)}
+                    </td>
                     <td className="text-right pr-2 font-mono text-foreground">{row.volume_M != null ? `$${row.volume_M.toFixed(2)}M` : "—"}</td>
-                    <td className={`text-right pr-2 font-mono ${row.pct_at_par > 0 ? "text-green-400 font-bold" : "text-muted-foreground"}`}>
-                      {row.pct_at_par > 0 ? `${row.pct_at_par}%` : "—"}
+                    <td className={`text-right pr-2 font-mono font-bold ${(row.price ?? 0) >= 100 ? "text-green-400" : "text-red-400"}`}>
+                      {(row.price ?? 0) >= 100 ? "≥ PAR ✓" : "Below Par"}
+                    </td>
+                    <td className="text-right pr-2 font-mono text-purple-400 font-bold">
+                      {row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}
+                    </td>
+                    <td className="text-right font-mono text-amber-400 font-bold">
+                      {row.btc_acquired > 0 ? `₿${row.btc_acquired}` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[9px] text-muted-foreground/70">Live daily bars from Polygon.io. Est. proceeds = 65% capture × vol when ≥ par. Confirmed BTC figures released via SEC 8-K.</p>
+        </div>
+      )}
+
+      {/* SATA Daily */}
+      {tab === "sata" && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <p className="text-[10px] text-muted-foreground">
+              Daily price &amp; volume — {liveSataRows ? <span className="text-green-400 font-semibold">● Live (Polygon)</span> : <span className="text-muted-foreground">Static fallback</span>}
+            </p>
+            <SourceLink href="https://bitcointreasuries.net/digital-credit/SATA" label="bitcointreasuries.net/SATA" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left py-1 pr-2">Date</th>
+                  <th className="text-right pr-2">Price</th>
+                  <th className="text-right pr-2">Vol $M</th>
+                  <th className="text-right pr-2">ATM Status</th>
+                  <th className="text-right pr-2">Est. Proceeds</th>
+                  <th className="text-right">Est. BTC</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sataRows.map((row, i) => (
+                  <tr key={row.date} className={`border-b border-border/40 hover:bg-secondary/30 ${row.isLive ? "bg-green-500/5" : ""}`}>
+                    <td className="py-1 pr-2 font-mono text-muted-foreground">
+                      {row.date?.slice(5)}
+                      {i === 0 && row.isLive && <span className="text-[9px] text-green-400 ml-1">●live</span>}
+                    </td>
+                    <td className={`text-right pr-2 font-mono font-bold ${(row.price ?? 0) >= 100 ? "text-green-400" : "text-amber-400"}`}>
+                      ${(row.price ?? 0).toFixed(2)}
+                    </td>
+                    <td className="text-right pr-2 font-mono text-foreground">{row.volume_M != null ? `$${row.volume_M.toFixed(2)}M` : "—"}</td>
+                    <td className={`text-right pr-2 font-mono font-bold ${(row.price ?? 0) >= 100 ? "text-green-400" : "text-red-400"}`}>
+                      {(row.price ?? 0) >= 100 ? "≥ PAR ✓" : "Below Par"}
                     </td>
                     <td className="text-right pr-2 font-mono text-violet-400 font-bold">
-                      {row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(1)}M` : "—"}
+                      {row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}
                     </td>
                     <td className="text-right font-mono text-amber-400 font-bold">
                       {row.btc_acquired > 0 ? `₿${row.btc_acquired}` : "—"}
@@ -264,6 +310,7 @@ export default function ATMMonitorPanel({ liveData }) {
               <p className="text-xs font-mono font-bold text-green-400">12.75%</p>
             </div>
           </div>
+          <p className="text-[9px] text-muted-foreground/70">Live daily bars from Polygon.io. Est. proceeds = 72% capture × vol when ≥ par.</p>
         </div>
       )}
 

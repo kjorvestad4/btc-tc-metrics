@@ -110,7 +110,35 @@ Deno.serve(async (req) => {
         }))).catch(() => null)
       : Promise.resolve(null);
 
-    const [iv, divs] = await Promise.all([ivPromise, divsPromise]);
+    // Fetch last 10 trading days of OHLCV for STRC and SATA
+    const atmPromise = POLYGON_KEY
+      ? (async () => {
+          try {
+            const toDate = new Date().toISOString().split("T")[0];
+            const fromDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+            const [strcData, sataData] = await Promise.all([
+              fetchJSON(`https://api.polygon.io/v2/aggs/ticker/STRC/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=desc&limit=15&apiKey=${POLYGON_KEY}`),
+              fetchJSON(`https://api.polygon.io/v2/aggs/ticker/SATA/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=desc&limit=15&apiKey=${POLYGON_KEY}`),
+            ]);
+            const mapBar = (bar) => ({
+              date: new Date(bar.t).toISOString().split("T")[0],
+              price: bar.c,
+              volume_M: parseFloat(((bar.v * bar.vw) / 1_000_000).toFixed(2)),
+              open: bar.o,
+              high: bar.h,
+              low: bar.l,
+              close: bar.c,
+              vwap: parseFloat(bar.vw?.toFixed(2) ?? bar.c),
+            });
+            return {
+              strc: (strcData.results ?? []).map(mapBar),
+              sata: (sataData.results ?? []).map(mapBar),
+            };
+          } catch { return null; }
+        })()
+      : Promise.resolve(null);
+
+    const [iv, divs, atmData] = await Promise.all([ivPromise, divsPromise, atmPromise]);
 
     const prices = {};
     const sources = {};
@@ -119,7 +147,7 @@ Deno.serve(async (req) => {
       sources[ticker] = source;
     });
 
-    return Response.json({ btc: btcResult, prices, sources, iv, divs });
+    return Response.json({ btc: btcResult, prices, sources, iv, divs, atm: atmData });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -221,6 +221,8 @@ export async function fetchAllMarketData() {
     mstr_iv: poly.iv ?? null,
     msty_dividends: poly.divs ?? null,
     msty_latest_div: poly.divs?.[0]?.amount ?? null,
+    atm_strc: poly.atm?.strc ?? null,
+    atm_sata: poly.atm?.sata ?? null,
     polygon_used: true,
     errors,
   };
