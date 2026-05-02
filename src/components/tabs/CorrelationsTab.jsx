@@ -620,7 +620,7 @@ function PreferredSharpePanel({ liveData }) {
 }
 
 // ── STRC ATM Program panel ────────────────────────────────────────────────────
-function STRCATMPanel({ params }) {
+function STRCATMPanel({ params, liveData }) {
   const prog = STRC_ATM_PROGRAM;
   const [captureRate, setCaptureRate] = useState(prog.avg_capture_pct);
   const [issuanceRate, setIssuanceRate] = useState(prog.avg_daily_volume_M);
@@ -687,7 +687,10 @@ function STRCATMPanel({ params }) {
           </div>
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Recent Daily Activity (Last 10 Trading Days)</p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Recent Daily Activity (Last 10 Trading Days)</p>
+        {liveData?.atm_strc ? <span className="text-[10px] text-green-400 font-semibold">● Live (Polygon)</span> : <span className="text-[10px] text-muted-foreground">Static fallback</span>}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -695,27 +698,42 @@ function STRCATMPanel({ params }) {
               <th className="text-left py-1.5 pr-2 font-medium">Date</th>
               <th className="text-right py-1.5 pr-2 font-medium">Price</th>
               <th className="text-right py-1.5 pr-2 font-medium">Vol ($M)</th>
-              <th className="text-right py-1.5 pr-2 font-medium">% ≥ Par</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Cap%</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Proceeds</th>
+              <th className="text-right py-1.5 pr-2 font-medium">ATM Status</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Est. Proceeds</th>
               <th className="text-right py-1.5 font-medium">BTC</th>
             </tr>
           </thead>
           <tbody>
-            {STRC_RECENT_ACTIVITY.map((row) => {
-              const atPar = row.price >= 100;
-              return (
-                <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-primary/5" : ""}`}>
-                  <td className="py-1 pr-2 font-mono text-foreground">{row.date}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-primary font-bold" : "text-muted-foreground"}`}>${row.price?.toFixed(2)}{atPar ? " ✓" : ""}</td>
-                  <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M?.toFixed(1)}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${row.pct_at_par > 0 ? "text-primary" : "text-muted-foreground"}`}>{row.pct_at_par > 0 ? `${row.pct_at_par.toFixed(1)}%` : "—"}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${row.capture_pct > 0 ? "text-amber-400" : "text-muted-foreground"}`}>{row.capture_pct > 0 ? `${row.capture_pct}%` : "—"}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
-                  <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
-                </tr>
-              );
-            })}
+            {(() => {
+              const liveRows = liveData?.atm_strc;
+              const staticRows = STRC_RECENT_ACTIVITY;
+              let rows = staticRows;
+              if (liveRows?.length) {
+                const liveMap = new Map(liveRows.map(r => [r.date, r]));
+                const liveMapped = [...liveRows].sort((a, b) => b.date.localeCompare(a.date)).map(r => ({
+                  date: r.date, price: r.price, volume_M: r.volume_M,
+                  pct_at_par: r.price >= 100 ? 100 : 0, capture_pct: r.price >= 100 ? 65 : 0,
+                  proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0,
+                  btc_acquired: 0, isLive: true,
+                }));
+                rows = [...liveMapped, ...staticRows.filter(r => !liveMap.has(r.date))].slice(0, 12);
+              }
+              return rows.map((row, i) => {
+                const atPar = (row.price ?? 0) >= 100;
+                return (
+                  <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-primary/5" : ""} ${row.isLive ? "bg-green-500/5" : ""}`}>
+                    <td className="py-1 pr-2 font-mono text-foreground">
+                      {row.date}{i === 0 && row.isLive && <span className="text-[9px] text-green-400 ml-1">●</span>}
+                    </td>
+                    <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-primary font-bold" : "text-muted-foreground"}`}>${(row.price ?? 0).toFixed(2)}{atPar ? " ✓" : ""}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M != null ? row.volume_M.toFixed(2) : "—"}</td>
+                    <td className={`py-1 pr-2 text-right font-mono font-bold ${atPar ? "text-green-400" : "text-red-400"}`}>{atPar ? "≥ PAR ✓" : "Below Par"}</td>
+                    <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
+                    <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
+                  </tr>
+                );
+              });
+            })()}
           </tbody>
         </table>
       </div>
@@ -724,7 +742,7 @@ function STRCATMPanel({ params }) {
 }
 
 // ── SATA ATM Program panel ────────────────────────────────────────────────────
-function SATAATMPanel({ params }) {
+function SATAATMPanel({ params, liveData }) {
   const prog = SATA_ATM_PROGRAM;
   const [captureRate, setCaptureRate] = useState(prog.avg_capture_pct);
   const [issuanceRate, setIssuanceRate] = useState(prog.avg_daily_volume_M);
@@ -784,7 +802,10 @@ function SATAATMPanel({ params }) {
           ))}
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Recent Daily SATA Activity (Last 10 Trading Days)</p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Recent Daily SATA Activity (Last 10 Trading Days)</p>
+        {liveData?.atm_sata ? <span className="text-[10px] text-green-400 font-semibold">● Live (Polygon)</span> : <span className="text-[10px] text-muted-foreground">Static fallback</span>}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -792,27 +813,42 @@ function SATAATMPanel({ params }) {
               <th className="text-left py-1.5 pr-2 font-medium">Date</th>
               <th className="text-right py-1.5 pr-2 font-medium">Price</th>
               <th className="text-right py-1.5 pr-2 font-medium">Vol ($M)</th>
-              <th className="text-right py-1.5 pr-2 font-medium">% ≥ Par</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Cap%</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Proceeds</th>
+              <th className="text-right py-1.5 pr-2 font-medium">ATM Status</th>
+              <th className="text-right py-1.5 pr-2 font-medium">Est. Proceeds</th>
               <th className="text-right py-1.5 font-medium">BTC</th>
             </tr>
           </thead>
           <tbody>
-            {SATA_RECENT_ACTIVITY.map((row) => {
-              const atPar = row.price >= 100;
-              return (
-                <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-violet-400/5" : ""}`}>
-                  <td className="py-1 pr-2 font-mono text-foreground">{row.date}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-violet-400 font-bold" : "text-muted-foreground"}`}>${row.price.toFixed(2)}{atPar ? " ✓" : ""}</td>
-                  <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M != null ? row.volume_M.toFixed(1) : "—"}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${row.pct_at_par > 0 ? "text-violet-400" : "text-muted-foreground"}`}>{row.pct_at_par > 0 ? `${row.pct_at_par.toFixed(1)}%` : "—"}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${row.capture_pct > 0 ? "text-amber-400" : "text-muted-foreground"}`}>{row.capture_pct > 0 ? `${row.capture_pct}%` : "—"}</td>
-                  <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
-                  <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-violet-400 font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
-                </tr>
-              );
-            })}
+            {(() => {
+              const liveRows = liveData?.atm_sata;
+              const staticRows = SATA_RECENT_ACTIVITY;
+              let rows = staticRows;
+              if (liveRows?.length) {
+                const liveMap = new Map(liveRows.map(r => [r.date, r]));
+                const liveMapped = [...liveRows].sort((a, b) => b.date.localeCompare(a.date)).map(r => ({
+                  date: r.date, price: r.price, volume_M: r.volume_M,
+                  pct_at_par: r.price >= 100 ? 100 : 0, capture_pct: r.price >= 100 ? 72 : 0,
+                  proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0,
+                  btc_acquired: 0, isLive: true,
+                }));
+                rows = [...liveMapped, ...staticRows.filter(r => !liveMap.has(r.date))].slice(0, 12);
+              }
+              return rows.map((row, i) => {
+                const atPar = (row.price ?? 0) >= 100;
+                return (
+                  <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-violet-400/5" : ""} ${row.isLive ? "bg-green-500/5" : ""}`}>
+                    <td className="py-1 pr-2 font-mono text-foreground">
+                      {row.date}{i === 0 && row.isLive && <span className="text-[9px] text-green-400 ml-1">●</span>}
+                    </td>
+                    <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-violet-400 font-bold" : "text-muted-foreground"}`}>${(row.price ?? 0).toFixed(2)}{atPar ? " ✓" : ""}</td>
+                    <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M != null ? row.volume_M.toFixed(2) : "—"}</td>
+                    <td className={`py-1 pr-2 text-right font-mono font-bold ${atPar ? "text-green-400" : "text-red-400"}`}>{atPar ? "≥ PAR ✓" : "Below Par"}</td>
+                    <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
+                    <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-violet-400 font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
+                  </tr>
+                );
+              });
+            })()}
           </tbody>
         </table>
       </div>
@@ -957,12 +993,12 @@ export default function CorrelationsTab({ params, liveData }) {
 
         {/* STRC ATM — full width */}
         <div className="grid grid-cols-1 gap-4">
-          <STRCATMPanel params={params} />
+          <STRCATMPanel params={params} liveData={liveData} />
         </div>
 
         {/* SATA ATM — full width */}
         <div className="grid grid-cols-1 gap-4">
-          <SATAATMPanel params={params} />
+          <SATAATMPanel params={params} liveData={liveData} />
         </div>
 
         {/* Par trading stats — STRC + SATA */}
