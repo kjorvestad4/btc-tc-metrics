@@ -87,6 +87,14 @@ function Card({ children, className = "" }) {
   return <div className={`bg-card border border-border rounded-xl p-4 ${className}`}>{children}</div>;
 }
 
+// ── Actual "now" NAV helpers (independent of mNAV multiple) ──────────────────
+function calcAsstNavNow(btcPrice) {
+  return (ASST_BTC_HOLD_NOW * btcPrice) / (ASST_SHARES_M * 1e6);
+}
+function calcMstrNavNow(btcPrice) {
+  return ((MSTR_BTC_HOLD_NOW * btcPrice) - MSTR_TOTAL_PREF_M * 1e6) / (MSTR_SHARES_M * 1e6);
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30, riskFreeRate = 5 }) {
   const [activeTicker, setActiveTicker] = useState("MSTR");
@@ -95,6 +103,10 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
   const [btcPriceNow, setBtcPriceNow] = useState(94000);
   const [btcCagr, setBtcCagr]         = useState(55);
   const [activePreset, setActivePreset] = useState("Base");
+
+  // Actual current prices (independent of mNAV — user-entered live prices)
+  const [asstPriceActual, setAsstPriceActual] = useState(12.50);
+  const [mstrPriceActual, setMstrPriceActual] = useState(370.00);
 
   // ASST-specific
   const [asstMnav, setAsstMnav] = useState(1.3);
@@ -106,6 +118,13 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
   const [mstrIv, setMstrIv]         = useState(80);
 
   const [rfrRate] = useState(riskFreeRate);
+
+  // Actual NAV now (computed from BTC price + holdings, no mNAV applied)
+  const actualNavNow = activeTicker === "ASST"
+    ? calcAsstNavNow(btcPriceNow)
+    : calcMstrNavNow(btcPriceNow);
+  const actualPriceNow = activeTicker === "ASST" ? asstPriceActual : mstrPriceActual;
+  const setActualPriceNow = activeTicker === "ASST" ? setAsstPriceActual : setMstrPriceActual;
 
   const applyPreset = (name) => {
     setActivePreset(name);
@@ -126,7 +145,8 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
     return projectMSTR({ btcPriceNow, btcCagrPct: btcCagr, mnavMultiple: mstrMnav, dilutionPct: mstrDilution });
   }, [activeTicker, btcPriceNow, btcCagr, asstMnav, mstrMnav, mstrDilution]);
 
-  const priceNow = projRows[0]?.price ?? 0;
+  // priceNow for % change calcs — use actual live price
+  const priceNow = actualPriceNow;
 
   // Chart data with option P&L overlaid
   const chartData = useMemo(() => {
@@ -200,7 +220,7 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
       </div>
 
       {/* Parameter controls — shared + ticker-specific */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <div>
           <Label className="text-[10px] text-muted-foreground">BTC Price Now ($)</Label>
           <Input type="number" value={btcPriceNow}
@@ -216,6 +236,13 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
 
         {activeTicker === "ASST" ? <>
           <div>
+            <Label className="text-[10px] text-muted-foreground">ASST Current Price ($) <span className="text-amber-400">live</span></Label>
+            <Input type="number" value={asstPriceActual}
+              onChange={e => setAsstPriceActual(Math.max(0.01, parseFloat(e.target.value)||0.01))}
+              className="h-8 text-xs font-mono bg-secondary border-border mt-1" step={0.5} />
+            <p className="text-[9px] text-muted-foreground mt-0.5">Used for "Now" row only</p>
+          </div>
+          <div>
             <Label className="text-[10px] text-muted-foreground">ASST mNAV Multiple</Label>
             <Input type="number" value={asstMnav}
               onChange={e => { setAsstMnav(Math.max(0.1, parseFloat(e.target.value)||0.1)); setActivePreset("Custom"); }}
@@ -228,6 +255,13 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
               className="h-8 text-xs font-mono bg-secondary border-border mt-1" step={5} />
           </div>
         </> : <>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">MSTR Current Price ($) <span className="text-amber-400">live</span></Label>
+            <Input type="number" value={mstrPriceActual}
+              onChange={e => setMstrPriceActual(Math.max(0.01, parseFloat(e.target.value)||0.01))}
+              className="h-8 text-xs font-mono bg-secondary border-border mt-1" step={1} />
+            <p className="text-[9px] text-muted-foreground mt-0.5">Used for "Now" row only</p>
+          </div>
           <div>
             <Label className="text-[10px] text-muted-foreground">MSTR mNAV Multiple</Label>
             <Input type="number" value={mstrMnav}
@@ -271,7 +305,7 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
       {/* Milestone cards */}
       <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
         {[
-          { label: `${activeTicker} Now`, value: `$${priceNow.toFixed(2)}`, color: "text-foreground", sub: "q0" },
+          { label: `${activeTicker} Now`, value: `$${actualPriceNow.toFixed(2)}`, color: "text-foreground", sub: "actual price" },
           y1Row && { label: `${activeTicker} Y1`, value: `$${y1Row.price.toFixed(2)}`, color: cfg.color.replace("#","text-[#"), sub: `+${(((y1Row.price/priceNow)-1)*100).toFixed(0)}%` },
           y2Row && { label: `${activeTicker} Y2`, value: `$${y2Row.price.toFixed(2)}`, color: "text-cyan-400", sub: `+${(((y2Row.price/priceNow)-1)*100).toFixed(0)}%` },
           y5Row && { label: `${activeTicker} Y5`, value: `$${y5Row.price.toFixed(2)}`, color: "text-primary", sub: `+${(((y5Row.price/priceNow)-1)*100).toFixed(0)}%` },
@@ -351,15 +385,22 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
           <tbody>
             {[...projRows.slice(0, 9), ...projRows.filter(r => [12, 16, 20].includes(r.q))].map(row => {
               const cd = chartData.find(c => c.q === row.q);
-              const pctVsNow = ((row.price / priceNow - 1) * 100).toFixed(0);
               const isNow = row.q === 0;
               const isYrEnd = row.q % 4 === 0 && row.q > 0;
+              // "Now" row always shows actual live values, not projection-derived
+              const displayBtc   = isNow ? btcPriceNow    : row.btcPrice;
+              const displayNav   = isNow ? actualNavNow   : row.navPerShare;
+              const displayPrice = isNow ? actualPriceNow : row.price;
+              const pctVsNow = ((displayPrice / priceNow - 1) * 100).toFixed(0);
               return (
                 <tr key={row.q} className={`border-b border-border/30 ${isYrEnd ? "bg-secondary/20" : ""} ${isNow ? "bg-secondary/40" : ""}`}>
-                  <td className={`py-1 pr-3 font-mono font-semibold ${isYrEnd ? "text-primary" : "text-muted-foreground"}`}>{row.label}</td>
-                  <td className="py-1 pr-3 text-right font-mono text-amber-400">${row.btcPrice.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-                  <td className="py-1 pr-3 text-right font-mono text-purple-400">${row.navPerShare.toFixed(2)}</td>
-                  <td className="py-1 pr-3 text-right font-mono font-bold" style={{ color: cfg.color }}>${row.price.toFixed(2)}</td>
+                  <td className={`py-1 pr-3 font-mono font-semibold ${isYrEnd ? "text-primary" : isNow ? "text-foreground" : "text-muted-foreground"}`}>
+                    {row.label}
+                    {isNow && <span className="text-[8px] text-amber-400 ml-1">actual</span>}
+                  </td>
+                  <td className="py-1 pr-3 text-right font-mono text-amber-400">${displayBtc.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+                  <td className="py-1 pr-3 text-right font-mono text-purple-400">${displayNav.toFixed(2)}</td>
+                  <td className="py-1 pr-3 text-right font-mono font-bold" style={{ color: cfg.color }}>${displayPrice.toFixed(2)}</td>
                   <td className={`py-1 pr-3 text-right font-mono ${isNow ? "text-muted-foreground" : parseFloat(pctVsNow) >= 0 ? "text-green-400" : "text-destructive"}`}>
                     {isNow ? "—" : `+${pctVsNow}%`}
                   </td>
