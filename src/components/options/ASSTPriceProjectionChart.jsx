@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/calculations";
+import { base44 } from "@/api/base44Client";
 import {
   ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
@@ -118,6 +119,16 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
   const [mstrIv, setMstrIv]         = useState(80);
 
   const [rfrRate] = useState(riskFreeRate);
+
+  // Fetch live prices from polygonProxy on mount (same source as Overview page)
+  useEffect(() => {
+    base44.functions.invoke("polygonProxy", {}).then(res => {
+      const d = res.data;
+      if (d?.btc_price)   setBtcPriceNow(d.btc_price);
+      if (d?.mstr_price)  setMstrPriceActual(d.mstr_price);
+      if (d?.asst_price)  setAsstPriceActual(d.asst_price);
+    }).catch(() => {/* silently fall back to defaults */});
+  }, []);
 
   // Actual NAV now (computed from BTC price + holdings, no mNAV applied)
   const actualNavNow = activeTicker === "ASST"
