@@ -183,6 +183,9 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
   const y5Row = projRows.find(r => r.q === 20);
   const netLegCost = legs.reduce((s, l) => s + l.premium * l.qty * 100 * (l.side === "buy" ? 1 : -1), 0);
 
+  // Expiry quarter: which quarter index does daysToExpiry land in (ceil, min 1)
+  const expiryQuarter = Math.max(1, Math.ceil(daysToExpiry / 91.25));
+
   return (
     <Card>
       {/* Header */}
@@ -377,7 +380,10 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
 
       {/* Quarterly table */}
       <div className="mt-4 overflow-x-auto">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Quarterly Projection Table</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+          Quarterly Projection Table
+          {legs.length > 0 && <span className="text-amber-400 ml-2 normal-case">· through expiration ({daysToExpiry}d)</span>}
+        </p>
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border text-muted-foreground text-[9px]">
@@ -390,20 +396,22 @@ export default function StockPriceProjectionChart({ legs = [], daysToExpiry = 30
             </tr>
           </thead>
           <tbody>
-            {[...projRows.slice(0, 9), ...projRows.filter(r => [12, 16, 20].includes(r.q))].map(row => {
+            {projRows.filter(r => r.q <= expiryQuarter).map(row => {
               const cd = chartData.find(c => c.q === row.q);
               const isNow = row.q === 0;
               const isYrEnd = row.q % 4 === 0 && row.q > 0;
+              const isExpiry = row.q === expiryQuarter;
               // "Now" row always shows actual live values, not projection-derived
               const displayBtc   = isNow ? btcPriceNow    : row.btcPrice;
               const displayNav   = isNow ? actualNavNow   : row.navPerShare;
               const displayPrice = isNow ? actualPriceNow : row.price;
               const pctVsNow = ((displayPrice / priceNow - 1) * 100).toFixed(0);
               return (
-                <tr key={row.q} className={`border-b border-border/30 ${isYrEnd ? "bg-secondary/20" : ""} ${isNow ? "bg-secondary/40" : ""}`}>
-                  <td className={`py-1 pr-3 font-mono font-semibold ${isYrEnd ? "text-primary" : isNow ? "text-foreground" : "text-muted-foreground"}`}>
+                <tr key={row.q} className={`border-b ${isExpiry ? "border-amber-500/60 bg-amber-500/10" : "border-border/30"} ${isYrEnd && !isExpiry ? "bg-secondary/20" : ""} ${isNow ? "bg-secondary/40" : ""}`}>
+                  <td className={`py-1 pr-3 font-mono font-semibold ${isExpiry ? "text-amber-400" : isYrEnd ? "text-primary" : isNow ? "text-foreground" : "text-muted-foreground"}`}>
                     {row.label}
                     {isNow && <span className="text-[8px] text-amber-400 ml-1">actual</span>}
+                    {isExpiry && <span className="text-[8px] text-amber-400 ml-1 font-bold">← expiry</span>}
                   </td>
                   <td className="py-1 pr-3 text-right font-mono text-amber-400">${displayBtc.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
                   <td className="py-1 pr-3 text-right font-mono text-purple-400">${displayNav.toFixed(2)}</td>
