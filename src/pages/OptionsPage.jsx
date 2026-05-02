@@ -269,6 +269,7 @@ export default function OptionsPage() {
         <OptionsSimulator
           selectedContract={selectedContract}
           underlyingPrice={underlyingPrice ?? 200}
+          selectedExpiry={selectedExpiry}
         />
       )}
 
