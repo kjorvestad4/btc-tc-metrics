@@ -60,21 +60,23 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     ? Math.min(yearsToFull, Math.max(0, retirementAge - currentAge))
     : yearsToFull;
 
-  const hasProjections = portfolioProjections && portfolioProjections.length > 0;
+  // Rule 72(t)/SEPP can start at partial retirement age (early IRA access)
+  // All other strategies start at full retirement age
+  const yearsToWithdrawalStart = strategy === "rule_72t" ? yearsToPartial : yearsToFull;
 
-  // IRA is a % of the portfolio — seed it at startBalance * iraPct and grow in lockstep
-  // iraBalance here is the actual dollar amount passed in (already computed from iraPct outside)
-  const iraFraction = startBalance > 0 ? Math.min(1, iraBalance / startBalance) : 0;
+  const hasProjections = portfolioProjections && portfolioProjections.length > 0;
 
   let fixedSeppAmount = null;
   let swrBaseAmount = null;
   let balance = startBalance;
+  // IRA grows independently at the same annual return rate — seeded from user input
   let trackingIra = iraBalance;
 
   for (let y = 0; y <= years; y++) {
     const isPartial  = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull;
     const isRetired  = y >= yearsToFull;
     const isWorking  = !isPartial && !isRetired;
+    const isWithdrawing = y >= yearsToWithdrawalStart;
 
     const empIncome = isWorking
       ? employmentIncome * 12
@@ -83,7 +85,6 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
         : 0;
 
     if (y === 0) {
-      // Only show IRA line for rule_72t strategy
       rows.push({ year: startYear, balance, iraBalance: strategy === "rule_72t" ? trackingIra : null, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
       continue;
     }
@@ -99,18 +100,18 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance = balance * (1 + rate);
     }
 
-    // ── IRA grows as same fraction of portfolio (not independently) ──
-    trackingIra = balance * iraFraction;
+    // ── IRA grows independently at same rate ──
+    trackingIra = trackingIra * (1 + rate);
 
-    // ── Compute withdrawal (retired phase only) ──
+    // ── Compute withdrawal ──
     let withdrawal = 0;
-    if (isRetired) {
-      const yearsIntoRetirement = y - yearsToFull;
-      if (strategy === "swr") {
+    if (isWithdrawing) {
+      const yearsIntoWithdrawal = y - yearsToWithdrawalStart;
+      if (strategy === "swr" && isRetired) {
         if (swrBaseAmount === null) swrBaseAmount = balance * (swrPct / 100);
-        withdrawal = swrBaseAmount * Math.pow(1 + inflationRate / 100, yearsIntoRetirement);
-      } else if (strategy === "fixed_income") {
-        withdrawal = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, yearsIntoRetirement);
+        withdrawal = swrBaseAmount * Math.pow(1 + inflationRate / 100, y - yearsToFull);
+      } else if (strategy === "fixed_income" && isRetired) {
+        withdrawal = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, y - yearsToFull);
       } else if (strategy === "rule_72t") {
         if (method72t === "rmd") {
           withdrawal = calc72t({ balance: trackingIra, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
@@ -124,15 +125,18 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       // income_only: withdrawal stays 0
     }
 
-    // ── Apply withdrawal to portfolio ──
+    // ── Apply withdrawal ──
     if (withdrawal > 0) {
-      balance = Math.max(0, balance - withdrawal);
-      trackingIra = Math.max(0, trackingIra - withdrawal);
+      if (strategy === "rule_72t") {
+        trackingIra = Math.max(0, trackingIra - withdrawal);
+      } else {
+        balance = Math.max(0, balance - withdrawal);
+      }
     }
 
-    // investmentIncome = what the chart shows as retirement income
-    const investmentIncome = isRetired
-      ? (strategy === "income_only" ? annualDividendIncome : withdrawal)
+    // investmentIncome = what the income chart shows
+    const investmentIncome = isWithdrawing
+      ? (strategy === "income_only" && isRetired ? annualDividendIncome : withdrawal)
       : 0;
 
     rows.push({
@@ -936,15 +940,21 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? "#22D3EE"
             : "#F59E0B";
 
-          // Compute year-1 retirement income directly from the summary cards logic
-          // (same formula used above, so tooltip always matches the cards)
-          const yearsToFirst = Math.max(0, fullRetirementAge - currentAge);
+          // For 72(t)/SEPP, withdrawals start at partial retirement age; others at full retirement
+          const yearsToWithdrawalStart = strategy === "rule_72t"
+            ? Math.max(0, retirementAge - currentAge)
+            : Math.max(0, fullRetirementAge - currentAge);
+          const withdrawalStartYear = new Date().getFullYear() + yearsToWithdrawalStart;
+          const fullRetireYear = new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge);
+
+          // Year-1 income at withdrawal start
+          const iraAtStart = engineIraBalance * Math.pow(1 + annualReturn / 100, yearsToWithdrawalStart);
           const balanceAtRetirement = (() => {
             if (portfolioProjections && mode === "portfolio" && portfolioProjections.length > 0) {
-              const idx = Math.min(yearsToFirst, portfolioProjections.length - 1);
+              const idx = Math.min(Math.max(0, fullRetirementAge - currentAge), portfolioProjections.length - 1);
               return portfolioProjections[idx].portfolio_value;
             }
-            return startBalance * Math.pow(1 + annualReturn / 100, yearsToFirst);
+            return startBalance * Math.pow(1 + annualReturn / 100, Math.max(0, fullRetirementAge - currentAge));
           })();
 
           const year1Income = strategy === "swr"
@@ -953,16 +963,12 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? portfolioMonthlyIncome * 12
             : strategy === "fixed_income"
             ? targetMonthlyIncome * 12
-            : calc72t({ balance: engineIraBalance, age: Math.min(fullRetirementAge, 84), method: method72t, interestRate: interestRate72t / 100 });
+            : calc72t({ balance: iraAtStart, age: Math.min(currentAge + yearsToWithdrawalStart, 84), method: method72t, interestRate: interestRate72t / 100 });
 
-          const retirementYear = new Date().getFullYear() + yearsToFirst;
-
-          // Build chart data: pre-retirement rows show 0, retirement rows show actual income
-          // Also ensure we always have enough rows to show retirement income
+          // null out pre-withdrawal years so line only starts when income begins
           const chartRows = withdrawalRows.map(row => ({
             ...row,
-            // For pre-retirement: show null so line only starts at retirement
-            incomeFlow: row.year < retirementYear ? null : row.investmentIncome,
+            incomeFlow: row.year < withdrawalStartYear ? null : row.investmentIncome,
           }));
 
           return (
@@ -974,7 +980,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 </div>
                 <div className="flex gap-3 text-[10px]">
                   <span className="text-muted-foreground">
-                    Year-1 at retirement ({retirementYear}): <span className="font-mono font-bold" style={{ color: incomeLineColor }}>{formatCurrency(year1Income, 0)}/yr</span>
+                    Year-1 ({withdrawalStartYear}): <span className="font-mono font-bold" style={{ color: incomeLineColor }}>{formatCurrency(year1Income, 0)}/yr</span>
                     <span className="text-muted-foreground ml-1">({formatCurrency(year1Income / 12, 0)}/mo)</span>
                   </span>
                 </div>
@@ -993,22 +999,19 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     labelFormatter={l => `Year ${l}`}
                   />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
-                  {fullRetirementAge > currentAge && (
-                    <ReferenceLine
-                      x={retirementYear}
-                      stroke="#22C55E" strokeDasharray="4 2"
-                      label={{ value: "Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
-                    />
+                  {/* SEPP start marker (may differ from full retirement) */}
+                  {strategy === "rule_72t" && withdrawalStartYear < fullRetireYear && (
+                    <ReferenceLine x={withdrawalStartYear} stroke="#22D3EE" strokeDasharray="4 2"
+                      label={{ value: "SEPP Start", fontSize: 8, fill: "#22D3EE", position: "top" }} />
                   )}
-                  {/* Year-1 income as a horizontal reference so it's always visible */}
+                  {fullRetireYear > new Date().getFullYear() && (
+                    <ReferenceLine x={fullRetireYear} stroke="#22C55E" strokeDasharray="4 2"
+                      label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }} />
+                  )}
+                  {/* Horizontal reference for year-1 income amount */}
                   {year1Income > 0 && (
-                    <ReferenceLine
-                      y={year1Income}
-                      stroke={incomeLineColor}
-                      strokeDasharray="3 3"
-                      strokeOpacity={0.4}
-                      label={{ value: `${formatCurrency(year1Income, 0)}/yr`, fontSize: 8, fill: incomeLineColor, position: "right" }}
-                    />
+                    <ReferenceLine y={year1Income} stroke={incomeLineColor} strokeDasharray="3 3" strokeOpacity={0.35}
+                      label={{ value: `${formatCurrency(year1Income, 0)}/yr`, fontSize: 8, fill: incomeLineColor, position: "right" }} />
                   )}
                   <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} />
                   <Line
