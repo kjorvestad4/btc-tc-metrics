@@ -129,7 +129,8 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
           withdrawal = fixedSeppAmount;
         }
       } else if (strategy === "fixed_income") {
-        const inflAdj = Math.pow(1 + inflationRate / 100, y);
+        // Inflate from the retirement start year, not from year 0
+        const inflAdj = Math.pow(1 + inflationRate / 100, y - yearsToFull);
         withdrawal = targetMonthlyIncome * 12 * inflAdj;
       }
       // income_only: withdrawal stays 0
@@ -294,10 +295,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     ? portfolioDerivedIra
     : iraBalance;
 
-  // Age at the selected IRA year (for portfolio mode) or current age (for independent mode)
+  // Age at the selected IRA year (for portfolio mode) or age at full retirement (for independent mode)
   const seppAge = iraMode === "portfolio"
     ? Math.min(currentAge + iraYearIndex, 84)
-    : currentAge;
+    : Math.min(fullRetirementAge, 84);
 
   // 72(t) SEPP comparison table
   const sepp72t = useMemo(() => {
@@ -660,8 +661,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? portfolioMonthlyIncome * 12 * (balanceAtRetirement / startBalance)
             : portfolioMonthlyIncome * 12;
 
-          // Fixed Draw: just the target (inflation-adjusted to retirement year)
-          const fixedAnnual = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, yearsToFull);
+          // Fixed Draw: the target amount in today's dollars (year-1 retirement = no inflation adjustment yet)
+          const fixedAnnual = targetMonthlyIncome * 12;
 
           // 72(t): use engineIraBalance (already at selected year) + selected method
           const sepp72tAnnual = calc72t({ balance: engineIraBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
