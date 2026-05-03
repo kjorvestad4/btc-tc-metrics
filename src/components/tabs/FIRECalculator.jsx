@@ -54,8 +54,14 @@ function calc72t({ balance, age, method, interestRate = 0.05 }) {
 function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, iraBalance, iraPct, method72t, interestRate72t, years = 30, portfolioProjections, annualDividendIncome = 0 }) {
   const rows = [];
   const startYear = new Date().getFullYear();
-  const yearsToPartial = Math.max(0, retirementAge - currentAge);
-  const yearsToFull    = Math.max(yearsToPartial, fullRetirementAge - currentAge);
+  // yearsToFull: when full retirement (withdrawals) begins
+  // When partial is OFF, full retirement starts at fullRetirementAge
+  // When partial is ON, partial phase bridges retirementAge → fullRetirementAge
+  const yearsToFull = Math.max(0, fullRetirementAge - currentAge);
+  const yearsToPartial = partialRetirementEnabled
+    ? Math.min(yearsToFull, Math.max(0, retirementAge - currentAge))
+    : yearsToFull; // no partial phase — pre-retirement goes straight to full
+
   const hasProjections = portfolioProjections && portfolioProjections.length > 0;
 
   // Build projected gross value lookup (before withdrawals) by year offset
@@ -198,7 +204,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   }, [portfolioProjections]);
 
   const annualReturn = mode === "portfolio" && portfolioCagr != null ? portfolioCagr : manualReturn;
-  const effectivePortfolioValue = mode === "portfolio" && portfolioValue > 0 ? portfolioValue : (mode === "independent" ? portfolioValue : 500000);
+  // Use a sensible default so the chart always shows meaningful data
+  const effectivePortfolioValue = (mode === "portfolio" && portfolioValue > 0)
+    ? portfolioValue
+    : (portfolioValue > 0 ? portfolioValue : 500000);
 
   // Derived IRA balance from portfolio projections
   const portfolioYearRow = portfolioProjections?.[iraYearIndex];
@@ -207,7 +216,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     : 0;
 
   // Distribution strategy
-  const [strategy, setStrategy] = useState("income_only");
+  const [strategy, setStrategy] = useState("swr");
   const [swrPct, setSwrPct] = useState(4);
   const [iraBalance, setIraBalance] = useState(500000);
   const effectiveIraBalance = iraMode === "portfolio" ? portfolioDerivedIra : iraBalance;
@@ -791,7 +800,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <ReferenceLine yAxisId="balance" y={0} stroke="#EF4444" strokeDasharray="4 2" />
-              {partialRetirementEnabled && retirementAge > currentAge && (
+              {partialRetirementEnabled && retirementAge > currentAge && retirementAge < fullRetirementAge && (
                 <ReferenceLine yAxisId="balance"
                   x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
                   stroke="#F59E0B" strokeDasharray="4 2"
@@ -802,7 +811,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 <ReferenceLine yAxisId="balance"
                   x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
                   stroke="#22C55E" strokeDasharray="4 2"
-                  label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
+                  label={{ value: partialRetirementEnabled ? "Full Retire" : "Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
                 />
               )}
               <Line yAxisId="balance" type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
