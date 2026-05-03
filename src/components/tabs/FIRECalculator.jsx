@@ -130,15 +130,11 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     }
 
     // investmentIncome for chart:
-    // - income_only: dividends scaled by portfolio growth ratio (never zero if annualDividendIncome > 0)
-    // - all others: the actual withdrawal amount
+    // - income_only: flat annual dividend income (no principal touch)
+    // - all others: actual withdrawal amount
     let investmentIncome = 0;
     if (isRetired) {
-      if (strategy === "income_only") {
-        investmentIncome = startBalance > 0 ? annualDividendIncome * (balance / startBalance) : annualDividendIncome;
-      } else {
-        investmentIncome = withdrawal;
-      }
+      investmentIncome = strategy === "income_only" ? annualDividendIncome : withdrawal;
     }
 
     rows.push({ year: startYear + y, balance, iraBalance: trackingIra, withdrawal, employmentIncome: empIncome, investmentIncome });
@@ -190,6 +186,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [partialRetirementEnabled, setPartialRetirementEnabled] = useState(false);
   const [partialSalaryPct, setPartialSalaryPct] = useState(50); // % of salary kept during partial
   const [fullRetirementAge, setFullRetirementAge] = useState(65); // full retirement age
+  const [manualStartBalance, setManualStartBalance] = useState(500000);
   const [manualReturn, setManualReturn] = useState(20);
   const [inflationRate, setInflationRate] = useState(3);
 
@@ -204,10 +201,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   }, [portfolioProjections]);
 
   const annualReturn = mode === "portfolio" && portfolioCagr != null ? portfolioCagr : manualReturn;
-  // Use a sensible default so the chart always shows meaningful data
-  const effectivePortfolioValue = (mode === "portfolio" && portfolioValue > 0)
+  // In portfolio mode use actual portfolio value; in independent mode use manual input
+  const effectivePortfolioValue = mode === "portfolio" && portfolioValue > 0
     ? portfolioValue
-    : (portfolioValue > 0 ? portfolioValue : 500000);
+    : manualStartBalance;
 
   // Derived IRA balance from portfolio projections
   const portfolioYearRow = portfolioProjections?.[iraYearIndex];
@@ -527,12 +524,20 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             </div>
 
             {mode === "independent" ? (
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <Label className="text-[10px] text-muted-foreground">Expected Portfolio Return</Label>
-                  <span className="text-[10px] font-mono text-primary">{manualReturn}%/yr</span>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Starting Portfolio Balance ($)</Label>
+                  <Input type="number" value={manualStartBalance}
+                    onChange={e => setManualStartBalance(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="h-8 text-sm font-mono bg-secondary border-border mt-1" step={10000} />
                 </div>
-                <Slider value={[manualReturn]} onValueChange={([v]) => setManualReturn(v)} min={1} max={80} step={1} />
+                <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <Label className="text-[10px] text-muted-foreground">Expected Portfolio Return</Label>
+                    <span className="text-[10px] font-mono text-primary">{manualReturn}%/yr</span>
+                  </div>
+                  <Slider value={[manualReturn]} onValueChange={([v]) => setManualReturn(v)} min={1} max={80} step={1} />
+                </div>
               </div>
             ) : (
               <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
@@ -649,10 +654,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           // SWR: % of projected balance at retirement
           const swrAnnual = balanceAtRetirement * (swrPct / 100);
 
-          // Income Only: project dividend income proportional to portfolio growth at retirement
-          const incomeOnlyAnnual = startBalance > 0
-            ? portfolioMonthlyIncome * 12 * (balanceAtRetirement / startBalance)
-            : portfolioMonthlyIncome * 12;
+          // Income Only: just show current annual dividend income (don't project/scale — keeps it honest)
+          const incomeOnlyAnnual = portfolioMonthlyIncome * 12;
 
           // Fixed Draw: the target amount in today's dollars (year-1 retirement = no inflation adjustment yet)
           const fixedAnnual = targetMonthlyIncome * 12;
