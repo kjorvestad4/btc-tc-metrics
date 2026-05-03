@@ -43,42 +43,44 @@ function calc72t({ balance, age, method, interestRate = 0.05 }) {
 
 /**
  * Project portfolio withdrawals over time, with selected distribution strategy.
- * Returns array of { year, balance, iraBalance, withdrawal, employmentIncome, investmentIncome }
- *
- * Pre-retirement: withdrawals = 0, IRA just grows, employment income shown.
- * Post-retirement: withdrawals begin, employment income = 0.
+ * Supports three phases:
+ *   1. Pre-partial-retirement: full employment income, no withdrawals
+ *   2. Partial retirement (if enabled): reduced salary, no portfolio withdrawals yet
+ *   3. Full retirement: withdrawals begin, employment income = 0
  */
-function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, employmentIncome, iraBalance, method72t, interestRate72t, years = 30 }) {
+function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, iraBalance, method72t, interestRate72t, years = 30 }) {
   const rows = [];
   let balance = startBalance;
   let iraBalanceRemaining = iraBalance;
   const startYear = new Date().getFullYear();
-  const yearsToRetirement = Math.max(0, retirementAge - currentAge);
+  const yearsToPartial = Math.max(0, retirementAge - currentAge);
+  const yearsToFull = Math.max(yearsToPartial, fullRetirementAge - currentAge);
 
   for (let y = 0; y <= years; y++) {
-    const isPreRetirement = y < yearsToRetirement;
+    const isPrePartial  = y < yearsToPartial;
+    const isPartial     = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull;
+    const isFullRetired = !isPrePartial && !isPartial;
     const inflAdj = Math.pow(1 + inflationRate / 100, y);
 
+    // Employment income in each phase
+    const empIncome = isPrePartial
+      ? employmentIncome * 12
+      : isPartial
+        ? employmentIncome * 12 * (partialSalaryPct / 100)
+        : 0;
+
     if (y === 0) {
-      rows.push({
-        year: startYear,
-        balance,
-        iraBalance: iraBalanceRemaining,
-        withdrawal: 0,
-        employmentIncome: employmentIncome * 12,
-        investmentIncome: 0,
-      });
+      rows.push({ year: startYear, balance, iraBalance: iraBalanceRemaining, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
       continue;
     }
 
     let withdrawal = 0;
 
-    if (isPreRetirement) {
-      // No withdrawals pre-retirement — IRA and portfolio just grow
+    if (!isFullRetired) {
+      // Pre/partial retirement — no portfolio withdrawals, just grow
       iraBalanceRemaining = iraBalanceRemaining * (1 + annualReturn / 100);
       balance = balance * (1 + annualReturn / 100);
     } else {
-      // Post-retirement: apply strategy
       if (strategy === "swr") {
         withdrawal = startBalance * (swrPct / 100) * inflAdj;
       } else if (strategy === "income_only") {
@@ -100,8 +102,8 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance,
       iraBalance: iraBalanceRemaining,
       withdrawal,
-      employmentIncome: isPreRetirement ? employmentIncome * 12 : 0,
-      investmentIncome: isPreRetirement ? 0 : (strategy === "income_only" ? targetMonthlyIncome * 12 : withdrawal),
+      employmentIncome: empIncome,
+      investmentIncome: isFullRetired ? (strategy === "income_only" ? targetMonthlyIncome * 12 : withdrawal) : 0,
     });
   }
   return rows;
@@ -144,8 +146,12 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
   // FIRE inputs
   const [targetMonthlyIncome, setTargetMonthlyIncome] = useState(10000);
+  const [incomeInputMode, setIncomeInputMode] = useState("monthly"); // "monthly" | "annual"
   const [currentAge, setCurrentAge] = useState(45);
-  const [retirementAge, setRetirementAge] = useState(55);
+  const [retirementAge, setRetirementAge] = useState(55);       // partial retirement age
+  const [partialRetirementEnabled, setPartialRetirementEnabled] = useState(false);
+  const [partialSalaryPct, setPartialSalaryPct] = useState(50); // % of salary kept during partial
+  const [fullRetirementAge, setFullRetirementAge] = useState(65); // full retirement age
   const [manualReturn, setManualReturn] = useState(20);
   const [inflationRate, setInflationRate] = useState(3);
 
@@ -176,7 +182,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [method72t, setMethod72t] = useState("amortization");
   const [interestRate72t, setInterestRate72t] = useState(5);
   const [projYears, setProjYears] = useState(30);
-  const [employmentIncome, setEmploymentIncome] = useState(8000); // monthly
+  const [employmentIncome, setEmploymentIncome] = useState(8000); // always stored as monthly internally
+  const [empIncomeInputMode, setEmpIncomeInputMode] = useState("monthly"); // "monthly" | "annual"
 
   // FIRE number calculations
   const fireNumber = useMemo(() => ({
@@ -225,12 +232,15 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     targetMonthlyIncome,
     currentAge,
     retirementAge,
+    partialRetirementEnabled,
+    partialSalaryPct,
+    fullRetirementAge,
     employmentIncome,
     iraBalance: effectiveIraBalance,
     method72t,
     interestRate72t,
     years: projYears,
-  }), [effectivePortfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, employmentIncome, effectiveIraBalance, method72t, interestRate72t, projYears]);
+  }), [effectivePortfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, effectiveIraBalance, method72t, interestRate72t, projYears]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
@@ -269,51 +279,166 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="space-y-3">
+            {/* Target Income */}
             <div>
-              <Label className="text-xs text-muted-foreground">Target Monthly Income</Label>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-muted-foreground">Target Retirement Income</Label>
+                <div className="flex gap-0.5">
+                  {["monthly", "annual"].map(m => (
+                    <button key={m} onClick={() => setIncomeInputMode(m)}
+                      className={`text-[9px] px-2 py-0.5 rounded border font-semibold capitalize transition-colors ${
+                        incomeInputMode === m ? "bg-primary/20 border-primary text-primary" : "border-border text-muted-foreground hover:bg-secondary"
+                      }`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">$</span>
                 <Input
                   type="number"
-                  value={targetMonthlyIncome}
-                  onChange={e => setTargetMonthlyIncome(Math.max(0, parseInt(e.target.value) || 0))}
+                  value={incomeInputMode === "monthly" ? targetMonthlyIncome : targetMonthlyIncome * 12}
+                  onChange={e => {
+                    const v = Math.max(0, parseInt(e.target.value) || 0);
+                    setTargetMonthlyIncome(incomeInputMode === "monthly" ? v : Math.round(v / 12));
+                  }}
                   className="h-8 text-sm font-mono bg-secondary border-border"
                   min={0}
                 />
+                <span className="text-[10px] text-muted-foreground">{incomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">
-                Annual target: <span className="text-foreground font-mono font-semibold">{formatCurrency(targetMonthlyIncome * 12)}</span>
+                {incomeInputMode === "monthly"
+                  ? <>Annual: <span className="text-foreground font-mono font-semibold">{formatCurrency(targetMonthlyIncome * 12)}</span></>
+                  : <>Monthly: <span className="text-foreground font-mono font-semibold">{formatCurrency(targetMonthlyIncome, 0)}/mo</span></>}
               </p>
             </div>
 
+            {/* Current Employment Income */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-muted-foreground">Current Employment Income</Label>
+                <div className="flex gap-0.5">
+                  {["monthly", "annual"].map(m => (
+                    <button key={m} onClick={() => setEmpIncomeInputMode(m)}
+                      className={`text-[9px] px-2 py-0.5 rounded border font-semibold capitalize transition-colors ${
+                        empIncomeInputMode === m ? "bg-blue-500/20 border-blue-500 text-blue-400" : "border-border text-muted-foreground hover:bg-secondary"
+                      }`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">$</span>
+                <Input
+                  type="number"
+                  value={empIncomeInputMode === "monthly" ? employmentIncome : employmentIncome * 12}
+                  onChange={e => {
+                    const v = Math.max(0, parseInt(e.target.value) || 0);
+                    setEmploymentIncome(empIncomeInputMode === "monthly" ? v : Math.round(v / 12));
+                  }}
+                  className="h-8 text-sm font-mono bg-secondary border-border"
+                  min={0}
+                />
+                <span className="text-[10px] text-muted-foreground">{empIncomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
+              </div>
+            </div>
+
+            {/* Current Age */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs text-muted-foreground">Current Age</Label>
                 <Input type="number" value={currentAge} onChange={e => setCurrentAge(parseInt(e.target.value) || 45)}
                   className="h-8 text-sm font-mono bg-secondary border-border mt-1" min={18} max={90} />
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Target Retirement Age</Label>
-                <Input type="number" value={retirementAge} onChange={e => setRetirementAge(parseInt(e.target.value) || 55)}
-                  className="h-8 text-sm font-mono bg-secondary border-border mt-1" min={18} max={90} />
-              </div>
+              <div />
             </div>
 
-            <div>
-              <Label className="text-xs text-muted-foreground">Current Monthly Employment Income</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-muted-foreground text-sm">$</span>
-                <Input
-                  type="number"
-                  value={employmentIncome}
-                  onChange={e => setEmploymentIncome(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="h-8 text-sm font-mono bg-secondary border-border"
-                  min={0}
-                />
+            {/* Retirement phases */}
+            <div className="p-3 bg-secondary/40 rounded-xl border border-border space-y-3">
+              {/* Partial Retirement toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-foreground">Partial Retirement</p>
+                  <p className="text-[10px] text-muted-foreground">Reduce salary before full retirement</p>
+                </div>
+                <button onClick={() => setPartialRetirementEnabled(v => !v)}
+                  className={`px-3 py-1 text-xs rounded-lg border font-semibold transition-colors ${
+                    partialRetirementEnabled ? "bg-amber-500/20 border-amber-500 text-amber-400" : "border-border text-muted-foreground hover:bg-secondary"
+                  }`}>
+                  {partialRetirementEnabled ? "ON" : "OFF"}
+                </button>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Shown on chart until retirement year (<span className="text-foreground font-mono">{new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}</span>), then drops to $0
-              </p>
+
+              {partialRetirementEnabled && (
+                <div className="space-y-2 pl-1 border-l-2 border-amber-500/30">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">Partial Retirement Age</Label>
+                      <Input type="number" value={retirementAge}
+                        onChange={e => setRetirementAge(Math.min(parseInt(e.target.value) || 55, fullRetirementAge))}
+                        className="h-7 text-xs font-mono bg-card border-border mt-1" min={currentAge} max={fullRetirementAge} />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-muted-foreground">% Salary Kept</Label>
+                      <Input type="number" value={partialSalaryPct}
+                        onChange={e => setPartialSalaryPct(Math.min(100, Math.max(0, parseInt(e.target.value) || 50)))}
+                        className="h-7 text-xs font-mono bg-card border-border mt-1" min={0} max={100} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {[10, 25, 50, 75].map(p => (
+                      <button key={p} onClick={() => setPartialSalaryPct(p)}
+                        className={`text-[10px] px-2 py-0.5 rounded border font-semibold transition-colors ${
+                          partialSalaryPct === p ? "bg-amber-500/20 border-amber-500 text-amber-400" : "border-border text-muted-foreground hover:bg-secondary"
+                        }`}>{p}%</button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-amber-400/80">
+                    Partial income: <span className="font-mono font-bold">{formatCurrency(employmentIncome * (partialSalaryPct / 100), 0)}/mo</span>
+                    <span className="text-muted-foreground ml-1">({formatCurrency(employmentIncome * (partialSalaryPct / 100) * 12, 0)}/yr)</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Full Retirement */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-foreground">Full Retirement Age</Label>
+                  <span className="text-[10px] text-muted-foreground">
+                    Year <span className="text-primary font-mono font-bold">{new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}</span>
+                  </span>
+                </div>
+                <Input type="number" value={fullRetirementAge}
+                  onChange={e => setFullRetirementAge(Math.max(partialRetirementEnabled ? retirementAge : currentAge, parseInt(e.target.value) || 65))}
+                  className="h-7 text-xs font-mono bg-card border-border" min={currentAge} max={90} />
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { label: "+10 yrs", val: currentAge + 10 },
+                    { label: "+20 yrs", val: currentAge + 20 },
+                    { label: "Age 55",  val: 55 },
+                    { label: "Age 60",  val: 60 },
+                    { label: "Age 65",  val: 65 },
+                    { label: "Age 67",  val: 67 },
+                  ].map(b => (
+                    <button key={b.label} onClick={() => setFullRetirementAge(Math.max(partialRetirementEnabled ? retirementAge : currentAge, b.val))}
+                      className={`text-[10px] px-2 py-0.5 rounded border font-semibold transition-colors ${
+                        fullRetirementAge === Math.max(partialRetirementEnabled ? retirementAge : currentAge, b.val)
+                          ? "bg-primary/20 border-primary text-primary"
+                          : "border-border text-muted-foreground hover:bg-secondary"
+                      }`}>{b.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* If partial retirement is OFF, show a simple "first retirement date" row */}
+              {!partialRetirementEnabled && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Early / Partial Retirement Age (optional)</Label>
+                  <Input type="number" value={retirementAge}
+                    onChange={e => setRetirementAge(Math.min(parseInt(e.target.value) || 55, fullRetirementAge))}
+                    className="h-7 text-xs font-mono bg-card border-border" min={currentAge} max={fullRetirementAge} />
+                  <p className="text-[10px] text-muted-foreground">Set equal to Full Retirement Age to skip partial phase</p>
+                </div>
+              )}
             </div>
 
             {mode === "independent" ? (
@@ -613,13 +738,22 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <ReferenceLine y={0} stroke="#EF4444" strokeDasharray="4 2" />
-              {/* Retirement year marker */}
-              {retirementAge > currentAge && (
+              {/* Partial retirement marker */}
+              {partialRetirementEnabled && retirementAge > currentAge && (
                 <ReferenceLine
                   x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
                   stroke="#F59E0B"
                   strokeDasharray="4 2"
-                  label={{ value: "Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
+                  label={{ value: "Semi-Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
+                />
+              )}
+              {/* Full retirement marker */}
+              {fullRetirementAge > currentAge && (
+                <ReferenceLine
+                  x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
+                  stroke="#22C55E"
+                  strokeDasharray="4 2"
+                  label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
                 />
               )}
               <Line type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
