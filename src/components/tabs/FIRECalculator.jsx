@@ -264,9 +264,16 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     }));
   }, [effectiveIraBalance, currentAge, interestRate72t]);
 
+  const startBalance = effectivePortfolioValue || 500000;
+  // IRA starting balance for the engine: use portfolio-derived value when in portfolio mode,
+  // otherwise use the manually entered IRA balance
+  const engineIraBalance = iraMode === "portfolio"
+    ? startBalance * (iraPct / 100)
+    : effectiveIraBalance;
+
   // Only pass portfolioProjections to the engine when in portfolio mode
   const withdrawalRows = useMemo(() => projectWithdrawals({
-    startBalance: effectivePortfolioValue || 500000,
+    startBalance,
     strategy,
     swrPct,
     annualReturn,
@@ -278,14 +285,14 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     partialSalaryPct,
     fullRetirementAge,
     employmentIncome,
-    iraBalance: effectiveIraBalance,
+    iraBalance: engineIraBalance,
     iraPct,
     method72t,
     interestRate72t,
     years: projYears,
     portfolioProjections: mode === "portfolio" ? portfolioProjections : null,
     annualDividendIncome: portfolioMonthlyIncome * 12,
-  }), [effectivePortfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, effectiveIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
+  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
