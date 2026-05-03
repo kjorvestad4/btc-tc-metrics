@@ -109,24 +109,22 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance = balance * (1 + annualReturn / 100);
     }
 
-    // IRA balance after growth = fraction of grown portfolio
-    const ira = balance * (iraPct / 100);
+    // IRA balance after growth = fraction of grown portfolio (BEFORE withdrawals)
+    const iraBeforeWithdrawal = balance * (iraPct / 100);
 
-    // Step 2: compute withdrawal
+    // Step 2: compute withdrawal (uses pre-withdrawal IRA balance)
     let withdrawal = 0;
     if (isFullRetired) {
       if (strategy === "swr") {
         const inflAdj = Math.pow(1 + inflationRate / 100, y);
         withdrawal = startBalance * (swrPct / 100) * inflAdj;
       } else if (strategy === "rule_72t") {
-        // For fixed methods, lock in the amount at first retirement year
         if (method72t === "rmd") {
-          // RMD recalculates each year against current IRA balance
-          withdrawal = calc72t({ balance: ira, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
+          withdrawal = calc72t({ balance: iraBeforeWithdrawal, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
         } else {
-          // Fixed amortization/annuitization: compute once at retirement start, then fixed
+          // Fixed amortization/annuitization: lock in at first retirement year
           if (fixedSeppAmount === null) {
-            fixedSeppAmount = calc72t({ balance: ira, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
+            fixedSeppAmount = calc72t({ balance: iraBeforeWithdrawal, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
           }
           withdrawal = fixedSeppAmount;
         }
@@ -143,6 +141,9 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance = Math.max(0, balance - withdrawal);
     }
 
+    // IRA balance after withdrawal
+    const iraAfterWithdrawal = balance * (iraPct / 100);
+
     // Investment income
     let investmentIncome = 0;
     if (isFullRetired) {
@@ -151,7 +152,7 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       investmentIncome = annualDividendIncome;
     }
 
-    rows.push({ year: startYear + y, balance, iraBalance: ira, withdrawal, employmentIncome: empIncome, investmentIncome });
+    rows.push({ year: startYear + y, balance, iraBalance: iraAfterWithdrawal, withdrawal, employmentIncome: empIncome, investmentIncome });
   }
   return rows;
 }
@@ -284,12 +285,13 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     : iraBalance;
 
   // 72(t) table uses the IRA balance at retirement start
+  // Deps include all state that feeds engineIraBalance so the table always reflects current inputs
   const sepp72t = useMemo(() => {
     return RULE_72T_METHODS.map(m => ({
       ...m,
       annual: calc72t({ balance: engineIraBalance, age: fullRetirementAge, method: m.id, interestRate: interestRate72t / 100 }),
     }));
-  }, [engineIraBalance, fullRetirementAge, interestRate72t]);
+  }, [engineIraBalance, fullRetirementAge, interestRate72t, iraBalance, iraMode, iraPct, portfolioAtRetirement]);
 
   const withdrawalRows = useMemo(() => projectWithdrawals({
     startBalance,
@@ -311,7 +313,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     years: projYears,
     portfolioProjections: mode === "portfolio" ? portfolioProjections : null,
     annualDividendIncome: portfolioMonthlyIncome * 12,
-  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
+  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode, iraBalance, iraMode, portfolioAtRetirement]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
