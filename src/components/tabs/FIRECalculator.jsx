@@ -595,8 +595,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               <div className="md:col-span-3 space-y-2">
                 <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">IRA / Tax-Deferred Balance</Label>
                 {iraMode === "independent" ? (
-                  <Input type="number" value={iraBalance} onChange={e => setIraBalance(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="h-7 text-xs font-mono bg-card border-border" />
+                  <Input type="number" value={iraBalance} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) setIraBalance(Math.max(0, v)); }}
+                   className="h-7 text-xs font-mono bg-card border-border" />
                 ) : (
                   <div className="space-y-2">
                     {/* Year selector */}
@@ -673,7 +673,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               <Label className="text-[10px] text-muted-foreground">Monthly Draw Target</Label>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">$</span>
-                <Input type="number" value={targetMonthlyIncome} onChange={e => setTargetMonthlyIncome(Math.max(0, parseInt(e.target.value) || 0))}
+                <Input type="number" value={targetMonthlyIncome} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) setTargetMonthlyIncome(Math.max(0, v)); }}
                   className="h-7 text-xs font-mono bg-card border-border" />
                 <span className="text-[10px] text-muted-foreground">inflation-adjusted</span>
               </div>
