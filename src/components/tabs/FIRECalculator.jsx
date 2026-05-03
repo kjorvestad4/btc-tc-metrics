@@ -136,10 +136,17 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       iraBalanceRemaining = iraBalanceRemaining * (1 + annualReturn / 100);
     }
 
-    // Investment income: for income_only use dividend income, else use withdrawal amount
-    const investmentIncome = isFullRetired
-      ? (strategy === "income_only" ? annualDividendIncome : withdrawal)
-      : 0;
+    // Investment income:
+    // - Pre-retirement: 0 (working full time, not drawing)
+    // - Partial retirement: show passive dividend income (portfolio income doesn't stop)
+    // - Full retirement: show withdrawal amount (or dividend income for income_only strategy)
+    let investmentIncome = 0;
+    if (isFullRetired) {
+      investmentIncome = strategy === "income_only" ? annualDividendIncome : withdrawal;
+    } else if (isPartial) {
+      // During partial retirement, passive/dividend income is still flowing
+      investmentIncome = annualDividendIncome;
+    }
 
     rows.push({ year: startYear + y, balance, iraBalance: iraBalanceRemaining, withdrawal, employmentIncome: empIncome, investmentIncome });
   }
