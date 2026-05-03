@@ -314,6 +314,7 @@ export default function ProjectionsPage({ liveData }) {
 
       {/* ── FIRE Calculator + Withdrawal Strategies ── */}
       <FIRECalculator
+        portfolioProjections={portfolioProjections}
         portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
         portfolioMonthlyIncome={(() => {
           // Monthly income from income assets using DRIP rate data

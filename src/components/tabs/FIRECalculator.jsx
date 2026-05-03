@@ -114,13 +114,29 @@ const RULE_72T_METHODS = [
   { id: "annuitization", label: "Fixed Annuitization", desc: "Uses annuity factor — typically slightly lower than amortization" },
 ];
 
-export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome }) {
+export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome, portfolioProjections }) {
+  // Mode: "independent" = manual inputs, "portfolio" = derived from holdings model
+  const [mode, setMode] = useState("independent");
+
   // FIRE inputs
   const [targetMonthlyIncome, setTargetMonthlyIncome] = useState(10000);
   const [currentAge, setCurrentAge] = useState(45);
   const [retirementAge, setRetirementAge] = useState(55);
-  const [annualReturn, setAnnualReturn] = useState(20);
+  const [manualReturn, setManualReturn] = useState(20);
   const [inflationRate, setInflationRate] = useState(3);
+
+  // Derive CAGR from portfolioProjections when in portfolio mode
+  const portfolioCagr = useMemo(() => {
+    if (!portfolioProjections || portfolioProjections.length < 2) return null;
+    const first = portfolioProjections[0]?.portfolio_value;
+    const last  = portfolioProjections[portfolioProjections.length - 1]?.portfolio_value;
+    if (!first || first <= 0 || !last) return null;
+    const years = portfolioProjections.length - 1;
+    return (Math.pow(last / first, 1 / years) - 1) * 100;
+  }, [portfolioProjections]);
+
+  const annualReturn = mode === "portfolio" && portfolioCagr != null ? portfolioCagr : manualReturn;
+  const effectivePortfolioValue = mode === "portfolio" && portfolioValue > 0 ? portfolioValue : (mode === "independent" ? portfolioValue : 500000);
 
   // Distribution strategy
   const [strategy, setStrategy] = useState("income_only");
@@ -135,22 +151,21 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome 
     swr4: (targetMonthlyIncome * 12) / 0.04,
     swr35: (targetMonthlyIncome * 12) / 0.035,
     swr3: (targetMonthlyIncome * 12) / 0.03,
-    income_only: portfolioMonthlyIncome > 0 ? (portfolioValue * targetMonthlyIncome) / portfolioMonthlyIncome : 0,
-  }), [targetMonthlyIncome, portfolioValue, portfolioMonthlyIncome]);
+    income_only: portfolioMonthlyIncome > 0 ? (effectivePortfolioValue * targetMonthlyIncome) / portfolioMonthlyIncome : 0,
+  }), [targetMonthlyIncome, effectivePortfolioValue, portfolioMonthlyIncome]);
 
-  const pctOfFireNumber = portfolioValue > 0 && fireNumber.swr4 > 0
-    ? Math.min(100, (portfolioValue / fireNumber.swr4) * 100).toFixed(0)
+  const pctOfFireNumber = effectivePortfolioValue > 0 && fireNumber.swr4 > 0
+    ? Math.min(100, (effectivePortfolioValue / fireNumber.swr4) * 100).toFixed(0)
     : 0;
 
   // Months to reach FIRE number at current growth rate
   const monthsToFire = useMemo(() => {
-    if (portfolioValue >= fireNumber.swr4) return 0;
+    if (effectivePortfolioValue >= fireNumber.swr4) return 0;
     if (annualReturn <= 0) return Infinity;
     const monthlyReturn = annualReturn / 100 / 12;
-    // PV * (1+r)^n = FV => n = log(FV/PV) / log(1+r)
-    const n = Math.log(fireNumber.swr4 / Math.max(1, portfolioValue)) / Math.log(1 + monthlyReturn);
+    const n = Math.log(fireNumber.swr4 / Math.max(1, effectivePortfolioValue)) / Math.log(1 + monthlyReturn);
     return Math.ceil(n);
-  }, [portfolioValue, fireNumber.swr4, annualReturn]);
+  }, [effectivePortfolioValue, fireNumber.swr4, annualReturn]);
 
   const fireDate = useMemo(() => {
     if (monthsToFire === 0) return "Already FIRE!";
@@ -170,7 +185,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome 
 
   // Withdrawal projection
   const withdrawalRows = useMemo(() => projectWithdrawals({
-    startBalance: portfolioValue || 500000,
+    startBalance: effectivePortfolioValue || 500000,
     strategy,
     swrPct,
     annualReturn,
@@ -189,10 +204,33 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome 
     <div className="space-y-4">
       {/* ── FIRE Number Dashboard ── */}
       <Card>
-        <SectionHeader icon={Flame} title="FIRE Number Calculator" color="text-orange-400" />
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">FIRE Number Calculator</h3>
+          </div>
+          {/* Mode toggle */}
+          <div className="flex gap-1.5 items-center">
+            <span className="text-[10px] text-muted-foreground">Mode:</span>
+            {[
+              { id: "independent", label: "Independent" },
+              { id: "portfolio",   label: "Portfolio Model" },
+            ].map(m => (
+              <button key={m.id} onClick={() => setMode(m.id)}
+                className={`text-xs px-3 py-1 rounded-lg border font-semibold transition-colors ${
+                  mode === m.id
+                    ? "bg-primary/20 border-primary text-primary"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                }`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <p className="text-[10px] text-muted-foreground mb-4">
-          How much do you need invested to retire? Based on your target monthly income and withdrawal strategy.
-          Your portfolio values are pulled automatically from the calculator above.
+          {mode === "portfolio"
+            ? `Portfolio mode: starting balance and expected return are derived from the Bitcoin24 model (${portfolioCagr != null ? portfolioCagr.toFixed(1) : "—"}% CAGR from your holdings above).`
+            : "Independent mode: enter your own starting balance and expected return assumptions."}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -227,13 +265,23 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome 
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <Label className="text-[10px] text-muted-foreground">Expected Portfolio Return</Label>
-                <span className="text-[10px] font-mono text-primary">{annualReturn}%/yr</span>
+            {mode === "independent" ? (
+              <div className="space-y-1.5">
+                <div className="flex justify-between">
+                  <Label className="text-[10px] text-muted-foreground">Expected Portfolio Return</Label>
+                  <span className="text-[10px] font-mono text-primary">{manualReturn}%/yr</span>
+                </div>
+                <Slider value={[manualReturn]} onValueChange={([v]) => setManualReturn(v)} min={1} max={80} step={1} />
               </div>
-              <Slider value={[annualReturn]} onValueChange={([v]) => setAnnualReturn(v)} min={1} max={80} step={1} />
-            </div>
+            ) : (
+              <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
+                <p className="text-[10px] text-muted-foreground">Expected Return (from model)</p>
+                <p className="text-sm font-bold font-mono text-primary mt-0.5">
+                  {portfolioCagr != null ? `${portfolioCagr.toFixed(1)}% CAGR` : "Enter holdings above"}
+                </p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">Bitcoin24 {/* activePreset */} scenario · {portfolioProjections?.length ?? 0} year horizon</p>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <div className="flex justify-between">
@@ -277,7 +325,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome 
           </div>
           <div className="flex justify-between mt-2 text-[10px]">
             <span className="text-muted-foreground">
-              Current: <span className="text-foreground font-mono font-semibold">{formatCurrency(portfolioValue)}</span>
+              Current: <span className="text-foreground font-mono font-semibold">{formatCurrency(effectivePortfolioValue)}</span>
             </span>
             <span className="text-muted-foreground">
               Current monthly income: <span className="text-green-400 font-mono font-semibold">{formatCurrency(portfolioMonthlyIncome, 2)}/mo</span>
