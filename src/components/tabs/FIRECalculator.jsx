@@ -72,7 +72,8 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
 
   // Running state
   let balance = startBalance;
-  let iraBalanceRemaining = hasProjections ? startBalance * (iraPct / 100) : iraBalance;
+  // IRA balance is always tracked independently so 72(t) withdrawals reduce it correctly
+  let iraBalanceRemaining = iraBalance;
   let cumulativeWithdrawals = 0;
 
   for (let y = 0; y <= years; y++) {
@@ -92,14 +93,12 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       continue;
     }
 
-    // Step 1: grow portfolio
+    // Step 1: grow portfolio balance
     if (hasProjections) {
-      // Use the gross projected value for this year, then subtract cumulative withdrawals
       let gross;
       if (projGross[y] != null) {
         gross = projGross[y];
       } else {
-        // Extrapolate beyond projection horizon
         const lastIdx = portfolioProjections.length - 1;
         gross = projGross[lastIdx] * Math.pow(1 + annualReturn / 100, y - lastIdx);
       }
@@ -108,12 +107,13 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance = balance * (1 + annualReturn / 100);
     }
 
-    // Step 2: compute this year's withdrawal
+    // Step 2: compute this year's withdrawal based on selected strategy
     let withdrawal = 0;
     if (isFullRetired) {
       if (strategy === "swr") {
         withdrawal = startBalance * (swrPct / 100) * inflAdj;
       } else if (strategy === "rule_72t") {
+        // 72(t): always computed against the independently-tracked IRA balance
         withdrawal = calc72t({ balance: iraBalanceRemaining, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
       } else if (strategy === "fixed_income") {
         withdrawal = targetMonthlyIncome * 12 * inflAdj;
@@ -121,30 +121,23 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       // income_only: withdrawal stays 0, income comes from dividends
     }
 
-    // Step 3: subtract withdrawal from balance
+    // Step 3: subtract withdrawal from balances
     if (withdrawal > 0) {
       cumulativeWithdrawals += withdrawal;
       balance = Math.max(0, balance - withdrawal);
     }
 
-    // Step 4: update IRA balance
-    if (hasProjections) {
-      iraBalanceRemaining = balance * (iraPct / 100);
-    } else if (strategy === "rule_72t") {
-      iraBalanceRemaining = Math.max(0, iraBalanceRemaining * (1 + annualReturn / 100) - (isFullRetired ? withdrawal : 0));
-    } else {
-      iraBalanceRemaining = iraBalanceRemaining * (1 + annualReturn / 100);
-    }
+    // Step 4: update IRA balance independently (always compound then deduct)
+    iraBalanceRemaining = Math.max(0, iraBalanceRemaining * (1 + annualReturn / 100) - (isFullRetired && strategy === "rule_72t" ? withdrawal : 0));
 
     // Investment income:
-    // - Pre-retirement: 0 (working full time, not drawing)
-    // - Partial retirement: show passive dividend income (portfolio income doesn't stop)
-    // - Full retirement: show withdrawal amount (or dividend income for income_only strategy)
+    // - Pre-retirement: 0
+    // - Partial retirement: passive dividend income still flows
+    // - Full retirement: actual withdrawal amount (or dividend income for income_only)
     let investmentIncome = 0;
     if (isFullRetired) {
       investmentIncome = strategy === "income_only" ? annualDividendIncome : withdrawal;
     } else if (isPartial) {
-      // During partial retirement, passive/dividend income is still flowing
       investmentIncome = annualDividendIncome;
     }
 
@@ -807,18 +800,20 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <ReferenceLine yAxisId="balance" y={0} stroke="#EF4444" strokeDasharray="4 2" />
-              {partialRetirementEnabled && retirementAge > currentAge && retirementAge < fullRetirementAge && (
+              {/* Partial retirement line — always show when ages differ */}
+              {retirementAge > currentAge && retirementAge < fullRetirementAge && (
                 <ReferenceLine yAxisId="balance"
                   x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
                   stroke="#F59E0B" strokeDasharray="4 2"
-                  label={{ value: "Semi-Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
+                  label={{ value: partialRetirementEnabled ? "Semi-Retire" : "Early Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
                 />
               )}
+              {/* Full retirement line */}
               {fullRetirementAge > currentAge && (
                 <ReferenceLine yAxisId="balance"
                   x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
                   stroke="#22C55E" strokeDasharray="4 2"
-                  label={{ value: partialRetirementEnabled ? "Full Retire" : "Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
+                  label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
                 />
               )}
               <Line yAxisId="balance" type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
