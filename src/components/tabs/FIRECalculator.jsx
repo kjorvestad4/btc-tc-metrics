@@ -146,10 +146,9 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     }
 
     // Investment income
-    // income_only: project dividend income proportional to balance growth
-    const projectedDividendIncome = startBalance > 0
-      ? annualDividendIncome * (balance / startBalance)
-      : annualDividendIncome;
+    // income_only: compound dividend income forward from retirement start at annualReturn
+    const yearsIntoRetirement = isFullRetired ? Math.max(0, y - yearsToFull) : 0;
+    const projectedDividendIncome = annualDividendIncome * Math.pow(1 + annualReturn / 100, yearsToFull + yearsIntoRetirement);
 
     let investmentIncome = 0;
     if (isFullRetired) {
@@ -666,10 +665,9 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           // SWR: % of projected balance at retirement
           const swrAnnual = balanceAtRetirement * (swrPct / 100);
 
-          // Income Only: project dividend income proportional to portfolio growth at retirement
-          const incomeOnlyAnnual = startBalance > 0
-            ? portfolioMonthlyIncome * 12 * (balanceAtRetirement / startBalance)
-            : portfolioMonthlyIncome * 12;
+          // Income Only: compound current dividend income forward to retirement date at portfolio CAGR
+          // This correctly projects what the income-generating assets will yield at retirement
+          const incomeOnlyAnnual = portfolioMonthlyIncome * 12 * Math.pow(1 + annualReturn / 100, yearsToFirst);
 
           // Fixed Draw: the target amount in today's dollars (year-1 retirement = no inflation adjustment yet)
           const fixedAnnual = targetMonthlyIncome * 12;
