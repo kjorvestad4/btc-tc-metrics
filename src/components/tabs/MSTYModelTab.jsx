@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import ProjectionChart from "../dashboard/ProjectionChart";
 import MetricCard from "../dashboard/MetricCard";
 import { BarChart3, DollarSign, Percent, Activity, RefreshCw, Wifi } from "lucide-react";
-// Investment calculator moved to Projections page
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { formatCurrency, formatPercent, calcMSTYDividend } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
 
@@ -12,6 +13,9 @@ const MSTY_SHARES_OUTSTANDING = 275_000_000; // ~275M shares outstanding
 const MSTY_MGMT_FEE = 0.99; // % annual management fee
 
 export default function MSTYModelTab({ params, projections, liveData, onRefresh, refreshing }) {
+
+  // My MSTY Calculator state
+  const [shareQty, setShareQty] = useState(1000);
 
   // Live values
   const mstySharePrice = liveData?.msty_price ?? params.msty_nav;
@@ -268,7 +272,65 @@ export default function MSTYModelTab({ params, projections, liveData, onRefresh,
         </div>
       </div>
 
-      {/* Monthly div projection chart moved to Projections tab */}
+      {/* My MSTY Investment Calculator */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <DollarSign className="w-3.5 h-3.5 text-cyan-400" />
+          My MSTY Investment Calculator
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Number of MSTY Shares</Label>
+              <Input
+                type="number"
+                value={shareQty}
+                onChange={e => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
+                className="h-8 text-sm font-mono bg-secondary border-border mt-1"
+                min={0}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Investment value: <span className="text-foreground font-mono font-semibold">{formatCurrency(shareQty * mstySharePrice, 2)}</span> at ${mstySharePrice.toFixed(2)}/share
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-xs space-y-1.5">
+              <p className="font-semibold text-foreground mb-1.5">Distribution History (recent monthly avg: $1.00–$1.25/share)</p>
+              {distributionHistory.slice(0, 5).map((d, i) => (
+                <div key={d.ex_date} className="flex justify-between">
+                  <span className="text-muted-foreground font-mono">{d.ex_date}</span>
+                  <span className={`font-mono font-bold ${i === 0 ? "text-primary" : "text-green-400"}`}>${d.amount.toFixed(4)}/sh</span>
+                </div>
+              ))}
+              <div className="pt-1 border-t border-border flex justify-between">
+                <span className="text-muted-foreground">8-week avg/wk</span>
+                <span className="font-mono text-primary font-bold">
+                  ${(distributionHistory.reduce((s, d) => s + d.amount, 0) / distributionHistory.length).toFixed(4)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Weekly Income</p>
+              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(shareQty * latestWeeklyDiv, 2)}</p>
+              <p className="text-[9px] text-muted-foreground">at latest rate</p>
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
+              <p className="text-[10px] text-muted-foreground">Monthly Income</p>
+              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(shareQty * latestWeeklyDiv * 4.33, 2)}</p>
+              <p className="text-[9px] text-muted-foreground">weekly × 4.33</p>
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center col-span-2">
+              <p className="text-[10px] text-muted-foreground">Annual Income</p>
+              <p className="text-lg font-bold font-mono text-cyan-400">{formatCurrency(shareQty * latestWeeklyDiv * 52, 2)}</p>
+              <p className="text-[9px] text-muted-foreground">weekly × 52</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

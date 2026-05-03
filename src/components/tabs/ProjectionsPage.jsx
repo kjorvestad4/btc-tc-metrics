@@ -275,62 +275,6 @@ export default function ProjectionsPage({ liveData }) {
         />
       </Card>
 
-      {/* ── My MSTY Investment Calculator ── */}
-      <Card>
-        <SectionHeader icon={Users} title="My MSTY Investment Calculator" color="text-cyan-400" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Number of MSTY Shares</Label>
-              <Input
-                type="number"
-                value={shareQty}
-                onChange={e => setShareQty(Math.max(0, parseInt(e.target.value) || 0))}
-                className="h-8 text-sm font-mono bg-secondary border-border mt-1"
-                min={0}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Investment value: <span className="text-foreground font-mono font-semibold">{formatCurrency(investmentValue, 2)}</span> at ${nowMsty.toFixed(2)}/share
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-secondary/50 border border-border text-xs space-y-1.5">
-              <p className="font-semibold text-foreground mb-1.5">Distribution History (recent monthly avg: $1.00–$1.25/share)</p>
-              {MSTY_DISTRIBUTION_HISTORY.slice(0, 5).map((d, i) => (
-                <div key={d.ex_date} className="flex justify-between">
-                  <span className="text-muted-foreground font-mono">{d.ex_date}</span>
-                  <span className={`font-mono font-bold ${i === 0 ? "text-primary" : "text-green-400"}`}>${d.amount.toFixed(4)}/sh</span>
-                </div>
-              ))}
-              <div className="pt-1 border-t border-border flex justify-between">
-                <span className="text-muted-foreground">8-week avg/wk</span>
-                <span className="font-mono text-primary font-bold">
-                  ${(MSTY_DISTRIBUTION_HISTORY.reduce((s, d) => s + d.amount, 0) / MSTY_DISTRIBUTION_HISTORY.length).toFixed(4)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Weekly Income</p>
-              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(weeklyIncome, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">at latest rate</p>
-            </div>
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center">
-              <p className="text-[10px] text-muted-foreground">Monthly Income</p>
-              <p className="text-lg font-bold font-mono text-green-400">{formatCurrency(monthlyIncome, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">weekly × 4.33</p>
-            </div>
-            <div className="p-3 bg-secondary/50 rounded-xl border border-border text-center col-span-2">
-              <p className="text-[10px] text-muted-foreground">Annual Income</p>
-              <p className="text-lg font-bold font-mono text-cyan-400">{formatCurrency(annualIncome, 2)}</p>
-              <p className="text-[9px] text-muted-foreground">weekly × 52</p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
       {/* ── Your Portfolio Valuation by Scenario ── */}
       <Card>
         <SectionHeader icon={Users} title="Your Portfolio Valuation — Bitcoin24 Projection" color="text-green-400" />
