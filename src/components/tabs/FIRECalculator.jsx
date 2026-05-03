@@ -62,7 +62,10 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
 
   // Rule 72(t)/SEPP can start at partial retirement age (early IRA access)
   // All other strategies start at full retirement age
-  const yearsToWithdrawalStart = strategy === "rule_72t" ? yearsToPartial : yearsToFull;
+  // NOTE: yearsToPartial equals yearsToFull when partialRetirementEnabled is false,
+  // so for 72t we use retirementAge directly to allow early SEPP even without partial retirement toggled
+  const yearsToSeppStart = Math.max(0, retirementAge - currentAge);
+  const yearsToWithdrawalStart = strategy === "rule_72t" ? yearsToSeppStart : yearsToFull;
 
   const hasProjections = portfolioProjections && portfolioProjections.length > 0;
 
@@ -889,34 +892,37 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             </span>
           </div>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+            <LineChart data={withdrawalRows} margin={{ top: 4, right: strategy === "rule_72t" ? 60 : 16, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="year" tick={TICK_STYLE} />
-              <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              <YAxis yAxisId="portfolio" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              {strategy === "rule_72t" && (
+                <YAxis yAxisId="ira" orientation="right" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              )}
               <Tooltip
                 contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
-                formatter={(v, name) => [formatCurrency(v, 0), name]}
+                formatter={(v, name) => v != null ? [formatCurrency(v, 0), name] : null}
                 labelFormatter={l => `Year ${l}`}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <ReferenceLine y={0} stroke="#EF4444" strokeDasharray="4 2" />
-              {retirementAge > currentAge && retirementAge < fullRetirementAge && (
-                <ReferenceLine
+              <ReferenceLine yAxisId="portfolio" y={0} stroke="#EF4444" strokeDasharray="4 2" />
+              {strategy === "rule_72t" && retirementAge > currentAge && (
+                <ReferenceLine yAxisId="portfolio"
                   x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
-                  stroke="#F59E0B" strokeDasharray="4 2"
-                  label={{ value: partialRetirementEnabled ? "Semi-Retire" : "Early Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
+                  stroke="#22D3EE" strokeDasharray="4 2"
+                  label={{ value: "SEPP Start", fontSize: 8, fill: "#22D3EE", position: "top" }}
                 />
               )}
               {fullRetirementAge > currentAge && (
-                <ReferenceLine
+                <ReferenceLine yAxisId="portfolio"
                   x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
                   stroke="#22C55E" strokeDasharray="4 2"
                   label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
                 />
               )}
-              <Line type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
+              <Line yAxisId="portfolio" type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
               {strategy === "rule_72t" && (
-                <Line type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
+                <Line yAxisId="ira" type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
               )}
             </LineChart>
           </ResponsiveContainer>
@@ -966,9 +972,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             : calc72t({ balance: iraAtStart, age: Math.min(currentAge + yearsToWithdrawalStart, 84), method: method72t, interestRate: interestRate72t / 100 });
 
           // null out pre-withdrawal years so line only starts when income begins
+          // Use >= so the first withdrawal year is included
           const chartRows = withdrawalRows.map(row => ({
             ...row,
-            incomeFlow: row.year < withdrawalStartYear ? null : row.investmentIncome,
+            incomeFlow: row.year >= withdrawalStartYear && row.investmentIncome > 0 ? row.investmentIncome : null,
           }));
 
           return (
