@@ -147,6 +147,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   // FIRE inputs
   const [targetMonthlyIncome, setTargetMonthlyIncome] = useState(10000);
   const [incomeInputMode, setIncomeInputMode] = useState("monthly"); // "monthly" | "annual"
+  const [targetIncomeRaw, setTargetIncomeRaw] = useState(""); // local string buffer for typing
   const [currentAge, setCurrentAge] = useState(45);
   const [retirementAge, setRetirementAge] = useState(55);       // partial retirement age
   const [partialRetirementEnabled, setPartialRetirementEnabled] = useState(false);
@@ -184,6 +185,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [projYears, setProjYears] = useState(30);
   const [employmentIncome, setEmploymentIncome] = useState(8000); // always stored as monthly internally
   const [empIncomeInputMode, setEmpIncomeInputMode] = useState("monthly"); // "monthly" | "annual"
+  const [empIncomeRaw, setEmpIncomeRaw] = useState(""); // local string buffer for typing
 
   // FIRE number calculations
   const fireNumber = useMemo(() => ({
@@ -293,19 +295,22 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">$</span>
-                <Input
-                 type="number"
-                 value={incomeInputMode === "monthly" ? targetMonthlyIncome : targetMonthlyIncome * 12}
-                 onChange={e => {
-                   const v = parseFloat(e.target.value);
-                   if (isNaN(v)) return;
-                   setTargetMonthlyIncome(incomeInputMode === "monthly" ? Math.max(0, v) : Math.max(0, Math.round(v / 12)));
-                 }}
-                 className="h-8 text-sm font-mono bg-secondary border-border"
-                 min={0}
-                />
-                <span className="text-[10px] text-muted-foreground">{incomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
+                 <span className="text-muted-foreground text-sm">$</span>
+                 <Input
+                  type="number"
+                  value={targetIncomeRaw !== "" ? targetIncomeRaw : (incomeInputMode === "monthly" ? targetMonthlyIncome : targetMonthlyIncome * 12)}
+                  onChange={e => setTargetIncomeRaw(e.target.value)}
+                  onBlur={() => {
+                    const v = parseFloat(targetIncomeRaw);
+                    if (!isNaN(v) && v >= 0) {
+                      setTargetMonthlyIncome(incomeInputMode === "monthly" ? v : Math.round(v / 12));
+                    }
+                    setTargetIncomeRaw("");
+                  }}
+                  className="h-8 text-sm font-mono bg-secondary border-border"
+                  min={0}
+                 />
+                 <span className="text-[10px] text-muted-foreground">{incomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">
                 {incomeInputMode === "monthly"
@@ -328,19 +333,22 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-sm">$</span>
-                <Input
+                 <span className="text-muted-foreground text-sm">$</span>
+                 <Input
                   type="number"
-                  value={empIncomeInputMode === "monthly" ? employmentIncome : employmentIncome * 12}
-                  onChange={e => {
-                    const v = parseFloat(e.target.value);
-                    if (isNaN(v)) return;
-                    setEmploymentIncome(empIncomeInputMode === "monthly" ? Math.max(0, v) : Math.max(0, Math.round(v / 12)));
+                  value={empIncomeRaw !== "" ? empIncomeRaw : (empIncomeInputMode === "monthly" ? employmentIncome : employmentIncome * 12)}
+                  onChange={e => setEmpIncomeRaw(e.target.value)}
+                  onBlur={() => {
+                    const v = parseFloat(empIncomeRaw);
+                    if (!isNaN(v) && v >= 0) {
+                      setEmploymentIncome(empIncomeInputMode === "monthly" ? v : Math.round(v / 12));
+                    }
+                    setEmpIncomeRaw("");
                   }}
                   className="h-8 text-sm font-mono bg-secondary border-border"
                   min={0}
-                />
-                <span className="text-[10px] text-muted-foreground">{empIncomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
+                 />
+                 <span className="text-[10px] text-muted-foreground">{empIncomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
               </div>
             </div>
 
