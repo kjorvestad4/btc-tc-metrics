@@ -647,11 +647,21 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
         {/* Strategy income summary — year 1 retirement income across all strategies */}
         {(() => {
-          const yearsToFull = Math.max(0, fullRetirementAge - currentAge);
-          const retireYear = new Date().getFullYear() + yearsToFull;
+          // Use whichever retirement comes first
+          const firstRetireAge = partialRetirementEnabled
+            ? Math.min(retirementAge, fullRetirementAge)
+            : fullRetirementAge;
+          const yearsToFirst = Math.max(0, firstRetireAge - currentAge);
+          const retireYear = new Date().getFullYear() + yearsToFirst;
 
-          // Balance at retirement start (projected)
-          const balanceAtRetirement = portfolioAtRetirement;
+          // Balance at first retirement start (projected)
+          const balanceAtRetirement = (() => {
+            if (portfolioProjections && portfolioProjections.length > 0) {
+              const clampedIdx = Math.min(yearsToFirst, portfolioProjections.length - 1);
+              return portfolioProjections[clampedIdx].portfolio_value;
+            }
+            return startBalance * Math.pow(1 + annualReturn / 100, yearsToFirst);
+          })();
 
           // SWR: % of projected balance at retirement
           const swrAnnual = balanceAtRetirement * (swrPct / 100);
@@ -664,16 +674,23 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           // Fixed Draw: the target amount in today's dollars (year-1 retirement = no inflation adjustment yet)
           const fixedAnnual = targetMonthlyIncome * 12;
 
-          // 72(t): use engineIraBalance (already at selected year) + selected method
-          const sepp72tAnnual = calc72t({ balance: engineIraBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
+          // 72(t): use engineIraBalance + age at first retirement
+          const sepp72tAge = iraMode === "portfolio"
+            ? Math.min(currentAge + iraYearIndex, 84)
+            : Math.min(firstRetireAge, 84);
+          const sepp72tAnnual = calc72t({ balance: engineIraBalance, age: sepp72tAge, method: method72t, interestRate: interestRate72t / 100 });
 
           const method72tLabel = RULE_72T_METHODS.find(m => m.id === method72t)?.label
             .replace("Fixed ", "").replace(" Method", "").replace("ization", "iz.");
 
+          const retireLabel = partialRetirementEnabled && retirementAge < fullRetirementAge
+            ? `Partial Retirement Age ${firstRetireAge}`
+            : `Full Retirement Age ${firstRetireAge}`;
+
           return (
             <div className="mb-4 p-3 bg-secondary/20 rounded-xl border border-border">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
-                Year-1 Retirement Income — Starting Age {fullRetirementAge} ({retireYear})
+                Year-1 Retirement Income — {retireLabel} ({retireYear})
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {[
