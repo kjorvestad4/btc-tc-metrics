@@ -51,64 +51,66 @@ function calc72t({ balance, age, method, interestRate = 0.05 }) {
  * When portfolioProjections is provided, balance tracks actual projected values
  * (minus cumulative withdrawals) rather than a flat compound rate.
  */
-function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, iraBalance, iraPct, method72t, interestRate72t, years = 30, portfolioProjections, annualDividendIncome = 0 }) {
+function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, iraBalance, method72t, interestRate72t, years = 30, portfolioProjections, annualDividendIncome = 0 }) {
   const rows = [];
   const startYear = new Date().getFullYear();
+  const rate = annualReturn / 100;
   const yearsToFull = Math.max(0, fullRetirementAge - currentAge);
-  // yearsToPartial: when partial is OFF, treat it same as yearsToFull (no partial phase)
   const yearsToPartial = partialRetirementEnabled
     ? Math.min(yearsToFull, Math.max(0, retirementAge - currentAge))
     : yearsToFull;
 
   const hasProjections = portfolioProjections && portfolioProjections.length > 0;
-  const projGross = {};
-  if (hasProjections) {
-    portfolioProjections.forEach((row, idx) => { projGross[idx] = row.portfolio_value; });
-  }
+
+  // IRA is a % of the portfolio — seed it at startBalance * iraPct and grow in lockstep
+  // iraBalance here is the actual dollar amount passed in (already computed from iraPct outside)
+  const iraFraction = startBalance > 0 ? Math.min(1, iraBalance / startBalance) : 0;
 
   let fixedSeppAmount = null;
   let swrBaseAmount = null;
   let balance = startBalance;
-  let cumulativeWithdrawals = 0;
   let trackingIra = iraBalance;
 
   for (let y = 0; y <= years; y++) {
-    // Phase classification
-    const isPreRetirement = y < yearsToPartial;                                             // full salary, no withdrawals
-    const isPartial       = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull; // reduced salary, no withdrawals
-    const isRetired       = y >= yearsToFull;                                               // withdrawals begin
+    const isPartial  = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull;
+    const isRetired  = y >= yearsToFull;
+    const isWorking  = !isPartial && !isRetired;
 
-    const empIncome = isPreRetirement
+    const empIncome = isWorking
       ? employmentIncome * 12
       : isPartial
         ? employmentIncome * 12 * (partialSalaryPct / 100)
         : 0;
 
     if (y === 0) {
-      rows.push({ year: startYear, balance, iraBalance: trackingIra, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
+      // Only show IRA line for rule_72t strategy
+      rows.push({ year: startYear, balance, iraBalance: strategy === "rule_72t" ? trackingIra : null, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
       continue;
     }
 
-    // Grow portfolio
+    // ── Grow portfolio ──
     if (hasProjections) {
       const lastIdx = portfolioProjections.length - 1;
-      const gross = projGross[y] != null ? projGross[y] : projGross[lastIdx] * Math.pow(1 + annualReturn / 100, y - lastIdx);
-      balance = Math.max(0, gross - cumulativeWithdrawals);
+      const gross = y <= lastIdx
+        ? portfolioProjections[y].portfolio_value
+        : portfolioProjections[lastIdx].portfolio_value * Math.pow(1 + rate, y - lastIdx);
+      balance = Math.max(0, gross);
     } else {
-      balance = balance * (1 + annualReturn / 100);
+      balance = balance * (1 + rate);
     }
 
-    // Grow IRA independently
-    trackingIra = trackingIra * (1 + annualReturn / 100);
+    // ── IRA grows as same fraction of portfolio (not independently) ──
+    trackingIra = balance * iraFraction;
 
-    // Compute withdrawal (only in retirement phase)
+    // ── Compute withdrawal (retired phase only) ──
     let withdrawal = 0;
     if (isRetired) {
+      const yearsIntoRetirement = y - yearsToFull;
       if (strategy === "swr") {
         if (swrBaseAmount === null) swrBaseAmount = balance * (swrPct / 100);
-        withdrawal = swrBaseAmount * Math.pow(1 + inflationRate / 100, y - yearsToFull);
+        withdrawal = swrBaseAmount * Math.pow(1 + inflationRate / 100, yearsIntoRetirement);
       } else if (strategy === "fixed_income") {
-        withdrawal = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, y - yearsToFull);
+        withdrawal = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, yearsIntoRetirement);
       } else if (strategy === "rule_72t") {
         if (method72t === "rmd") {
           withdrawal = calc72t({ balance: trackingIra, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
@@ -119,25 +121,28 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
           withdrawal = fixedSeppAmount;
         }
       }
-      // income_only: withdrawal = 0, income shown separately
+      // income_only: withdrawal stays 0
     }
 
-    // Apply withdrawal
+    // ── Apply withdrawal to portfolio ──
     if (withdrawal > 0) {
-      cumulativeWithdrawals += withdrawal;
       balance = Math.max(0, balance - withdrawal);
-      if (strategy === "rule_72t") trackingIra = Math.max(0, trackingIra - withdrawal);
+      trackingIra = Math.max(0, trackingIra - withdrawal);
     }
 
-    // investmentIncome for chart:
-    // - income_only: flat annual dividend income (no principal touch)
-    // - all others: actual withdrawal amount
-    let investmentIncome = 0;
-    if (isRetired) {
-      investmentIncome = strategy === "income_only" ? annualDividendIncome : withdrawal;
-    }
+    // investmentIncome = what the chart shows as retirement income
+    const investmentIncome = isRetired
+      ? (strategy === "income_only" ? annualDividendIncome : withdrawal)
+      : 0;
 
-    rows.push({ year: startYear + y, balance, iraBalance: trackingIra, withdrawal, employmentIncome: empIncome, investmentIncome });
+    rows.push({
+      year: startYear + y,
+      balance,
+      iraBalance: strategy === "rule_72t" ? trackingIra : null,
+      withdrawal,
+      employmentIncome: empIncome,
+      investmentIncome,
+    });
   }
   return rows;
 }
@@ -302,13 +307,12 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     fullRetirementAge,
     employmentIncome,
     iraBalance: engineIraBalance,
-    iraPct,
     method72t,
     interestRate72t,
     years: projYears,
     portfolioProjections: mode === "portfolio" ? portfolioProjections : null,
     annualDividendIncome: portfolioMonthlyIncome * 12,
-  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode, iraBalance, iraMode, portfolioAtRetirement]);
+  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
@@ -907,7 +911,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 />
               )}
               <Line type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
-              {(strategy === "rule_72t" || (iraMode === "portfolio" && iraPct > 0)) && (
+              {strategy === "rule_72t" && (
                 <Line type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
               )}
             </LineChart>
