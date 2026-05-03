@@ -55,28 +55,26 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
   const rows = [];
   const startYear = new Date().getFullYear();
   const yearsToPartial = Math.max(0, retirementAge - currentAge);
-  const yearsToFull = Math.max(yearsToPartial, fullRetirementAge - currentAge);
+  const yearsToFull    = Math.max(yearsToPartial, fullRetirementAge - currentAge);
+  const hasProjections = portfolioProjections && portfolioProjections.length > 0;
 
-  // Build a lookup of projected portfolio values by year offset
-  // portfolioProjections is indexed 0..N where index === year offset from now
-  const projByOffset = {};
-  if (portfolioProjections && portfolioProjections.length > 0) {
-    portfolioProjections.forEach((row, idx) => { projByOffset[idx] = row.portfolio_value; });
+  // Build projected gross value lookup (before withdrawals) by year offset
+  const projGross = {};
+  if (hasProjections) {
+    portfolioProjections.forEach((row, idx) => { projGross[idx] = row.portfolio_value; });
   }
 
-  // Track cumulative withdrawals to subtract from projected balances
+  // Running state
+  let balance = startBalance;
+  let iraBalanceRemaining = hasProjections ? startBalance * (iraPct / 100) : iraBalance;
   let cumulativeWithdrawals = 0;
-  // iraBalanceRemaining: for portfolio mode, derived from portfolio balance × iraPct each year
-  // for independent mode, compounds separately
-  let iraBalanceRemaining = iraBalance;
 
   for (let y = 0; y <= years; y++) {
     const isPrePartial  = y < yearsToPartial;
     const isPartial     = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull;
     const isFullRetired = !isPrePartial && !isPartial;
-    const inflAdj = Math.pow(1 + inflationRate / 100, y);
+    const inflAdj       = Math.pow(1 + inflationRate / 100, y);
 
-    // Employment income in each phase
     const empIncome = isPrePartial
       ? employmentIncome * 12
       : isPartial
@@ -84,44 +82,47 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
         : 0;
 
     if (y === 0) {
-      // IRA balance = iraPct% of portfolio for projection mode, else raw iraBalance
-      if (portfolioProjections && portfolioProjections.length > 0) {
-        iraBalanceRemaining = startBalance * (iraPct / 100);
-      }
-      rows.push({ year: startYear, balance: startBalance, iraBalance: iraBalanceRemaining, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
+      rows.push({ year: startYear, balance, iraBalance: iraBalanceRemaining, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
       continue;
     }
 
-    let withdrawal = 0;
+    // Step 1: grow portfolio
+    if (hasProjections) {
+      // Use the gross projected value for this year, then subtract cumulative withdrawals
+      let gross;
+      if (projGross[y] != null) {
+        gross = projGross[y];
+      } else {
+        // Extrapolate beyond projection horizon
+        const lastIdx = portfolioProjections.length - 1;
+        gross = projGross[lastIdx] * Math.pow(1 + annualReturn / 100, y - lastIdx);
+      }
+      balance = Math.max(0, gross - cumulativeWithdrawals);
+    } else {
+      balance = balance * (1 + annualReturn / 100);
+    }
 
+    // Step 2: compute this year's withdrawal
+    let withdrawal = 0;
     if (isFullRetired) {
       if (strategy === "swr") {
         withdrawal = startBalance * (swrPct / 100) * inflAdj;
-      } else if (strategy === "income_only") {
-        withdrawal = 0;
       } else if (strategy === "rule_72t") {
         withdrawal = calc72t({ balance: iraBalanceRemaining, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
       } else if (strategy === "fixed_income") {
         withdrawal = targetMonthlyIncome * 12 * inflAdj;
       }
+      // income_only: withdrawal stays 0, income comes from dividends
+    }
+
+    // Step 3: subtract withdrawal from balance
+    if (withdrawal > 0) {
       cumulativeWithdrawals += withdrawal;
+      balance = Math.max(0, balance - withdrawal);
     }
 
-    // Portfolio balance: use actual projection if available, else compound from start
-    let baseProjectedValue;
-    if (projByOffset[y] != null) {
-      baseProjectedValue = projByOffset[y];
-    } else {
-      // Extrapolate beyond projection horizon using annualReturn
-      const lastIdx = portfolioProjections && portfolioProjections.length > 0 ? portfolioProjections.length - 1 : 0;
-      const lastVal = projByOffset[lastIdx] ?? startBalance;
-      const extraYears = y - lastIdx;
-      baseProjectedValue = lastVal * Math.pow(1 + annualReturn / 100, Math.max(0, extraYears));
-    }
-    const balance = Math.max(0, baseProjectedValue - cumulativeWithdrawals);
-
-    // IRA balance = iraPct% of portfolio for projection mode, else compound separately
-    if (portfolioProjections && portfolioProjections.length > 0) {
+    // Step 4: update IRA balance
+    if (hasProjections) {
       iraBalanceRemaining = balance * (iraPct / 100);
     } else if (strategy === "rule_72t") {
       iraBalanceRemaining = Math.max(0, iraBalanceRemaining * (1 + annualReturn / 100) - (isFullRetired ? withdrawal : 0));
@@ -129,14 +130,12 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       iraBalanceRemaining = iraBalanceRemaining * (1 + annualReturn / 100);
     }
 
-    rows.push({
-      year: startYear + y,
-      balance,
-      iraBalance: iraBalanceRemaining,
-      withdrawal,
-      employmentIncome: empIncome,
-      investmentIncome: isFullRetired ? (strategy === "income_only" ? annualDividendIncome : withdrawal) : 0,
-    });
+    // Investment income: for income_only use dividend income, else use withdrawal amount
+    const investmentIncome = isFullRetired
+      ? (strategy === "income_only" ? annualDividendIncome : withdrawal)
+      : 0;
+
+    rows.push({ year: startYear + y, balance, iraBalance: iraBalanceRemaining, withdrawal, employmentIncome: empIncome, investmentIncome });
   }
   return rows;
 }
