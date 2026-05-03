@@ -635,6 +635,39 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           {iraMode === "portfolio" && <span className="text-cyan-400 ml-1">IRA balance is derived from your Portfolio Valuation above.</span>}
         </p>
 
+        {/* Strategy income summary — year 1 retirement income across all strategies */}
+        {(() => {
+          const yearsToFull = Math.max(0, fullRetirementAge - currentAge);
+          const retireYear = new Date().getFullYear() + yearsToFull;
+          const swrAnnual = startBalance * (swrPct / 100);
+          const incomeOnlyAnnual = portfolioMonthlyIncome * 12;
+          const fixedAnnual = targetMonthlyIncome * 12;
+          const sepp72tSelected = sepp72t.find(m => m.id === method72t);
+          const sepp72tAnnual = strategy === "rule_72t" ? (sepp72tSelected?.annual ?? 0) : calc72t({ balance: engineIraBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
+          return (
+            <div className="mb-4 p-3 bg-secondary/20 rounded-xl border border-border">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
+                Year-1 Retirement Income at Age {fullRetirementAge} ({retireYear})
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  { id: "swr", label: `SWR ${swrPct}%`, value: swrAnnual, color: strategy === "swr" ? "text-primary border-primary bg-primary/10" : "text-muted-foreground border-border" },
+                  { id: "income_only", label: "Income Only", value: incomeOnlyAnnual, color: strategy === "income_only" ? "text-green-400 border-green-400/50 bg-green-400/10" : "text-muted-foreground border-border" },
+                  { id: "rule_72t", label: `72(t) ${RULE_72T_METHODS.find(m=>m.id===method72t)?.label.replace(" Method","").replace(" Amortization","Amort.").replace(" Annuitization","Annuit.")}`, value: sepp72tAnnual, color: strategy === "rule_72t" ? "text-cyan-400 border-cyan-400/50 bg-cyan-400/10" : "text-muted-foreground border-border" },
+                  { id: "fixed_income", label: "Fixed Draw", value: fixedAnnual, color: strategy === "fixed_income" ? "text-amber-400 border-amber-400/50 bg-amber-400/10" : "text-muted-foreground border-border" },
+                ].map(s => (
+                  <button key={s.id} onClick={() => setStrategy(s.id)}
+                    className={`text-center p-2.5 rounded-xl border transition-colors cursor-pointer ${s.color}`}>
+                    <p className="text-[9px] opacity-80">{s.label}</p>
+                    <p className="text-sm font-bold font-mono mt-0.5">{formatCurrency(s.value, 0)}/yr</p>
+                    <p className="text-[9px] opacity-70">{formatCurrency(s.value / 12, 0)}/mo</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Strategy selector */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
           {DISTRIBUTION_STRATEGIES.map(s => (
@@ -854,7 +887,21 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
         {/* Chart 2: Income Flows */}
         <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Annual Income Flows</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Annual Income Flows</p>
+            {(() => {
+              const firstRetirementRow = withdrawalRows.find(r => r.investmentIncome > 0);
+              if (!firstRetirementRow) return null;
+              return (
+                <div className="flex gap-3 text-[10px]">
+                  <span className="text-muted-foreground">
+                    Year-1 Withdrawal Income: <span className="text-amber-400 font-mono font-bold">{formatCurrency(firstRetirementRow.investmentIncome, 0)}/yr</span>
+                    <span className="text-muted-foreground ml-1">({formatCurrency(firstRetirementRow.investmentIncome / 12, 0)}/mo)</span>
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
