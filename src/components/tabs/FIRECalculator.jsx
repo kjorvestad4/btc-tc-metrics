@@ -927,50 +927,72 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
         </div>
 
         {/* Chart 2: Income Flows */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Annual Income Flows</p>
-            {(() => {
-              const firstRetirementRow = withdrawalRows.find(r => r.investmentIncome > 0);
-              if (!firstRetirementRow) return null;
-              return (
-                <div className="flex gap-3 text-[10px]">
-                  <span className="text-muted-foreground">
-                    Year-1 Withdrawal Income: <span className="text-amber-400 font-mono font-bold">{formatCurrency(firstRetirementRow.investmentIncome, 0)}/yr</span>
-                    <span className="text-muted-foreground ml-1">({formatCurrency(firstRetirementRow.investmentIncome / 12, 0)}/mo)</span>
-                  </span>
+        {(() => {
+          // Dynamic label & color based on active strategy
+          const incomeLineLabel = strategy === "swr"
+            ? `SWR ${swrPct}% Withdrawal`
+            : strategy === "income_only"
+            ? "Dividend / Income Only"
+            : strategy === "rule_72t"
+            ? `72(t) SEPP — ${RULE_72T_METHODS.find(m => m.id === method72t)?.label ?? method72t}`
+            : `Fixed Draw (${formatCurrency(targetMonthlyIncome, 0)}/mo)`;
+
+          const incomeLineColor = strategy === "swr"
+            ? "#22C55E"
+            : strategy === "income_only"
+            ? "#34D399"
+            : strategy === "rule_72t"
+            ? "#22D3EE"
+            : "#F59E0B";
+
+          const firstRetirementRow = withdrawalRows.find(r => r.investmentIncome > 0);
+
+          return (
+            <div>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Annual Income Flows</p>
+                  <p className="text-[9px] mt-0.5" style={{ color: incomeLineColor }}>{incomeLineLabel}</p>
                 </div>
-              );
-            })()}
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-              <XAxis dataKey="year" tick={TICK_STYLE} />
-              <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
-              <Tooltip
-                contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
-                formatter={(v, name) => [formatCurrency(v, 0), name]}
-                labelFormatter={l => `Year ${l}`}
-              />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              {retirementAge > currentAge && retirementAge < fullRetirementAge && (
-                <ReferenceLine
-                  x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
-                  stroke="#F59E0B" strokeDasharray="4 2"
-                />
-              )}
-              {fullRetirementAge > currentAge && (
-                <ReferenceLine
-                  x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
-                  stroke="#22C55E" strokeDasharray="4 2"
-                />
-              )}
-              <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} />
-              <Line type="monotone" dataKey="investmentIncome" stroke="#F59E0B" strokeWidth={2} name="Investment/Withdrawal Income" dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+                {firstRetirementRow && (
+                  <div className="flex gap-3 text-[10px]">
+                    <span className="text-muted-foreground">
+                      Year-1 Income: <span className="font-mono font-bold" style={{ color: incomeLineColor }}>{formatCurrency(firstRetirementRow.investmentIncome, 0)}/yr</span>
+                      <span className="text-muted-foreground ml-1">({formatCurrency(firstRetirementRow.investmentIncome / 12, 0)}/mo)</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                  <XAxis dataKey="year" tick={TICK_STYLE} />
+                  <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
+                    formatter={(v, name) => [formatCurrency(v, 0), name]}
+                    labelFormatter={l => `Year ${l}`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  {retirementAge > currentAge && retirementAge < fullRetirementAge && (
+                    <ReferenceLine
+                      x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
+                      stroke="#F59E0B" strokeDasharray="4 2"
+                    />
+                  )}
+                  {fullRetirementAge > currentAge && (
+                    <ReferenceLine
+                      x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
+                      stroke="#22C55E" strokeDasharray="4 2"
+                    />
+                  )}
+                  <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} />
+                  <Line key={`income-${strategy}-${method72t}`} type="monotone" dataKey="investmentIncome" stroke={incomeLineColor} strokeWidth={2} name={incomeLineLabel} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        })()}
 
         {/* Other distribution options reference */}
         <div className="mt-4 p-3 bg-secondary/30 rounded-xl border border-border">
