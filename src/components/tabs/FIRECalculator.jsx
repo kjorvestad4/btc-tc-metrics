@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/calculations";
 import { Flame, Target, Shield, TrendingDown } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, Legend,
+  ResponsiveContainer, ReferenceLine, Legend, ComposedChart, Bar,
 } from "recharts";
 
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
@@ -255,7 +255,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     }));
   }, [effectiveIraBalance, currentAge, interestRate72t]);
 
-  // Withdrawal projection
+  // Only pass portfolioProjections to the engine when in portfolio mode
   const withdrawalRows = useMemo(() => projectWithdrawals({
     startBalance: effectivePortfolioValue || 500000,
     strategy,
@@ -274,9 +274,9 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     method72t,
     interestRate72t,
     years: projYears,
-    portfolioProjections,
+    portfolioProjections: mode === "portfolio" ? portfolioProjections : null,
     annualDividendIncome: portfolioMonthlyIncome * 12,
-  }), [effectivePortfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, effectiveIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome]);
+  }), [effectivePortfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, effectiveIraBalance, iraPct, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
@@ -776,43 +776,42 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               {portfolioSurvives ? "✓ Portfolio survives" : "⚠ Portfolio depleted"}
             </span>
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={withdrawalRows} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={withdrawalRows} margin={{ top: 4, right: 50, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="year" tick={TICK_STYLE} />
-              <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              {/* Left axis: portfolio balance */}
+              <YAxis yAxisId="balance" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              {/* Right axis: income flows — separate scale so they're always visible */}
+              <YAxis yAxisId="income" orientation="right" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
               <Tooltip
                 contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
                 formatter={(v, name) => [formatCurrency(v, 0), name]}
                 labelFormatter={l => `Year ${l}`}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <ReferenceLine y={0} stroke="#EF4444" strokeDasharray="4 2" />
-              {/* Partial retirement marker */}
+              <ReferenceLine yAxisId="balance" y={0} stroke="#EF4444" strokeDasharray="4 2" />
               {partialRetirementEnabled && retirementAge > currentAge && (
-                <ReferenceLine
+                <ReferenceLine yAxisId="balance"
                   x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
-                  stroke="#F59E0B"
-                  strokeDasharray="4 2"
+                  stroke="#F59E0B" strokeDasharray="4 2"
                   label={{ value: "Semi-Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
                 />
               )}
-              {/* Full retirement marker */}
               {fullRetirementAge > currentAge && (
-                <ReferenceLine
+                <ReferenceLine yAxisId="balance"
                   x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
-                  stroke="#22C55E"
-                  strokeDasharray="4 2"
+                  stroke="#22C55E" strokeDasharray="4 2"
                   label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
                 />
               )}
-              <Line type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
+              <Line yAxisId="balance" type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
               {(strategy === "rule_72t" || (iraMode === "portfolio" && iraPct > 0)) && (
-                <Line type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
+                <Line yAxisId="balance" type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
               )}
-              <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={1.5} name="Employment Income" dot={false} strokeDasharray="5 3" />
-              <Line type="monotone" dataKey="investmentIncome" stroke="#F59E0B" strokeWidth={1.5} name="Investment/Withdrawal Income" dot={false} strokeDasharray="3 3" />
-            </LineChart>
+              <Line yAxisId="income" type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={1.5} name="Employment Income" dot={false} strokeDasharray="5 3" />
+              <Line yAxisId="income" type="monotone" dataKey="investmentIncome" stroke="#F59E0B" strokeWidth={2} name="Investment/Withdrawal Income" dot={false} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 
