@@ -118,6 +118,11 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   // Mode: "independent" = manual inputs, "portfolio" = derived from holdings model
   const [mode, setMode] = useState("independent");
 
+  // IRA mode for the Withdrawal Strategy section
+  const [iraMode, setIraMode] = useState("independent");
+  const [iraPct, setIraPct] = useState(50);
+  const [iraYearIndex, setIraYearIndex] = useState(0); // index into portfolioProjections
+
   // FIRE inputs
   const [targetMonthlyIncome, setTargetMonthlyIncome] = useState(10000);
   const [currentAge, setCurrentAge] = useState(45);
@@ -138,10 +143,17 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const annualReturn = mode === "portfolio" && portfolioCagr != null ? portfolioCagr : manualReturn;
   const effectivePortfolioValue = mode === "portfolio" && portfolioValue > 0 ? portfolioValue : (mode === "independent" ? portfolioValue : 500000);
 
+  // Derived IRA balance from portfolio projections
+  const portfolioYearRow = portfolioProjections?.[iraYearIndex];
+  const portfolioDerivedIra = portfolioYearRow
+    ? portfolioYearRow.portfolio_value * (iraPct / 100)
+    : 0;
+
   // Distribution strategy
   const [strategy, setStrategy] = useState("income_only");
   const [swrPct, setSwrPct] = useState(4);
   const [iraBalance, setIraBalance] = useState(500000);
+  const effectiveIraBalance = iraMode === "portfolio" ? portfolioDerivedIra : iraBalance;
   const [method72t, setMethod72t] = useState("amortization");
   const [interestRate72t, setInterestRate72t] = useState(5);
   const [projYears, setProjYears] = useState(30);
@@ -179,9 +191,9 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const sepp72t = useMemo(() => {
     return RULE_72T_METHODS.map(m => ({
       ...m,
-      annual: calc72t({ balance: iraBalance, age: currentAge, method: m.id, interestRate: interestRate72t / 100 }),
+      annual: calc72t({ balance: effectiveIraBalance, age: currentAge, method: m.id, interestRate: interestRate72t / 100 }),
     }));
-  }, [iraBalance, currentAge, interestRate72t]);
+  }, [effectiveIraBalance, currentAge, interestRate72t]);
 
   // Withdrawal projection
   const withdrawalRows = useMemo(() => projectWithdrawals({
@@ -192,7 +204,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     inflationRate,
     targetMonthlyIncome,
     age: currentAge,
-    iraBalance,
+    iraBalance: effectiveIraBalance,
     method72t,
     interestRate72t,
     years: projYears,
@@ -339,9 +351,32 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
       {/* ── Withdrawal Strategy ── */}
       <Card>
-        <SectionHeader icon={TrendingDown} title="Withdrawal Strategy Modeling" color="text-cyan-400" />
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <TrendingDown className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Withdrawal Strategy Modeling</h3>
+          </div>
+          {/* IRA Mode toggle — only relevant for 72(t) */}
+          <div className="flex gap-1.5 items-center">
+            <span className="text-[10px] text-muted-foreground">IRA Balance:</span>
+            {[
+              { id: "independent", label: "Independent" },
+              { id: "portfolio",   label: "Portfolio Model" },
+            ].map(m => (
+              <button key={m.id} onClick={() => setIraMode(m.id)}
+                className={`text-xs px-3 py-1 rounded-lg border font-semibold transition-colors ${
+                  iraMode === m.id
+                    ? "bg-cyan-500/20 border-cyan-500 text-cyan-400"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                }`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <p className="text-[10px] text-muted-foreground mb-4">
           Model how different distribution strategies affect your portfolio over time. Includes Rule 72(t) / SEPP for early IRA access without penalty.
+          {iraMode === "portfolio" && <span className="text-cyan-400 ml-1">IRA balance is derived from your Portfolio Valuation above.</span>}
         </p>
 
         {/* Strategy selector */}
@@ -391,10 +426,64 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           )}
           {strategy === "rule_72t" && (
             <>
-              <div>
-                <Label className="text-[10px] text-muted-foreground">IRA / Tax-Deferred Balance</Label>
-                <Input type="number" value={iraBalance} onChange={e => setIraBalance(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="h-7 text-xs font-mono bg-card border-border mt-1" />
+              <div className="md:col-span-3 space-y-2">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">IRA / Tax-Deferred Balance</Label>
+                {iraMode === "independent" ? (
+                  <Input type="number" value={iraBalance} onChange={e => setIraBalance(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="h-7 text-xs font-mono bg-card border-border" />
+                ) : (
+                  <div className="space-y-2">
+                    {/* Year selector */}
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <span className="text-[10px] text-muted-foreground">Portfolio Year:</span>
+                      {portfolioProjections?.map((row, idx) => (
+                        <button key={idx} onClick={() => setIraYearIndex(idx)}
+                          className={`text-[10px] px-2 py-0.5 rounded border font-mono font-semibold transition-colors ${
+                            iraYearIndex === idx
+                              ? "bg-cyan-500/20 border-cyan-500 text-cyan-400"
+                              : "border-border text-muted-foreground hover:bg-secondary"
+                          }`}>
+                          {row.year ?? `Y${idx}`}
+                        </button>
+                      ))}
+                    </div>
+                    {/* IRA % of total portfolio */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground">% of Total Portfolio in IRA/Tax-Deferred</span>
+                        <span className="text-[10px] font-mono text-cyan-400 font-bold">{iraPct}%</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[10, 25, 50, 75, 90, 100].map(p => (
+                          <button key={p} onClick={() => setIraPct(p)}
+                            className={`text-[10px] px-2.5 py-1 rounded-lg border font-semibold transition-colors ${
+                              iraPct === p
+                                ? "bg-cyan-500/20 border-cyan-500 text-cyan-400"
+                                : "border-border text-muted-foreground hover:bg-secondary"
+                            }`}>
+                            {p}%
+                          </button>
+                        ))}
+                        <Input
+                          type="number" value={iraPct}
+                          onChange={e => setIraPct(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                          className="h-7 w-16 text-xs font-mono bg-card border-border"
+                          min={0} max={100}
+                        />
+                      </div>
+                      <div className="p-2 bg-cyan-400/10 border border-cyan-400/20 rounded-lg">
+                        <p className="text-[10px] text-muted-foreground">
+                          Total portfolio in <span className="text-cyan-400 font-mono font-bold">{portfolioYearRow?.year ?? "—"}</span>:
+                          <span className="text-foreground font-mono font-bold ml-1">{formatCurrency(portfolioYearRow?.portfolio_value ?? 0)}</span>
+                        </p>
+                        <p className="text-xs font-bold font-mono text-cyan-400 mt-0.5">
+                          IRA Balance = {formatCurrency(portfolioDerivedIra)}
+                          <span className="text-[9px] text-muted-foreground ml-2">({iraPct}% of total)</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">120% AFR Rate (%)</Label>
