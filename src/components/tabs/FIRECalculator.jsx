@@ -920,7 +920,6 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
         {/* Chart 2: Income Flows */}
         {(() => {
-          // Dynamic label & color based on active strategy
           const incomeLineLabel = strategy === "swr"
             ? `SWR ${swrPct}% Withdrawal`
             : strategy === "income_only"
@@ -937,7 +936,34 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? "#22D3EE"
             : "#F59E0B";
 
-          const firstRetirementRow = withdrawalRows.find(r => r.investmentIncome > 0);
+          // Compute year-1 retirement income directly from the summary cards logic
+          // (same formula used above, so tooltip always matches the cards)
+          const yearsToFirst = Math.max(0, fullRetirementAge - currentAge);
+          const balanceAtRetirement = (() => {
+            if (portfolioProjections && mode === "portfolio" && portfolioProjections.length > 0) {
+              const idx = Math.min(yearsToFirst, portfolioProjections.length - 1);
+              return portfolioProjections[idx].portfolio_value;
+            }
+            return startBalance * Math.pow(1 + annualReturn / 100, yearsToFirst);
+          })();
+
+          const year1Income = strategy === "swr"
+            ? balanceAtRetirement * (swrPct / 100)
+            : strategy === "income_only"
+            ? portfolioMonthlyIncome * 12
+            : strategy === "fixed_income"
+            ? targetMonthlyIncome * 12
+            : calc72t({ balance: engineIraBalance, age: Math.min(fullRetirementAge, 84), method: method72t, interestRate: interestRate72t / 100 });
+
+          const retirementYear = new Date().getFullYear() + yearsToFirst;
+
+          // Build chart data: pre-retirement rows show 0, retirement rows show actual income
+          // Also ensure we always have enough rows to show retirement income
+          const chartRows = withdrawalRows.map(row => ({
+            ...row,
+            // For pre-retirement: show null so line only starts at retirement
+            incomeFlow: row.year < retirementYear ? null : row.investmentIncome,
+          }));
 
           return (
             <div>
@@ -946,40 +972,55 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Annual Income Flows</p>
                   <p className="text-[9px] mt-0.5" style={{ color: incomeLineColor }}>{incomeLineLabel}</p>
                 </div>
-                {firstRetirementRow && (
-                  <div className="flex gap-3 text-[10px]">
-                    <span className="text-muted-foreground">
-                      Year-1 Income: <span className="font-mono font-bold" style={{ color: incomeLineColor }}>{formatCurrency(firstRetirementRow.investmentIncome, 0)}/yr</span>
-                      <span className="text-muted-foreground ml-1">({formatCurrency(firstRetirementRow.investmentIncome / 12, 0)}/mo)</span>
-                    </span>
-                  </div>
-                )}
+                <div className="flex gap-3 text-[10px]">
+                  <span className="text-muted-foreground">
+                    Year-1 at retirement ({retirementYear}): <span className="font-mono font-bold" style={{ color: incomeLineColor }}>{formatCurrency(year1Income, 0)}/yr</span>
+                    <span className="text-muted-foreground ml-1">({formatCurrency(year1Income / 12, 0)}/mo)</span>
+                  </span>
+                </div>
               </div>
               <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+                <LineChart data={chartRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="year" tick={TICK_STYLE} />
                   <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
                   <Tooltip
                     contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
-                    formatter={(v, name) => [formatCurrency(v, 0), name]}
+                    formatter={(v, name) => {
+                      if (v === null || v === undefined) return null;
+                      return [formatCurrency(v, 0), name];
+                    }}
                     labelFormatter={l => `Year ${l}`}
                   />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
-                  {retirementAge > currentAge && retirementAge < fullRetirementAge && (
-                    <ReferenceLine
-                      x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
-                      stroke="#F59E0B" strokeDasharray="4 2"
-                    />
-                  )}
                   {fullRetirementAge > currentAge && (
                     <ReferenceLine
-                      x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
+                      x={retirementYear}
                       stroke="#22C55E" strokeDasharray="4 2"
+                      label={{ value: "Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
+                    />
+                  )}
+                  {/* Year-1 income as a horizontal reference so it's always visible */}
+                  {year1Income > 0 && (
+                    <ReferenceLine
+                      y={year1Income}
+                      stroke={incomeLineColor}
+                      strokeDasharray="3 3"
+                      strokeOpacity={0.4}
+                      label={{ value: `${formatCurrency(year1Income, 0)}/yr`, fontSize: 8, fill: incomeLineColor, position: "right" }}
                     />
                   )}
                   <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} />
-                  <Line key={`income-${strategy}-${method72t}`} type="monotone" dataKey="investmentIncome" stroke={incomeLineColor} strokeWidth={2} name={incomeLineLabel} dot={false} />
+                  <Line
+                    key={`income-${strategy}-${method72t}`}
+                    type="monotone"
+                    dataKey="incomeFlow"
+                    stroke={incomeLineColor}
+                    strokeWidth={2.5}
+                    name={incomeLineLabel}
+                    dot={false}
+                    connectNulls={false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
