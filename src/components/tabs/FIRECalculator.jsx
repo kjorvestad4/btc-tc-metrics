@@ -43,46 +43,65 @@ function calc72t({ balance, age, method, interestRate = 0.05 }) {
 
 /**
  * Project portfolio withdrawals over time, with selected distribution strategy.
- * Returns array of { year, balance, withdrawal, income }
+ * Returns array of { year, balance, iraBalance, withdrawal, employmentIncome, investmentIncome }
+ *
+ * Pre-retirement: withdrawals = 0, IRA just grows, employment income shown.
+ * Post-retirement: withdrawals begin, employment income = 0.
  */
-function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, age, iraBalance, method72t, interestRate72t, years = 30 }) {
+function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, employmentIncome, iraBalance, method72t, interestRate72t, years = 30 }) {
   const rows = [];
   let balance = startBalance;
   let iraBalanceRemaining = iraBalance;
   const startYear = new Date().getFullYear();
+  const yearsToRetirement = Math.max(0, retirementAge - currentAge);
 
   for (let y = 0; y <= years; y++) {
-    let withdrawal = 0;
-    let sourceLabel = "";
+    const isPreRetirement = y < yearsToRetirement;
+    const inflAdj = Math.pow(1 + inflationRate / 100, y);
 
     if (y === 0) {
-      rows.push({ year: startYear + y, balance, iraBalance: iraBalanceRemaining, withdrawal: 0, income: targetMonthlyIncome * 12 });
+      rows.push({
+        year: startYear,
+        balance,
+        iraBalance: iraBalanceRemaining,
+        withdrawal: 0,
+        employmentIncome: employmentIncome * 12,
+        investmentIncome: 0,
+      });
       continue;
     }
 
-    const inflAdj = Math.pow(1 + inflationRate / 100, y);
+    let withdrawal = 0;
 
-    if (strategy === "swr") {
-      withdrawal = startBalance * (swrPct / 100) * inflAdj;
-      sourceLabel = `${swrPct}% SWR`;
-    } else if (strategy === "income_only") {
-      // Live off dividends only — no principal touch
-      withdrawal = 0;
-    } else if (strategy === "rule_72t") {
-      withdrawal = calc72t({ balance: iraBalanceRemaining, age: age + y, method: method72t, interestRate: interestRate72t / 100 });
-      iraBalanceRemaining = Math.max(0, iraBalanceRemaining * (1 + annualReturn / 100) - withdrawal);
-    } else if (strategy === "fixed_income") {
-      withdrawal = targetMonthlyIncome * 12 * inflAdj;
+    if (isPreRetirement) {
+      // No withdrawals pre-retirement — IRA and portfolio just grow
+      iraBalanceRemaining = iraBalanceRemaining * (1 + annualReturn / 100);
+      balance = balance * (1 + annualReturn / 100);
+    } else {
+      // Post-retirement: apply strategy
+      if (strategy === "swr") {
+        withdrawal = startBalance * (swrPct / 100) * inflAdj;
+      } else if (strategy === "income_only") {
+        withdrawal = 0;
+      } else if (strategy === "rule_72t") {
+        withdrawal = calc72t({ balance: iraBalanceRemaining, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
+        iraBalanceRemaining = Math.max(0, iraBalanceRemaining * (1 + annualReturn / 100) - withdrawal);
+      } else if (strategy === "fixed_income") {
+        withdrawal = targetMonthlyIncome * 12 * inflAdj;
+      }
+      if (strategy !== "rule_72t") {
+        balance = Math.max(0, balance * (1 + annualReturn / 100) - withdrawal);
+        iraBalanceRemaining = iraBalanceRemaining * (1 + annualReturn / 100);
+      }
     }
-
-    balance = Math.max(0, balance * (1 + annualReturn / 100) - (strategy !== "rule_72t" ? withdrawal : 0));
 
     rows.push({
       year: startYear + y,
       balance,
       iraBalance: iraBalanceRemaining,
       withdrawal,
-      income: strategy === "income_only" ? targetMonthlyIncome * 12 : withdrawal,
+      employmentIncome: isPreRetirement ? employmentIncome * 12 : 0,
+      investmentIncome: isPreRetirement ? 0 : (strategy === "income_only" ? targetMonthlyIncome * 12 : withdrawal),
     });
   }
   return rows;
@@ -157,6 +176,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [method72t, setMethod72t] = useState("amortization");
   const [interestRate72t, setInterestRate72t] = useState(5);
   const [projYears, setProjYears] = useState(30);
+  const [employmentIncome, setEmploymentIncome] = useState(8000); // monthly
 
   // FIRE number calculations
   const fireNumber = useMemo(() => ({
@@ -203,12 +223,14 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     annualReturn,
     inflationRate,
     targetMonthlyIncome,
-    age: currentAge,
+    currentAge,
+    retirementAge,
+    employmentIncome,
     iraBalance: effectiveIraBalance,
     method72t,
     interestRate72t,
     years: projYears,
-  }), [portfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, iraBalance, method72t, interestRate72t, projYears]);
+  }), [effectivePortfolioValue, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, employmentIncome, effectiveIraBalance, method72t, interestRate72t, projYears]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
@@ -275,6 +297,23 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 <Input type="number" value={retirementAge} onChange={e => setRetirementAge(parseInt(e.target.value) || 55)}
                   className="h-8 text-sm font-mono bg-secondary border-border mt-1" min={18} max={90} />
               </div>
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Current Monthly Employment Income</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-muted-foreground text-sm">$</span>
+                <Input
+                  type="number"
+                  value={employmentIncome}
+                  onChange={e => setEmploymentIncome(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="h-8 text-sm font-mono bg-secondary border-border"
+                  min={0}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Shown on chart until retirement year (<span className="text-foreground font-mono">{new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}</span>), then drops to $0
+              </p>
             </div>
 
             {mode === "independent" ? (
@@ -562,7 +601,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               {portfolioSurvives ? "✓ Portfolio survives" : "⚠ Portfolio depleted"}
             </span>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={260}>
             <LineChart data={withdrawalRows} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="year" tick={TICK_STYLE} />
@@ -574,11 +613,21 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <ReferenceLine y={0} stroke="#EF4444" strokeDasharray="4 2" />
+              {/* Retirement year marker */}
+              {retirementAge > currentAge && (
+                <ReferenceLine
+                  x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
+                  stroke="#F59E0B"
+                  strokeDasharray="4 2"
+                  label={{ value: "Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
+                />
+              )}
               <Line type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
               {strategy === "rule_72t" && (
                 <Line type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
               )}
-              <Line type="monotone" dataKey="income" stroke="#F59E0B" strokeWidth={1.5} name="Annual Income/Withdrawal" dot={false} strokeDasharray="3 3" />
+              <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={1.5} name="Employment Income" dot={false} strokeDasharray="5 3" />
+              <Line type="monotone" dataKey="investmentIncome" stroke="#F59E0B" strokeWidth={1.5} name="Investment/Withdrawal Income" dot={false} strokeDasharray="3 3" />
             </LineChart>
           </ResponsiveContainer>
         </div>
