@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/calculations";
 import { Flame, Target, Shield, TrendingDown } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine, Legend, ComposedChart, Bar,
+  ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
 
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
@@ -782,52 +782,77 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           </div>
         )}
 
-        {/* Projection chart */}
-        <div>
+        {/* Chart 1: Portfolio & IRA Balance */}
+        <div className="mb-4">
           <div className="flex justify-between mb-2">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Portfolio Balance Over {projYears} Years</p>
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${portfolioSurvives ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-destructive border-destructive/30 bg-destructive/10"}`}>
               {portfolioSurvives ? "✓ Portfolio survives" : "⚠ Portfolio depleted"}
             </span>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={withdrawalRows} margin={{ top: 4, right: 50, bottom: 4, left: -10 }}>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
               <XAxis dataKey="year" tick={TICK_STYLE} />
-              {/* Left axis: portfolio balance */}
-              <YAxis yAxisId="balance" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
-              {/* Right axis: income flows — separate scale so they're always visible */}
-              <YAxis yAxisId="income" orientation="right" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
               <Tooltip
                 contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
                 formatter={(v, name) => [formatCurrency(v, 0), name]}
                 labelFormatter={l => `Year ${l}`}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
-              <ReferenceLine yAxisId="balance" y={0} stroke="#EF4444" strokeDasharray="4 2" />
-              {/* Partial retirement line — always show when ages differ */}
+              <ReferenceLine y={0} stroke="#EF4444" strokeDasharray="4 2" />
               {retirementAge > currentAge && retirementAge < fullRetirementAge && (
-                <ReferenceLine yAxisId="balance"
+                <ReferenceLine
                   x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
                   stroke="#F59E0B" strokeDasharray="4 2"
                   label={{ value: partialRetirementEnabled ? "Semi-Retire" : "Early Retire", fontSize: 8, fill: "#F59E0B", position: "top" }}
                 />
               )}
-              {/* Full retirement line */}
               {fullRetirementAge > currentAge && (
-                <ReferenceLine yAxisId="balance"
+                <ReferenceLine
                   x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
                   stroke="#22C55E" strokeDasharray="4 2"
                   label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }}
                 />
               )}
-              <Line yAxisId="balance" type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
+              <Line type="monotone" dataKey="balance" stroke="#22C55E" strokeWidth={2.5} name="Portfolio Balance" dot={false} />
               {(strategy === "rule_72t" || (iraMode === "portfolio" && iraPct > 0)) && (
-                <Line yAxisId="balance" type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
+                <Line type="monotone" dataKey="iraBalance" stroke="#8B5CF6" strokeWidth={1.5} name="IRA Balance" dot={false} strokeDasharray="4 2" />
               )}
-              <Line yAxisId="income" type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={1.5} name="Employment Income" dot={false} strokeDasharray="5 3" />
-              <Line yAxisId="income" type="monotone" dataKey="investmentIncome" stroke="#F59E0B" strokeWidth={2} name="Investment/Withdrawal Income" dot={false} />
-            </ComposedChart>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Chart 2: Income Flows */}
+        <div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Annual Income Flows</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={withdrawalRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+              <XAxis dataKey="year" tick={TICK_STYLE} />
+              <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+              <Tooltip
+                contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
+                formatter={(v, name) => [formatCurrency(v, 0), name]}
+                labelFormatter={l => `Year ${l}`}
+              />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              {retirementAge > currentAge && retirementAge < fullRetirementAge && (
+                <ReferenceLine
+                  x={new Date().getFullYear() + Math.max(0, retirementAge - currentAge)}
+                  stroke="#F59E0B" strokeDasharray="4 2"
+                />
+              )}
+              {fullRetirementAge > currentAge && (
+                <ReferenceLine
+                  x={new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge)}
+                  stroke="#22C55E" strokeDasharray="4 2"
+                />
+              )}
+              <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} />
+              <Line type="monotone" dataKey="investmentIncome" stroke="#F59E0B" strokeWidth={2} name="Investment/Withdrawal Income" dot={false} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
 
