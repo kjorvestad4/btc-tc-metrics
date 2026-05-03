@@ -145,16 +145,18 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       }
     }
 
-    // Investment income
-    // income_only: compound dividend income forward from retirement start at annualReturn
-    const yearsIntoRetirement = isFullRetired ? Math.max(0, y - yearsToFull) : 0;
-    const projectedDividendIncome = annualDividendIncome * Math.pow(1 + annualReturn / 100, yearsToFull + yearsIntoRetirement);
-
+    // Compute investment/withdrawal income shown in the chart
+    // income_only: dividends grow proportionally with portfolio balance (no compounding explosion)
+    // all other strategies: use the actual withdrawal computed above
     let investmentIncome = 0;
     if (isFullRetired) {
-      investmentIncome = strategy === "income_only" ? projectedDividendIncome : withdrawal;
-    } else if (isPartial) {
-      investmentIncome = annualDividendIncome * ((isPartial ? balance / startBalance : 1));
+      if (strategy === "income_only") {
+        investmentIncome = startBalance > 0 ? annualDividendIncome * (balance / startBalance) : annualDividendIncome;
+      } else {
+        investmentIncome = withdrawal;
+      }
+    } else if (isPartial && strategy === "income_only") {
+      investmentIncome = startBalance > 0 ? annualDividendIncome * (balance / startBalance) : annualDividendIncome;
     }
 
     rows.push({ year: startYear + y, balance, iraBalance: trackingIra, withdrawal, employmentIncome: empIncome, investmentIncome });
@@ -665,9 +667,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           // SWR: % of projected balance at retirement
           const swrAnnual = balanceAtRetirement * (swrPct / 100);
 
-          // Income Only: compound current dividend income forward to retirement date at portfolio CAGR
-          // This correctly projects what the income-generating assets will yield at retirement
-          const incomeOnlyAnnual = portfolioMonthlyIncome * 12 * Math.pow(1 + annualReturn / 100, yearsToFirst);
+          // Income Only: project dividend income proportional to portfolio growth at retirement
+          const incomeOnlyAnnual = startBalance > 0
+            ? portfolioMonthlyIncome * 12 * (balanceAtRetirement / startBalance)
+            : portfolioMonthlyIncome * 12;
 
           // Fixed Draw: the target amount in today's dollars (year-1 retirement = no inflation adjustment yet)
           const fixedAnnual = targetMonthlyIncome * 12;
