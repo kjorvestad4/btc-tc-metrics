@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Users, Bitcoin } from "lucide-react";
+import { Users, TrendingUp } from "lucide-react";
 import InvestmentCalculator from "./InvestmentCalculator";
 import Bitcoin24Simulator from "./Bitcoin24Simulator";
-import DRIPSimulator, { DRIP_ASSETS, runDRIP } from "./DRIPSimulator";
+import DRIPSimulator, { DRIP_ASSETS, runDRIP, defaultDripConfig } from "./DRIPSimulator";
+import AdditionalCapitalPanel, { calcAnnualInflows } from "./AdditionalCapitalPanel";
 import MonteCarloSimulator from "./MonteCarloSimulator";
 import FIRECalculator from "./FIRECalculator";
 import TaxAccountAllocator from "./TaxAccountAllocator";
@@ -100,9 +101,17 @@ export default function ProjectionsPage({ liveData }) {
   const [dripRates, setDripRates] = useState({
     STRC: 11.5, SATA: 13.0, STRF: 10.0, STRK: 8.0, STRD: 10.0,
   });
+  const [dripConfigs, setDripConfigs] = useState(() => defaultDripConfig());
   const [mstyWeeklyDiv, setMstyWeeklyDiv] = useState(
     liveData?.msty_latest_div ?? 0.25
   );
+
+  // Additional capital inflow state
+  const [inflowAmount, setInflowAmount] = useState(500);
+  const [inflowFrequency, setInflowFrequency] = useState("monthly");
+  const [inflowAllocations, setInflowAllocations] = useState({
+    MSTR: 50, ASST: 50, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0,
+  });
 
   // Current (now) prices
   const nowBtc  = liveData?.btc_price  ?? 84000;
@@ -125,6 +134,11 @@ export default function ProjectionsPage({ liveData }) {
     });
   }, [activePreset, nowBtc, liveData]);
 
+  // Annual inflows per ticker
+  const annualInflows = useMemo(() => calcAnnualInflows({
+    amount: inflowAmount, frequency: inflowFrequency, allocations: inflowAllocations,
+  }), [inflowAmount, inflowFrequency, inflowAllocations]);
+
   // Pre-compute DRIP share counts per income asset per year (indexed by year offset 0..HORIZON)
   const dripSharesByYear = useMemo(() => {
     const incomeAssets = {
@@ -138,12 +152,17 @@ export default function ProjectionsPage({ liveData }) {
     const out = {};
     for (const [ticker, { price, rate }] of Object.entries(incomeAssets)) {
       const sh = portfolioHoldings[ticker] ?? 0;
-      if (sh <= 0) { out[ticker] = Array(HORIZON + 1).fill(0); continue; }
-      const sim = runDRIP({ shares: sh, price, annualRatesPct: rate, years: HORIZON, dripEnabled });
-      out[ticker] = sim.map(r => r.shares);
+      if (sh <= 0 && !(annualInflows[ticker] > 0)) { out[ticker] = Array(HORIZON + 1).fill(0); continue; }
+      const cfg = dripEnabled ? (dripConfigs?.[ticker] ?? { mode: "drip", dripPct: 100 }) : { mode: "drip", dripPct: 0 };
+      const sim = runDRIP({ shares: sh, price, annualRatesPct: rate, years: HORIZON, dripConfig: cfg });
+      // Add inflow shares per year
+      out[ticker] = sim.map((r, idx) => {
+        const addedShares = idx === 0 ? 0 : (annualInflows[ticker] ?? 0) / price * idx;
+        return r.shares + addedShares;
+      });
     }
     return out;
-  }, [portfolioHoldings, dripEnabled, dripRates, mstyWeeklyDiv, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty]);
+  }, [portfolioHoldings, dripEnabled, dripConfigs, dripRates, mstyWeeklyDiv, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty, annualInflows]);
 
   // Build yearly portfolio projections using sim ratios + DRIP-compounded share counts
   const portfolioProjections = useMemo(() => {
@@ -153,9 +172,13 @@ export default function ProjectionsPage({ liveData }) {
       const mstrRatio = r.mstrPrice / Math.max(base.mstrPrice, 0.01);
       const asstRatio = r.asstPrice / Math.max(base.asstPrice, 0.01);
 
+      // Add inflow-accumulated shares for growth assets
+      const mstrInflowShares = i === 0 ? 0 : (annualInflows.MSTR ?? 0) / nowMstr * i;
+      const asstInflowShares = i === 0 ? 0 : (annualInflows.ASST ?? 0) / nowAsst * i;
+
       const btc_val  = portfolioHoldings.BTC  * nowBtc  * btcRatio;
-      const mstr_val = portfolioHoldings.MSTR * nowMstr * mstrRatio;
-      const asst_val = portfolioHoldings.ASST * nowAsst * asstRatio;
+      const mstr_val = (portfolioHoldings.MSTR + mstrInflowShares) * nowMstr * mstrRatio;
+      const asst_val = (portfolioHoldings.ASST + asstInflowShares) * nowAsst * asstRatio;
 
       // Preferred: DRIP-compounded shares × current price (par-stable)
       const strc_val = (dripSharesByYear.STRC?.[i] ?? portfolioHoldings.STRC) * nowStrc;
@@ -163,8 +186,9 @@ export default function ProjectionsPage({ liveData }) {
       const strf_val = (dripSharesByYear.STRF?.[i] ?? portfolioHoldings.STRF) * nowStrf;
       const strk_val = (dripSharesByYear.STRK?.[i] ?? portfolioHoldings.STRK) * nowStrk;
       const strd_val = (dripSharesByYear.STRD?.[i] ?? portfolioHoldings.STRD) * nowStrd;
-      // MSTY: DRIP shares × MSTY price tracks MSTR
-      const msty_val = (dripSharesByYear.MSTY?.[i] ?? portfolioHoldings.MSTY) * nowMsty * mstrRatio;
+      // MSTY: DRIP shares + inflow shares × MSTY price tracks MSTR
+      const mstyInflowShares = i === 0 ? 0 : (annualInflows.MSTY ?? 0) / nowMsty * i;
+      const msty_val = ((dripSharesByYear.MSTY?.[i] ?? portfolioHoldings.MSTY) + mstyInflowShares) * nowMsty * mstrRatio;
 
       const portfolio_value = btc_val + mstr_val + asst_val + strc_val + sata_val + strf_val + strk_val + strd_val + msty_val;
 
@@ -220,20 +244,34 @@ export default function ProjectionsPage({ liveData }) {
         <InvestmentCalculator liveData={liveData} onHoldingsChange={setPortfolioHoldings} />
       </Card>
 
+      {/* ── Additional Capital Inflows ── */}
+      <Card>
+        <SectionHeader icon={TrendingUp} title="Additional Capital Contributions" color="text-cyan-400" />
+        <p className="text-[10px] text-muted-foreground mb-3">
+          Model periodic contributions and how they compound your portfolio over time. Set the amount, frequency, and allocation % per instrument.
+        </p>
+        <AdditionalCapitalPanel
+          amount={inflowAmount}       setAmount={setInflowAmount}
+          frequency={inflowFrequency} setFrequency={setInflowFrequency}
+          allocations={inflowAllocations} setAllocations={setInflowAllocations}
+        />
+      </Card>
+
       {/* ── DRIP Simulator ── */}
       <Card>
         <SectionHeader icon={Users} title="Preferred & Income DRIP Simulator" color="text-green-400" />
         <p className="text-[10px] text-muted-foreground mb-3">
-          Simulate dividend reinvestment (DRIP) for your preferred stock and income holdings. Adjust rates to model different yield scenarios.
+          Per-instrument: choose to <strong className="text-green-400">DRIP</strong> dividends back into the same instrument, or <strong className="text-amber-400">Redirect</strong> them to MSTR or ASST. Set allocation % for each.
         </p>
         <DRIPSimulator
           holdings={portfolioHoldings}
           prices={{ STRC: nowStrc, SATA: nowSata, STRF: nowStrf, STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty }}
           liveData={liveData}
-          dripEnabled={dripEnabled}   setDripEnabled={setDripEnabled}
-          years={dripYears}           setYears={setDripYears}
-          rates={dripRates}           setRates={setDripRates}
+          dripEnabled={dripEnabled}     setDripEnabled={setDripEnabled}
+          years={dripYears}             setYears={setDripYears}
+          rates={dripRates}             setRates={setDripRates}
           mstyWeeklyDiv={mstyWeeklyDiv} setMstyWeeklyDiv={setMstyWeeklyDiv}
+          dripConfigs={dripConfigs}     setDripConfigs={setDripConfigs}
         />
       </Card>
 
