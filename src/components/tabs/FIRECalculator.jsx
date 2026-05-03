@@ -280,25 +280,30 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     return startBalance * Math.pow(1 + rate, retirementYearIdx);
   }, [portfolioProjections, retirementYearIdx, startBalance, mode, portfolioCagr, manualReturn]);
 
-  // engineIraBalance: what's fed into SEPP calc and the projection engine
-  // In portfolio mode: use the user-selected year row × iraPct (portfolioDerivedIra)
-  // In independent mode: use manually entered iraBalance
+  // engineIraBalance: TODAY's IRA balance — what the projection engine seeds from year 0.
+  // It grows internally inside the engine at annualReturn each year.
+  // In portfolio mode: always use year-0 portfolio value × iraPct so the engine doesn't double-compound.
+  // In independent mode: use manually entered iraBalance.
   const engineIraBalance = iraMode === "portfolio"
-    ? portfolioDerivedIra
+    ? (portfolioProjections?.[0]?.portfolio_value ?? 0) * (iraPct / 100)
     : iraBalance;
 
-  // Age at the selected IRA year (for portfolio mode) or age at full retirement (for independent mode)
+  // For the SEPP comparison TABLE only — show values at the user-selected year (for reference).
+  // This does NOT feed into the projection engine.
+  const seppTableBalance = iraMode === "portfolio"
+    ? portfolioDerivedIra  // user-selected year × iraPct
+    : iraBalance;
   const seppAge = iraMode === "portfolio"
     ? Math.min(currentAge + iraYearIndex, 84)
-    : Math.min(fullRetirementAge, 84);
+    : Math.min(retirementAge, 84);
 
-  // 72(t) SEPP comparison table
+  // 72(t) SEPP comparison table (uses seppTableBalance for display only)
   const sepp72t = useMemo(() => {
     return RULE_72T_METHODS.map(m => ({
       ...m,
-      annual: calc72t({ balance: engineIraBalance, age: seppAge, method: m.id, interestRate: interestRate72t / 100 }),
+      annual: calc72t({ balance: seppTableBalance, age: seppAge, method: m.id, interestRate: interestRate72t / 100 }),
     }));
-  }, [engineIraBalance, seppAge, interestRate72t, iraBalance, iraMode, iraPct, portfolioDerivedIra, iraYearIndex]);
+  }, [seppTableBalance, seppAge, interestRate72t]);
 
   const withdrawalRows = useMemo(() => projectWithdrawals({
     startBalance,
@@ -671,11 +676,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           // Fixed Draw: the target amount in today's dollars (year-1 retirement = no inflation adjustment yet)
           const fixedAnnual = targetMonthlyIncome * 12;
 
-          // 72(t): use engineIraBalance + age at first retirement
-          const sepp72tAge = iraMode === "portfolio"
-            ? Math.min(currentAge + iraYearIndex, 84)
-            : Math.min(firstRetireAge, 84);
-          const sepp72tAnnual = calc72t({ balance: engineIraBalance, age: sepp72tAge, method: method72t, interestRate: interestRate72t / 100 });
+          // 72(t): use seppTableBalance (user-selected year for display) + age
+          const sepp72tAnnual = calc72t({ balance: seppTableBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
 
           const method72tLabel = RULE_72T_METHODS.find(m => m.id === method72t)?.label
             .replace("Fixed ", "").replace(" Method", "").replace("ization", "iz.");
@@ -969,7 +971,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? portfolioMonthlyIncome * 12
             : strategy === "fixed_income"
             ? targetMonthlyIncome * 12
-            : calc72t({ balance: iraAtStart, age: Math.min(currentAge + yearsToWithdrawalStart, 84), method: method72t, interestRate: interestRate72t / 100 });
+            : calc72t({ balance: seppTableBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
 
           // null out pre-withdrawal years so line only starts when income begins
           // Use >= so the first withdrawal year is included
