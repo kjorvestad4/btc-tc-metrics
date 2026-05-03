@@ -51,7 +51,7 @@ function calc72t({ balance, age, method, interestRate = 0.05 }) {
  * When portfolioProjections is provided, balance tracks actual projected values
  * (minus cumulative withdrawals) rather than a flat compound rate.
  */
-function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, iraBalance, method72t, interestRate72t, years = 30, portfolioProjections, annualDividendIncome = 0 }) {
+function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, iraBalance, iraPct = 100, method72t, interestRate72t, fixedSeppOverride = null, years = 30, portfolioProjections, annualDividendIncome = 0 }) {
   const rows = [];
   const startYear = new Date().getFullYear();
   const rate = annualReturn / 100;
@@ -69,10 +69,13 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
 
   const hasProjections = portfolioProjections && portfolioProjections.length > 0;
 
-  let fixedSeppAmount = null;
+  // If fixedSeppOverride is provided (from the table), use it directly for fixed methods
+  let fixedSeppAmount = (fixedSeppOverride != null && method72t !== "rmd") ? fixedSeppOverride : null;
   let swrBaseAmount = null;
   let balance = startBalance;
-  // IRA grows independently at the same annual return rate — seeded from user input
+  // IRA: when iraPct=100 in portfolio mode, IRA mirrors portfolio exactly (no separate tracking needed)
+  // Otherwise grows independently from its seeded value
+  const iraIsFull = iraPct >= 100 && hasProjections;
   let trackingIra = iraBalance;
 
   for (let y = 0; y <= years; y++) {
@@ -103,13 +106,16 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance = balance * (1 + rate);
     }
 
-    // ── IRA grows independently at same rate ──
-    trackingIra = trackingIra * (1 + rate);
+    // ── IRA: if 100% of portfolio, mirror balance; otherwise grow independently ──
+    if (iraIsFull) {
+      trackingIra = balance;
+    } else {
+      trackingIra = trackingIra * (1 + rate);
+    }
 
     // ── Compute withdrawal ──
     let withdrawal = 0;
     if (isWithdrawing) {
-      const yearsIntoWithdrawal = y - yearsToWithdrawalStart;
       if (strategy === "swr" && isRetired) {
         if (swrBaseAmount === null) swrBaseAmount = balance * (swrPct / 100);
         withdrawal = swrBaseAmount * Math.pow(1 + inflationRate / 100, y - yearsToFull);
@@ -117,12 +123,12 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
         withdrawal = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, y - yearsToFull);
       } else if (strategy === "rule_72t") {
         if (method72t === "rmd") {
+          // RMD recalculates each year based on current IRA balance
           withdrawal = calc72t({ balance: trackingIra, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
         } else {
-          if (fixedSeppAmount === null) {
-            fixedSeppAmount = calc72t({ balance: trackingIra, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
-          }
-          withdrawal = fixedSeppAmount;
+          // Fixed methods: use the override from the table (locked at SEPP start)
+          withdrawal = fixedSeppAmount ?? calc72t({ balance: trackingIra, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
+          if (fixedSeppAmount === null) fixedSeppAmount = withdrawal;
         }
       }
       // income_only: withdrawal stays 0
@@ -132,6 +138,8 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     if (withdrawal > 0) {
       if (strategy === "rule_72t") {
         trackingIra = Math.max(0, trackingIra - withdrawal);
+        // If IRA is full portfolio, also reduce balance
+        if (iraIsFull) balance = trackingIra;
       } else {
         balance = Math.max(0, balance - withdrawal);
       }
@@ -305,6 +313,9 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     }));
   }, [seppTableBalance, seppAge, interestRate72t]);
 
+  // The fixed SEPP amount from the table — used as the locked distribution in the chart
+  const selectedSeppAmount = sepp72t.find(m => m.id === method72t)?.annual ?? null;
+
   const withdrawalRows = useMemo(() => projectWithdrawals({
     startBalance,
     strategy,
@@ -319,12 +330,14 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     fullRetirementAge,
     employmentIncome,
     iraBalance: engineIraBalance,
+    iraPct: iraMode === "portfolio" ? iraPct : 100,
     method72t,
     interestRate72t,
+    fixedSeppOverride: method72t !== "rmd" ? selectedSeppAmount : null,
     years: projYears,
     portfolioProjections: mode === "portfolio" ? portfolioProjections : null,
     annualDividendIncome: portfolioMonthlyIncome * 12,
-  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, method72t, interestRate72t, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
+  }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, iraMode, iraPct, method72t, interestRate72t, selectedSeppAmount, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
 
@@ -971,7 +984,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? portfolioMonthlyIncome * 12
             : strategy === "fixed_income"
             ? targetMonthlyIncome * 12
-            : calc72t({ balance: seppTableBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
+            : (selectedSeppAmount ?? 0);
 
           // null out pre-withdrawal years so line only starts when income begins
           // Use >= so the first withdrawal year is included
