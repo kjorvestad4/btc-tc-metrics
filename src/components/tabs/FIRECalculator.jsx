@@ -295,14 +295,15 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-sm">$</span>
                 <Input
-                  type="number"
-                  value={incomeInputMode === "monthly" ? targetMonthlyIncome : targetMonthlyIncome * 12}
-                  onChange={e => {
-                    const v = Math.max(0, parseInt(e.target.value) || 0);
-                    setTargetMonthlyIncome(incomeInputMode === "monthly" ? v : Math.round(v / 12));
-                  }}
-                  className="h-8 text-sm font-mono bg-secondary border-border"
-                  min={0}
+                 type="number"
+                 value={incomeInputMode === "monthly" ? targetMonthlyIncome : targetMonthlyIncome * 12}
+                 onChange={e => {
+                   const v = parseFloat(e.target.value);
+                   if (isNaN(v)) return;
+                   setTargetMonthlyIncome(incomeInputMode === "monthly" ? Math.max(0, v) : Math.max(0, Math.round(v / 12)));
+                 }}
+                 className="h-8 text-sm font-mono bg-secondary border-border"
+                 min={0}
                 />
                 <span className="text-[10px] text-muted-foreground">{incomeInputMode === "monthly" ? "/mo" : "/yr"}</span>
               </div>
@@ -332,8 +333,9 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                   type="number"
                   value={empIncomeInputMode === "monthly" ? employmentIncome : employmentIncome * 12}
                   onChange={e => {
-                    const v = Math.max(0, parseInt(e.target.value) || 0);
-                    setEmploymentIncome(empIncomeInputMode === "monthly" ? v : Math.round(v / 12));
+                    const v = parseFloat(e.target.value);
+                    if (isNaN(v)) return;
+                    setEmploymentIncome(empIncomeInputMode === "monthly" ? Math.max(0, v) : Math.max(0, Math.round(v / 12)));
                   }}
                   className="h-8 text-sm font-mono bg-secondary border-border"
                   min={0}
