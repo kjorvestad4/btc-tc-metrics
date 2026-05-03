@@ -61,19 +61,18 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
 
   const hasProjections = portfolioProjections && portfolioProjections.length > 0;
 
-  // Build projected gross value lookup by year offset
   const projGross = {};
   if (hasProjections) {
     portfolioProjections.forEach((row, idx) => { projGross[idx] = row.portfolio_value; });
   }
 
-  // For fixed-amount strategies (amortization, annuitization), compute the fixed SEPP amount
-  // once at the point full retirement begins, using the IRA balance at that time.
-  // This is computed lazily on first entry into isFullRetired.
+  // fixedSeppAmount is locked in at first year of full retirement (amortization/annuitization)
   let fixedSeppAmount = null;
 
   let balance = startBalance;
   let cumulativeWithdrawals = 0;
+  // Track IRA independently: grows at annualReturn, seeded from iraBalance param
+  let trackingIra = iraBalance;
 
   for (let y = 0; y <= years; y++) {
     const isPrePartial  = y < yearsToPartial;
@@ -86,12 +85,8 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
         ? employmentIncome * 12 * (partialSalaryPct / 100)
         : 0;
 
-    // IRA balance tracks as a fixed fraction of the total portfolio balance
-    // (iraPct% of total, reduced proportionally by any withdrawals already taken)
-    const iraBalanceThisYear = balance * (iraPct / 100);
-
     if (y === 0) {
-      rows.push({ year: startYear, balance, iraBalance: iraBalanceThisYear, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
+      rows.push({ year: startYear, balance, iraBalance: trackingIra, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
       continue;
     }
 
@@ -109,10 +104,10 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       balance = balance * (1 + annualReturn / 100);
     }
 
-    // IRA balance after growth = fraction of grown portfolio (BEFORE withdrawals)
-    const iraBeforeWithdrawal = balance * (iraPct / 100);
+    // Step 2: grow IRA independently (before withdrawal)
+    trackingIra = trackingIra * (1 + annualReturn / 100);
 
-    // Step 2: compute withdrawal (uses pre-withdrawal IRA balance)
+    // Step 3: compute withdrawal using the independently-tracked IRA
     let withdrawal = 0;
     if (isFullRetired) {
       if (strategy === "swr") {
@@ -120,11 +115,12 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
         withdrawal = startBalance * (swrPct / 100) * inflAdj;
       } else if (strategy === "rule_72t") {
         if (method72t === "rmd") {
-          withdrawal = calc72t({ balance: iraBeforeWithdrawal, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
+          // RMD recalculates each year against current IRA
+          withdrawal = calc72t({ balance: trackingIra, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
         } else {
           // Fixed amortization/annuitization: lock in at first retirement year
           if (fixedSeppAmount === null) {
-            fixedSeppAmount = calc72t({ balance: iraBeforeWithdrawal, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
+            fixedSeppAmount = calc72t({ balance: trackingIra, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
           }
           withdrawal = fixedSeppAmount;
         }
@@ -135,14 +131,14 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       // income_only: withdrawal stays 0
     }
 
-    // Step 3: subtract withdrawal
+    // Step 4: subtract withdrawal from portfolio and IRA
     if (withdrawal > 0) {
       cumulativeWithdrawals += withdrawal;
       balance = Math.max(0, balance - withdrawal);
+      if (strategy === "rule_72t") {
+        trackingIra = Math.max(0, trackingIra - withdrawal);
+      }
     }
-
-    // IRA balance after withdrawal
-    const iraAfterWithdrawal = balance * (iraPct / 100);
 
     // Investment income
     let investmentIncome = 0;
@@ -152,7 +148,7 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       investmentIncome = annualDividendIncome;
     }
 
-    rows.push({ year: startYear + y, balance, iraBalance: iraAfterWithdrawal, withdrawal, employmentIncome: empIncome, investmentIncome });
+    rows.push({ year: startYear + y, balance, iraBalance: trackingIra, withdrawal, employmentIncome: empIncome, investmentIncome });
   }
   return rows;
 }
