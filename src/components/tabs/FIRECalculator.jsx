@@ -68,6 +68,8 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
 
   // fixedSeppAmount is locked in at first year of full retirement (amortization/annuitization)
   let fixedSeppAmount = null;
+  // swrBaseAmount locked at first retirement year balance
+  let swrBaseAmount = null;
 
   let balance = startBalance;
   let cumulativeWithdrawals = 0;
@@ -111,8 +113,10 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     let withdrawal = 0;
     if (isFullRetired) {
       if (strategy === "swr") {
-        const inflAdj = Math.pow(1 + inflationRate / 100, y);
-        withdrawal = startBalance * (swrPct / 100) * inflAdj;
+        // Lock in base withdrawal at first retirement year, then inflate
+        if (swrBaseAmount === null) swrBaseAmount = balance * (swrPct / 100);
+        const inflAdj = Math.pow(1 + inflationRate / 100, y - yearsToFull);
+        withdrawal = swrBaseAmount * inflAdj;
       } else if (strategy === "rule_72t") {
         if (method72t === "rmd") {
           // RMD recalculates each year against current IRA
@@ -141,11 +145,16 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     }
 
     // Investment income
+    // income_only: project dividend income proportional to balance growth
+    const projectedDividendIncome = startBalance > 0
+      ? annualDividendIncome * (balance / startBalance)
+      : annualDividendIncome;
+
     let investmentIncome = 0;
     if (isFullRetired) {
-      investmentIncome = strategy === "income_only" ? annualDividendIncome : withdrawal;
+      investmentIncome = strategy === "income_only" ? projectedDividendIncome : withdrawal;
     } else if (isPartial) {
-      investmentIncome = annualDividendIncome;
+      investmentIncome = annualDividendIncome * ((isPartial ? balance / startBalance : 1));
     }
 
     rows.push({ year: startYear + y, balance, iraBalance: trackingIra, withdrawal, employmentIncome: empIncome, investmentIncome });
@@ -639,22 +648,38 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
         {(() => {
           const yearsToFull = Math.max(0, fullRetirementAge - currentAge);
           const retireYear = new Date().getFullYear() + yearsToFull;
-          const swrAnnual = startBalance * (swrPct / 100);
-          const incomeOnlyAnnual = portfolioMonthlyIncome * 12;
-          const fixedAnnual = targetMonthlyIncome * 12;
-          const sepp72tSelected = sepp72t.find(m => m.id === method72t);
-          const sepp72tAnnual = strategy === "rule_72t" ? (sepp72tSelected?.annual ?? 0) : calc72t({ balance: engineIraBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
+
+          // Balance at retirement start (projected)
+          const balanceAtRetirement = portfolioAtRetirement;
+
+          // SWR: % of projected balance at retirement
+          const swrAnnual = balanceAtRetirement * (swrPct / 100);
+
+          // Income Only: project dividend income proportional to portfolio growth at retirement
+          const incomeOnlyAnnual = startBalance > 0
+            ? portfolioMonthlyIncome * 12 * (balanceAtRetirement / startBalance)
+            : portfolioMonthlyIncome * 12;
+
+          // Fixed Draw: just the target (inflation-adjusted to retirement year)
+          const fixedAnnual = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, yearsToFull);
+
+          // 72(t): use engineIraBalance (already at selected year) + selected method
+          const sepp72tAnnual = calc72t({ balance: engineIraBalance, age: seppAge, method: method72t, interestRate: interestRate72t / 100 });
+
+          const method72tLabel = RULE_72T_METHODS.find(m => m.id === method72t)?.label
+            .replace("Fixed ", "").replace(" Method", "").replace("ization", "iz.");
+
           return (
             <div className="mb-4 p-3 bg-secondary/20 rounded-xl border border-border">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
-                Year-1 Retirement Income at Age {fullRetirementAge} ({retireYear})
+                Year-1 Retirement Income — Starting Age {fullRetirementAge} ({retireYear})
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {[
-                  { id: "swr", label: `SWR ${swrPct}%`, value: swrAnnual, color: strategy === "swr" ? "text-primary border-primary bg-primary/10" : "text-muted-foreground border-border" },
-                  { id: "income_only", label: "Income Only", value: incomeOnlyAnnual, color: strategy === "income_only" ? "text-green-400 border-green-400/50 bg-green-400/10" : "text-muted-foreground border-border" },
-                  { id: "rule_72t", label: `72(t) ${RULE_72T_METHODS.find(m=>m.id===method72t)?.label.replace(" Method","").replace(" Amortization","Amort.").replace(" Annuitization","Annuit.")}`, value: sepp72tAnnual, color: strategy === "rule_72t" ? "text-cyan-400 border-cyan-400/50 bg-cyan-400/10" : "text-muted-foreground border-border" },
-                  { id: "fixed_income", label: "Fixed Draw", value: fixedAnnual, color: strategy === "fixed_income" ? "text-amber-400 border-amber-400/50 bg-amber-400/10" : "text-muted-foreground border-border" },
+                  { id: "swr",          label: `SWR ${swrPct}%`,        value: swrAnnual,        color: strategy === "swr"          ? "text-primary border-primary bg-primary/10"               : "text-muted-foreground border-border" },
+                  { id: "income_only",  label: "Income Only",            value: incomeOnlyAnnual, color: strategy === "income_only"  ? "text-green-400 border-green-400/50 bg-green-400/10"     : "text-muted-foreground border-border" },
+                  { id: "rule_72t",     label: `72(t) ${method72tLabel}`,value: sepp72tAnnual,    color: strategy === "rule_72t"     ? "text-cyan-400 border-cyan-400/50 bg-cyan-400/10"         : "text-muted-foreground border-border" },
+                  { id: "fixed_income", label: "Fixed Draw",             value: fixedAnnual,      color: strategy === "fixed_income" ? "text-amber-400 border-amber-400/50 bg-amber-400/10"     : "text-muted-foreground border-border" },
                 ].map(s => (
                   <button key={s.id} onClick={() => setStrategy(s.id)}
                     className={`text-center p-2.5 rounded-xl border transition-colors cursor-pointer ${s.color}`}>
