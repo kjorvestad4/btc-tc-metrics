@@ -256,20 +256,18 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
   }, [monthsToFire]);
 
-  // 72(t) calculation
+  const startBalance = effectivePortfolioValue || 500000;
+  // IRA starting balance: in portfolio mode, use the selected year's projected portfolio value × iraPct.
+  // In independent mode, use the manually entered IRA balance.
+  const engineIraBalance = iraMode === "portfolio" ? portfolioDerivedIra : iraBalance;
+
+  // 72(t) calculation — uses the same engineIraBalance so table and chart agree
   const sepp72t = useMemo(() => {
     return RULE_72T_METHODS.map(m => ({
       ...m,
-      annual: calc72t({ balance: effectiveIraBalance, age: currentAge, method: m.id, interestRate: interestRate72t / 100 }),
+      annual: calc72t({ balance: engineIraBalance, age: currentAge, method: m.id, interestRate: interestRate72t / 100 }),
     }));
-  }, [effectiveIraBalance, currentAge, interestRate72t]);
-
-  const startBalance = effectivePortfolioValue || 500000;
-  // IRA starting balance for the engine: use portfolio-derived value when in portfolio mode,
-  // otherwise use the manually entered IRA balance
-  const engineIraBalance = iraMode === "portfolio"
-    ? startBalance * (iraPct / 100)
-    : effectiveIraBalance;
+  }, [engineIraBalance, currentAge, interestRate72t]);
 
   // Only pass portfolioProjections to the engine when in portfolio mode
   const withdrawalRows = useMemo(() => projectWithdrawals({
