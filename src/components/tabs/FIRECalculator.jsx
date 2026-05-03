@@ -55,33 +55,30 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
   const rows = [];
   const startYear = new Date().getFullYear();
   const yearsToFull = Math.max(0, fullRetirementAge - currentAge);
+  // yearsToPartial: when partial is OFF, treat it same as yearsToFull (no partial phase)
   const yearsToPartial = partialRetirementEnabled
     ? Math.min(yearsToFull, Math.max(0, retirementAge - currentAge))
     : yearsToFull;
 
   const hasProjections = portfolioProjections && portfolioProjections.length > 0;
-
   const projGross = {};
   if (hasProjections) {
     portfolioProjections.forEach((row, idx) => { projGross[idx] = row.portfolio_value; });
   }
 
-  // fixedSeppAmount is locked in at first year of full retirement (amortization/annuitization)
   let fixedSeppAmount = null;
-  // swrBaseAmount locked at first retirement year balance
   let swrBaseAmount = null;
-
   let balance = startBalance;
   let cumulativeWithdrawals = 0;
-  // Track IRA independently: grows at annualReturn, seeded from iraBalance param
   let trackingIra = iraBalance;
 
   for (let y = 0; y <= years; y++) {
-    const isPrePartial  = y < yearsToPartial;
-    const isPartial     = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull;
-    const isFullRetired = !isPrePartial && !isPartial;
+    // Phase classification
+    const isPreRetirement = y < yearsToPartial;                                             // full salary, no withdrawals
+    const isPartial       = partialRetirementEnabled && y >= yearsToPartial && y < yearsToFull; // reduced salary, no withdrawals
+    const isRetired       = y >= yearsToFull;                                               // withdrawals begin
 
-    const empIncome = isPrePartial
+    const empIncome = isPreRetirement
       ? employmentIncome * 12
       : isPartial
         ? employmentIncome * 12 * (partialSalaryPct / 100)
@@ -92,71 +89,56 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       continue;
     }
 
-    // Step 1: grow portfolio balance
+    // Grow portfolio
     if (hasProjections) {
-      let gross;
-      if (projGross[y] != null) {
-        gross = projGross[y];
-      } else {
-        const lastIdx = portfolioProjections.length - 1;
-        gross = projGross[lastIdx] * Math.pow(1 + annualReturn / 100, y - lastIdx);
-      }
+      const lastIdx = portfolioProjections.length - 1;
+      const gross = projGross[y] != null ? projGross[y] : projGross[lastIdx] * Math.pow(1 + annualReturn / 100, y - lastIdx);
       balance = Math.max(0, gross - cumulativeWithdrawals);
     } else {
       balance = balance * (1 + annualReturn / 100);
     }
 
-    // Step 2: grow IRA independently (before withdrawal)
+    // Grow IRA independently
     trackingIra = trackingIra * (1 + annualReturn / 100);
 
-    // Step 3: compute withdrawal using the independently-tracked IRA
+    // Compute withdrawal (only in retirement phase)
     let withdrawal = 0;
-    if (isFullRetired) {
+    if (isRetired) {
       if (strategy === "swr") {
-        // Lock in base withdrawal at first retirement year, then inflate
         if (swrBaseAmount === null) swrBaseAmount = balance * (swrPct / 100);
-        const inflAdj = Math.pow(1 + inflationRate / 100, y - yearsToFull);
-        withdrawal = swrBaseAmount * inflAdj;
+        withdrawal = swrBaseAmount * Math.pow(1 + inflationRate / 100, y - yearsToFull);
+      } else if (strategy === "fixed_income") {
+        withdrawal = targetMonthlyIncome * 12 * Math.pow(1 + inflationRate / 100, y - yearsToFull);
       } else if (strategy === "rule_72t") {
         if (method72t === "rmd") {
-          // RMD recalculates each year against current IRA
           withdrawal = calc72t({ balance: trackingIra, age: currentAge + y, method: "rmd", interestRate: interestRate72t / 100 });
         } else {
-          // Fixed amortization/annuitization: lock in at first retirement year
           if (fixedSeppAmount === null) {
             fixedSeppAmount = calc72t({ balance: trackingIra, age: currentAge + y, method: method72t, interestRate: interestRate72t / 100 });
           }
           withdrawal = fixedSeppAmount;
         }
-      } else if (strategy === "fixed_income") {
-        // Inflate from the retirement start year, not from year 0
-        const inflAdj = Math.pow(1 + inflationRate / 100, y - yearsToFull);
-        withdrawal = targetMonthlyIncome * 12 * inflAdj;
       }
-      // income_only: withdrawal stays 0
+      // income_only: withdrawal = 0, income shown separately
     }
 
-    // Step 4: subtract withdrawal from portfolio and IRA
+    // Apply withdrawal
     if (withdrawal > 0) {
       cumulativeWithdrawals += withdrawal;
       balance = Math.max(0, balance - withdrawal);
-      if (strategy === "rule_72t") {
-        trackingIra = Math.max(0, trackingIra - withdrawal);
-      }
+      if (strategy === "rule_72t") trackingIra = Math.max(0, trackingIra - withdrawal);
     }
 
-    // Compute investment/withdrawal income shown in the chart
-    // income_only: dividends grow proportionally with portfolio balance (no compounding explosion)
-    // all other strategies: use the actual withdrawal computed above
+    // investmentIncome for chart:
+    // - income_only: dividends scaled by portfolio growth ratio (never zero if annualDividendIncome > 0)
+    // - all others: the actual withdrawal amount
     let investmentIncome = 0;
-    if (isFullRetired) {
+    if (isRetired) {
       if (strategy === "income_only") {
         investmentIncome = startBalance > 0 ? annualDividendIncome * (balance / startBalance) : annualDividendIncome;
       } else {
         investmentIncome = withdrawal;
       }
-    } else if (isPartial && strategy === "income_only") {
-      investmentIncome = startBalance > 0 ? annualDividendIncome * (balance / startBalance) : annualDividendIncome;
     }
 
     rows.push({ year: startYear + y, balance, iraBalance: trackingIra, withdrawal, employmentIncome: empIncome, investmentIncome });
