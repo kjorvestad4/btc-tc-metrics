@@ -1002,9 +1002,11 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
             const isFullyRetired = row.year >= fullRetireYear;
+            // Null out employment income at/after full retirement so the line ends (not hugs zero)
+            const empInc = isFullyRetired ? null : (row.employmentIncome > 0 ? row.employmentIncome : null);
             return {
               ...row,
-              employmentIncome: isFullyRetired ? null : row.employmentIncome,
+              employmentIncome: empInc,
               incomeFlow: afterStart && !seppExpired ? row.investmentIncome : null,
             };
           });
