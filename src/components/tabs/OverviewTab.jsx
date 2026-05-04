@@ -9,6 +9,7 @@ import { ASST_DEFAULTS } from "./ASSTModelTab";
 const MSTR_DEBT_M = 8214;       // $8,214M total debt (strategy.com/credit, May 4 2026)
 const MSTR_PREF_M = 13536;      // $13,536M preferred notional (STRF+STRC+STRE+STRK+STRD)
 const MSTR_DEBT_PREF_M = MSTR_DEBT_M + MSTR_PREF_M; // $21,750M total
+const MSTR_CASH_M = 2250;       // $2,250M USD Reserve (strategy.com/credit, May 4 2026)
 
 // SATA static defaults (May 2026) — from treasury.strive.com credit tab
 const SATA_NOTIONAL_M = 495.95;
@@ -25,11 +26,11 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   const totalAnnualDiv = calcTotalAnnualDividend(preferreds);
   const mstrBtcNav = params.mstr_btc_holdings * btcPrice;
 
-  // mNAV = Market Cap ÷ Net BTC NAV (strategy.com definition)
-  // Net BTC NAV = BTC Holdings × BTC Price − Debt − Preferred Notional
+  // mNAV = EV ÷ BTC Reserve (strategy.com/learn definition)
+  // EV = Market Cap + Debt + Pref − Cash
   const mstrMarketCap = mstrPrice * params.mstr_shares_outstanding * 1e6;
-  const mstrNetBtcNav = mstrBtcNav - MSTR_DEBT_PREF_M * 1e6;
-  const mstrMnav = mstrNetBtcNav > 0 ? mstrMarketCap / mstrNetBtcNav : 0;
+  const mstrEV = mstrMarketCap + (MSTR_DEBT_PREF_M - MSTR_CASH_M) * 1e6;
+  const mstrMnav = mstrBtcNav > 0 ? mstrEV / mstrBtcNav : 0;
 
   // Amplification = (Debt + Pref) ÷ BTC Reserve — official formula
   const mstrAmplificationPct = mstrBtcNav > 0 ? (MSTR_DEBT_PREF_M * 1e6 / mstrBtcNav) * 100 : 0;
@@ -123,16 +124,16 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
           value={`${mstrMnav.toFixed(2)}x`}
           icon={Shield}
           accentClass="text-green-400"
-          subtitle="Mkt Cap ÷ Net BTC NAV"
-          tooltip="mNAV = Market Cap ÷ Net BTC NAV. Net BTC NAV = BTC Holdings × BTC Price − Debt − Preferred Notional. Matches strategy.com/learn definition. Updates live with BTC and MSTR prices."
+          subtitle="EV ÷ BTC Reserve"
+          tooltip={`mNAV = Enterprise Value ÷ BTC Reserve. EV = Market Cap + Debt ($${MSTR_DEBT_M.toLocaleString()}M) + Pref ($${MSTR_PREF_M.toLocaleString()}M) − Cash ($${MSTR_CASH_M.toLocaleString()}M). Source: strategy.com/learn & strategy.com/credit (May 4 2026). Updates live with BTC price and MSTR share price.`}
         />
         <MetricCard
           title="ASST mNAV"
           value={`${asstMnav.toFixed(2)}x`}
           icon={Shield}
           accentClass="text-blue-400"
-          subtitle="Mkt Cap ÷ Net BTC NAV"
-          tooltip="mNAV = Market Cap ÷ Net BTC NAV. Net BTC NAV = BTC Holdings × BTC Price − Debt − Preferred Notional. Same formula as strategy.com/learn. Updates live with BTC and ASST prices."
+          subtitle="EV ÷ BTC Reserve"
+          tooltip="mNAV = Enterprise Value ÷ BTC Reserve. EV = Market Cap + Debt + Pref − Cash. Same formula as strategy.com/learn. Updates live with BTC and ASST prices."
         />
       </div>
 
