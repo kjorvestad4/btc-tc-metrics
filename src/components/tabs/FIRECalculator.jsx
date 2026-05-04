@@ -999,17 +999,9 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           const chartRows = withdrawalRows.map(row => {
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
-            // Employment income: show actual value while working, drop to 0 at retirement, null after
-            // We derive retirement year the same way the engine does
+            // Employment income: null for any year at or after full retirement so the line stops completely
             const engineRetireYear = new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge);
-            let empIncome;
-            if (row.year < engineRetireYear) {
-              empIncome = row.employmentIncome;
-            } else if (row.year === engineRetireYear) {
-              empIncome = 0;
-            } else {
-              empIncome = null;
-            }
+            const empIncome = row.year < engineRetireYear ? row.employmentIncome : null;
             return {
               ...row,
               employmentIncome: empIncome,
