@@ -35,13 +35,14 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   // Amplification = (Debt + Pref) ÷ BTC Reserve — official formula
   const mstrAmplificationPct = mstrBtcNav > 0 ? (MSTR_DEBT_PREF_M * 1e6 / mstrBtcNav) * 100 : 0;
 
-  // ASST calcs — from official treasury.strive.com data
+  // ASST calcs — from official treasury.strive.com data (May 4 2026)
+  // EV mNAV = EV ÷ BTC NAV  (matches treasury.strive.com navPremium chart: 1.29x)
+  // EV = Market Cap + Total Debt + Total Preferred (no cash deduction per strive definition)
   const asstPrice = liveData?.asst_price ?? ASST_DEFAULTS.price;
   const asstBtcNav = ASST_DEFAULTS.btc_holdings * btcPrice;
-  // EV = Market Cap + Debt + Pref
   const asstMarketCap = asstPrice * ASST_DEFAULTS.shares_outstanding_M * 1e6;
-  const asstNetBtcNav = asstBtcNav - ASST_DEFAULTS.total_debt_pref_M * 1e6;
-  const asstMnav = asstNetBtcNav > 0 ? asstMarketCap / asstNetBtcNav : 0;
+  const asstEV = asstMarketCap + ASST_DEFAULTS.total_debt_pref_M * 1e6;
+  const asstMnav = asstBtcNav > 0 ? asstEV / asstBtcNav : 0;
   // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;
   const asstPriceDisplay = asstPrice;
@@ -133,7 +134,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
           icon={Shield}
           accentClass="text-blue-400"
           subtitle="EV ÷ BTC Reserve"
-          tooltip="mNAV = Enterprise Value ÷ BTC Reserve. EV = Market Cap + Debt + Pref − Cash. Same formula as strategy.com/learn. Updates live with BTC and ASST prices."
+          tooltip={`ASST EV mNAV = EV ÷ BTC NAV. EV = Market Cap + Debt ($${ASST_DEFAULTS.debt_M}M) + Pref ($${ASST_DEFAULTS.sata_notional_M}M). Source: treasury.strive.com/navPremium (shows 1.29x as of May 4 2026). Updates live with BTC price and ASST share price.`}
         />
       </div>
 

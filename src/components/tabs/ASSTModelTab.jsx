@@ -15,11 +15,11 @@ import {
 // BTC holdings & preferred notional updated from live credit tab (May 4 2026)
 export const ASST_DEFAULTS = {
   btc_holdings: 15000.5,             // live from treasury.strive.com (May 4 2026)
-  shares_outstanding_M: 69.72,       // basic shares from official data
-  shares_diluted_M: 97.47,           // diluted shares
-  price: 16.40,                      // official share price May 4 2026
-  btc_nav_per_share: 15.21,          // official NAV per basic share
-  ev_mnav_multiple: 1.30,            // official EV/BTC NAV = 1.30x (May 4 2026)
+  shares_outstanding_M: 73.02,       // basic shares — treasury.strive.com (May 4 2026, latest purchase)
+  shares_diluted_M: 100.77,          // diluted shares — treasury.strive.com (May 4 2026)
+  price: 16.36,                      // official share price May 4 2026
+  btc_nav_per_share: 16.44,          // official NAV per basic share (treasury.strive.com)
+  ev_mnav_multiple: 1.29,            // official EV mNAV = 1.29x (treasury.strive.com/navPremium, May 4 2026)
   pref_notional_M: 495.95,           // SATA preferred notional from credit tab (May 4 2026)
   sata_notional_M: 495.95,           // SATA notional = $495.95M (credit tab)
   debt_M: 10,                        // $10M Semler Loan (credit tab)
