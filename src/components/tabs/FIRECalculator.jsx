@@ -242,12 +242,21 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [projYears, setProjYears] = useState(30);
   const [employmentIncome, setEmploymentIncome] = useState(8000); // always stored as monthly internally
 
-  // Post-SEPP reinvestment section
-  const [monthlyExpenses, setMonthlyExpenses] = useState(5000);
-  const [prefYieldPct, setPrefYieldPct] = useState(11.5); // avg preferred yield %
-  const [prefPricePerShare, setPrefPricePerShare] = useState(100); // par ~$100
   const [empIncomeInputMode, setEmpIncomeInputMode] = useState("monthly"); // "monthly" | "annual"
   const [empIncomeDisplay, setEmpIncomeDisplay] = useState("8000"); // raw string for input
+
+  // Post-SEPP / Preferred Deployment section
+  const [expenseInputMode, setExpenseInputMode] = useState("monthly"); // "monthly" | "annual"
+  const [expenseDisplay, setExpenseDisplay] = useState("5000"); // raw string for input
+  const [monthlyExpenses, setMonthlyExpenses] = useState(5000); // always stored monthly internally
+  const [deployPct, setDeployPct] = useState(80); // % of surplus to deploy into prefs
+  // Per-ticker allocation (must sum to 100)
+  const [prefAllocs, setPrefAllocs] = useState({ STRC: 40, STRF: 20, STRK: 20, STRD: 20 });
+  // STRC variable yield — others are fixed
+  const [strcYield, setStrcYield] = useState(11.5);
+  // Fixed yields for the others
+  const PREF_FIXED_YIELDS = { STRF: 10.0, STRK: 8.0, STRD: 10.0 };
+  const PREF_COLORS = { STRC: "#22D3EE", STRF: "#60A5FA", STRK: "#FBBF24", STRD: "#FB923C" };
 
   // FIRE number calculations
   const fireNumber = useMemo(() => ({
@@ -1101,91 +1110,191 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           );
         })()}
 
-        {/* ── Post-SEPP Capital Deployment ── */}
+        {/* ── SEPP Preferred Share Deployment ── */}
         {strategy === "rule_72t" && (() => {
           const seppAnnual = selectedSeppAmount ?? 0;
           const annualExpenses = monthlyExpenses * 12;
           const annualSurplus = Math.max(0, seppAnnual - annualExpenses);
-          const seppEndAge = 60;
-          const yearsPostSepp = Math.max(0, projYears - Math.max(0, seppEndAge - currentAge));
+          const annualDeploy = annualSurplus * (deployPct / 100);
 
-          // Compound preferred share accumulation from surplus after SEPP ends
-          // Each year the surplus buys new pref shares; existing shares pay dividends which also buy more shares (DRIP)
-          const prefYield = prefYieldPct / 100;
+          const baseYear = new Date().getFullYear();
+          const seppStartYear = baseYear + Math.max(0, Math.floor(Number(retirementAge) - Number(currentAge)));
+          const seppEndYearLocal = baseYear + Math.max(0, Math.floor(60 - Number(currentAge)));
+
+          const TICKERS = ["STRC", "STRF", "STRK", "STRD"];
+          const tickerYields = {
+            STRC: strcYield / 100,
+            STRF: PREF_FIXED_YIELDS.STRF / 100,
+            STRK: PREF_FIXED_YIELDS.STRK / 100,
+            STRD: PREF_FIXED_YIELDS.STRD / 100,
+          };
+          const PAR = 100; // all prefs trade near $100 par
+
+          // Simulate each ticker independently — DRIP + inflows starting at SEPP start
+          const tickerShares = { STRC: 0, STRF: 0, STRK: 0, STRD: 0 };
           const prefRows = [];
-          let prefShares = 0;
-          let prefValue = 0;
-          const postSeppBaseYear = new Date().getFullYear();
-          const seppEndYear = postSeppBaseYear + Math.max(0, seppEndAge - currentAge);
 
           for (let y = 0; y <= projYears; y++) {
-            const rowYear = postSeppBaseYear + y;
-            if (rowYear >= seppEndYear) {
-              // Surplus buys new shares
-              const newSharesFromSurplus = annualSurplus / prefPricePerShare;
-              // Existing shares generate dividends reinvested (DRIP)
-              const dividendShares = prefShares * prefYield;
-              prefShares += newSharesFromSurplus + dividendShares;
-              prefValue = prefShares * prefPricePerShare;
+            const rowYear = baseYear + y;
+            const isActive = rowYear >= seppStartYear;
+
+            if (isActive) {
+              TICKERS.forEach(t => {
+                const alloc = (prefAllocs[t] ?? 0) / 100;
+                const yr = tickerYields[t];
+                // New shares from deployed surplus
+                tickerShares[t] += (annualDeploy * alloc) / PAR;
+                // DRIP: existing shares generate dividends → buy more shares
+                tickerShares[t] += tickerShares[t] * yr;
+              });
             }
-            prefRows.push({ year: rowYear, prefValue, prefShares: Math.round(prefShares), annualIncome: prefShares * prefPricePerShare * prefYield });
+
+            const rowData = { year: rowYear };
+            let totalValue = 0;
+            let totalIncome = 0;
+            TICKERS.forEach(t => {
+              const val = tickerShares[t] * PAR;
+              const inc = tickerShares[t] * PAR * tickerYields[t];
+              rowData[`${t}_value`] = val;
+              rowData[`${t}_income`] = inc;
+              totalValue += val;
+              totalIncome += inc;
+            });
+            rowData.totalValue = totalValue;
+            rowData.totalIncome = totalIncome;
+            prefRows.push(rowData);
           }
 
+          const activeRows = prefRows.filter(r => r.year >= seppStartYear);
           const finalRow = prefRows[prefRows.length - 1];
-          const postSeppAnnualIncome = finalRow?.annualIncome ?? 0;
+          const allocTotal = Object.values(prefAllocs).reduce((s, v) => s + v, 0);
 
           return (
             <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-4 h-4 text-cyan-400" />
-                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Post-SEPP Capital Deployment — Preferred Share Stack</p>
+                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">SEPP Preferred Share Deployment</p>
               </div>
               <p className="text-[10px] text-muted-foreground mb-3">
-                After SEPP ends at age 60, surplus SEPP income (above living expenses) is reinvested into Preferred shares (STRC/SATA/STRF/STRK/STRD) which are tax-advantaged and generate stable yield. Dividends are automatically reinvested (DRIP).
+                Starting from SEPP payments ({seppStartYear}), surplus income (after expenses) is deployed into preferred shares. Dividends are reinvested (DRIP) automatically each year. SEPP ends at age 60 ({seppEndYearLocal}) but preferred income continues.
               </p>
 
-              {/* Controls */}
+              {/* ── Controls Row 1: Expenses + Deploy % ── */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Monthly Living Expenses ($)</Label>
-                  <Input type="number" value={monthlyExpenses}
-                    onChange={e => setMonthlyExpenses(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={500} />
-                </div>
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Pref Avg Yield (%)</Label>
-                  <Input type="number" value={prefYieldPct}
-                    onChange={e => setPrefYieldPct(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={0.5} />
-                </div>
-                <div>
-                  <Label className="text-[10px] text-muted-foreground">Pref Price / Share ($)</Label>
-                  <Input type="number" value={prefPricePerShare}
-                    onChange={e => setPrefPricePerShare(Math.max(1, parseFloat(e.target.value) || 100))}
-                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={1} />
-                </div>
-                <div className="flex flex-col justify-end">
-                  <p className="text-[9px] text-muted-foreground">Annual Surplus to Deploy</p>
-                  <p className={`text-sm font-bold font-mono ${annualSurplus > 0 ? "text-cyan-400" : "text-amber-400"}`}>
-                    {annualSurplus > 0 ? `+${formatCurrency(annualSurplus, 0)}/yr` : "No surplus"}
+                {/* Living Expenses with monthly/annual toggle */}
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-[10px] text-muted-foreground">Living Expenses</Label>
+                    <div className="flex gap-0.5">
+                      {["monthly", "annual"].map(m => (
+                        <button key={m} onClick={() => {
+                          setExpenseInputMode(m);
+                          setExpenseDisplay(m === "monthly" ? String(monthlyExpenses) : String(monthlyExpenses * 12));
+                        }}
+                          className={`text-[9px] px-2 py-0.5 rounded border font-semibold capitalize transition-colors ${
+                            expenseInputMode === m ? "bg-amber-500/20 border-amber-500 text-amber-400" : "border-border text-muted-foreground hover:bg-secondary"
+                          }`}>{m}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground text-sm">$</span>
+                    <Input type="number" value={expenseDisplay}
+                      onChange={e => {
+                        setExpenseDisplay(e.target.value);
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v) && v >= 0) setMonthlyExpenses(expenseInputMode === "monthly" ? v : v / 12);
+                      }}
+                      className="h-7 text-xs font-mono bg-card border-border" step={500} />
+                    <span className="text-[10px] text-muted-foreground">{expenseInputMode === "monthly" ? "/mo" : "/yr"}</span>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">
+                    Annual: <span className="text-amber-400 font-mono">{formatCurrency(annualExpenses, 0)}</span>
+                    &nbsp;· Surplus: <span className={annualSurplus > 0 ? "text-green-400 font-mono" : "text-destructive font-mono"}>{formatCurrency(annualSurplus, 0)}/yr</span>
                   </p>
-                  <p className="text-[9px] text-muted-foreground">{formatCurrency(seppAnnual, 0)} SEPP − {formatCurrency(annualExpenses, 0)} expenses</p>
+                </div>
+
+                {/* % to deploy */}
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">% Surplus to Deploy</Label>
+                  <Input type="number" value={deployPct}
+                    onChange={e => setDeployPct(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={5} min={0} max={100} />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">
+                    Deploying: <span className="text-cyan-400 font-mono">{formatCurrency(annualDeploy, 0)}/yr</span>
+                  </p>
+                </div>
+
+                {/* STRC Yield (variable) */}
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">STRC Yield (%/yr)</Label>
+                  <Input type="number" value={strcYield}
+                    onChange={e => setStrcYield(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={0.5} />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">STRF 10% · STRK 8% · STRD 10% (fixed)</p>
                 </div>
               </div>
 
               {annualSurplus <= 0 && (
                 <div className="mb-3 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg text-[10px] text-amber-400">
-                  ⚠ SEPP income is fully consumed by expenses. Reduce monthly expenses or increase SEPP amount to generate a deployable surplus.
+                  ⚠ SEPP income is fully consumed by expenses. Reduce expenses or increase SEPP amount to generate a deployable surplus.
                 </div>
               )}
 
-              {/* Summary cards */}
+              {/* ── Allocation per ticker ── */}
+              <div className="mb-3 p-3 bg-secondary/30 rounded-xl border border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Allocation per Preferred Share</p>
+                  <span className={`text-[10px] font-mono font-bold ${Math.abs(allocTotal - 100) < 1 ? "text-green-400" : "text-destructive"}`}>
+                    {allocTotal}% {Math.abs(allocTotal - 100) < 1 ? "✓" : "(must = 100%)"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {TICKERS.map(t => {
+                    const yr = t === "STRC" ? strcYield : PREF_FIXED_YIELDS[t];
+                    const color = PREF_COLORS[t];
+                    return (
+                      <div key={t} className="p-2 rounded-lg border border-border bg-secondary/20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold font-mono" style={{ color }}>{t}</span>
+                          <span className="text-[9px] text-muted-foreground">{yr}%/yr {t === "STRC" ? "(variable)" : "(fixed)"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Input type="number" value={prefAllocs[t] ?? 0}
+                            onChange={e => setPrefAllocs(prev => ({ ...prev, [t]: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) }))}
+                            className="h-6 text-xs font-mono bg-card border-border" step={5} min={0} max={100} />
+                          <span className="text-[10px] text-muted-foreground">%</span>
+                        </div>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          {formatCurrency(annualDeploy * (prefAllocs[t] ?? 0) / 100, 0)}/yr
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Quick presets */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {[
+                    { label: "Equal", v: { STRC: 25, STRF: 25, STRK: 25, STRD: 25 } },
+                    { label: "STRC Heavy", v: { STRC: 50, STRF: 20, STRK: 15, STRD: 15 } },
+                    { label: "STRC Only", v: { STRC: 100, STRF: 0, STRK: 0, STRD: 0 } },
+                    { label: "No STRC", v: { STRC: 0, STRF: 40, STRK: 30, STRD: 30 } },
+                  ].map(p => (
+                    <button key={p.label} onClick={() => setPrefAllocs(p.v)}
+                      className="text-[9px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors font-semibold">
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Summary Cards ── */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
                 {[
-                  { label: "SEPP Annual Income", value: formatCurrency(seppAnnual, 0), color: "text-cyan-400", sub: `${formatCurrency(seppAnnual/12, 0)}/mo` },
+                  { label: "SEPP Annual Income", value: formatCurrency(seppAnnual, 0), color: "text-cyan-400", sub: `${formatCurrency(seppAnnual / 12, 0)}/mo` },
                   { label: "Annual Expenses", value: formatCurrency(annualExpenses, 0), color: "text-amber-400", sub: `${formatCurrency(monthlyExpenses, 0)}/mo` },
-                  { label: `Pref Value (Yr ${projYears})`, value: formatCurrency(finalRow?.prefValue ?? 0, 0), color: "text-green-400", sub: `${(finalRow?.prefShares ?? 0).toLocaleString()} shares` },
-                  { label: `Annual Pref Income (Yr ${projYears})`, value: formatCurrency(postSeppAnnualIncome, 0), color: "text-primary", sub: `${formatCurrency(postSeppAnnualIncome / 12, 0)}/mo` },
+                  { label: `Total Pref Value (Yr ${projYears})`, value: formatCurrency(finalRow?.totalValue ?? 0, 0), color: "text-green-400", sub: "all tickers" },
+                  { label: `Annual Pref Income (Yr ${projYears})`, value: formatCurrency(finalRow?.totalIncome ?? 0, 0), color: "text-primary", sub: `${formatCurrency((finalRow?.totalIncome ?? 0) / 12, 0)}/mo` },
                 ].map(c => (
                   <div key={c.label} className="p-2.5 bg-secondary/40 rounded-xl border border-border text-center">
                     <p className="text-[9px] text-muted-foreground">{c.label}</p>
@@ -1195,12 +1304,45 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 ))}
               </div>
 
-              {/* Chart: Preferred value + annual income over time */}
-              {annualSurplus > 0 && (
+              {/* ── Per-ticker breakdown table ── */}
+              {activeRows.length > 0 && annualDeploy > 0 && (
+                <div className="mb-3 overflow-x-auto">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Final Year Per-Ticker Breakdown</p>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground text-[9px]">
+                        <th className="text-left py-1 pr-2">Ticker</th>
+                        <th className="text-right py-1 pr-2">Yield</th>
+                        <th className="text-right py-1 pr-2">Alloc</th>
+                        <th className="text-right py-1 pr-2">Portfolio Value</th>
+                        <th className="text-right py-1">Annual Income</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {TICKERS.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => {
+                        const yr = t === "STRC" ? strcYield : PREF_FIXED_YIELDS[t];
+                        const color = PREF_COLORS[t];
+                        return (
+                          <tr key={t} className="border-b border-border/30">
+                            <td className="py-1 pr-2 font-bold font-mono" style={{ color }}>{t}</td>
+                            <td className="py-1 pr-2 text-right font-mono text-muted-foreground">{yr}%</td>
+                            <td className="py-1 pr-2 text-right font-mono text-muted-foreground">{prefAllocs[t]}%</td>
+                            <td className="py-1 pr-2 text-right font-mono text-foreground">{formatCurrency(finalRow?.[`${t}_value`] ?? 0, 0)}</td>
+                            <td className="py-1 text-right font-mono text-green-400">{formatCurrency(finalRow?.[`${t}_income`] ?? 0, 0)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* ── Chart ── */}
+              {annualDeploy > 0 && activeRows.length > 0 && (
                 <>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Preferred Share Stack Growth (Post-SEPP DRIP)</p>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <ComposedChart data={prefRows.filter(r => r.year >= seppEndYear)} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Preferred Portfolio Value Over Time (by Ticker)</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <ComposedChart data={activeRows} margin={{ top: 4, right: 60, bottom: 4, left: -10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                       <XAxis dataKey="year" tick={TICK_STYLE} />
                       <YAxis yAxisId="val" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
@@ -1211,15 +1353,17 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                         labelFormatter={l => `Year ${l}`}
                       />
                       <Legend wrapperStyle={{ fontSize: 10 }} />
-                      <Bar yAxisId="val" dataKey="prefValue" fill="#22D3EE" fillOpacity={0.7} name="Pref Portfolio Value" />
-                      <Line yAxisId="inc" type="monotone" dataKey="annualIncome" stroke="#22C55E" strokeWidth={2} name="Annual Dividend Income" dot={false} />
+                      {TICKERS.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => (
+                        <Bar key={t} yAxisId="val" dataKey={`${t}_value`} stackId="pref" fill={PREF_COLORS[t]} fillOpacity={0.75} name={`${t} Value`} />
+                      ))}
+                      <Line yAxisId="inc" type="monotone" dataKey="totalIncome" stroke="#22C55E" strokeWidth={2} name="Total Annual Income" dot={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </>
               )}
 
               <p className="text-[9px] text-muted-foreground/50 mt-2">
-                Assumes 100% DRIP of preferred dividends + annual surplus reinvestment at constant yield. Par price held stable. Tax treatment may vary — consult a tax advisor.
+                All prefs modeled at $100 par. DRIP applied annually. STRC yield is variable; STRF/STRK/STRD use fixed rates. Tax treatment may vary — consult a tax advisor.
               </p>
             </div>
           );
