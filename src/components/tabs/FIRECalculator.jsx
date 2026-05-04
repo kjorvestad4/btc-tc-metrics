@@ -1051,8 +1051,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                   </span>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartRows} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={chartRows} margin={{ top: 24, right: 16, bottom: 4, left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="year" tick={TICK_STYLE} />
                   <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
@@ -1068,16 +1068,16 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                   {/* SEPP start marker (may differ from full retirement) */}
                   {strategy === "rule_72t" && withdrawalStartYear < fullRetireYear && (
                     <ReferenceLine x={withdrawalStartYear} stroke="#22D3EE" strokeDasharray="4 2"
-                      label={{ value: "SEPP Start", fontSize: 8, fill: "#22D3EE", position: "top" }} />
+                      label={{ value: "SEPP Start", fontSize: 10, fill: "#22D3EE", position: "insideTopLeft", offset: 4 }} />
                   )}
                   {/* SEPP end at age 60 */}
                   {seppEndYear != null && seppEndYear > withdrawalStartYear && (
                     <ReferenceLine x={seppEndYear} stroke="#F87171" strokeDasharray="4 2"
-                      label={{ value: "SEPP End (60)", fontSize: 8, fill: "#F87171", position: "top" }} />
+                      label={{ value: "SEPP End (60)", fontSize: 10, fill: "#F87171", position: "insideTopLeft", offset: 4 }} />
                   )}
                   {fullRetireYear > currentYear && (
                     <ReferenceLine x={fullRetireYear} stroke="#22C55E" strokeDasharray="4 2"
-                      label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }} />
+                      label={{ value: "Full Retire", fontSize: 10, fill: "#22C55E", position: "insideTopLeft", offset: 4 }} />
                   )}
                   {/* Horizontal reference for year-1 income amount */}
                   {year1Income > 0 && (
