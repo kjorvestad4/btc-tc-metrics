@@ -103,7 +103,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
         <MetricCard
           title="MSTR Amplification"
           value={`${mstrAmplificationPct.toFixed(1)}%`}
-          icon={Activity}
+          icon={Percent}
           accentClass="text-primary"
           subtitle={`Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M`}
           tooltip={`Amplification = (Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M) ÷ BTC Reserve. Total Debt+Pref = $${MSTR_DEBT_PREF_M.toLocaleString()}M per strategy.com/credit (May 4 2026). Updates live with BTC price — higher BTC = lower amplification.`}
@@ -111,7 +111,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
         <MetricCard
           title="ASST Amplification"
           value={`${asstAmplificationPct.toFixed(1)}%`}
-          icon={Activity}
+          icon={Percent}
           accentClass="text-blue-400"
           subtitle={`Total Debt+Pref $${ASST_DEFAULTS.total_debt_pref_M}M`}
           tooltip={`ASST Amplification = (Debt $${ASST_DEFAULTS.debt_M}M + SATA Pref $${ASST_DEFAULTS.sata_notional_M}M) ÷ BTC Reserve (${ASST_DEFAULTS.btc_holdings.toLocaleString()} BTC × live price). treasury.strive.com credit tab shows ${ASST_DEFAULTS.amplification_pct}% as of May 4 2026. Updates live with BTC price — higher BTC = lower amplification.`}
@@ -143,7 +143,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
         <MetricCard
           title="MSTR Pref Div Liability"
           value="$1,481M"
-          icon={Percent}
+          icon={Activity}
           accentClass="text-purple-400"
           subtitle="strategy.com/credit annual dividends"
           tooltip="Total annual preferred dividend obligation: $1,481M — source: strategy.com/credit (May 4 2026). STRC $8,537M×11.5% + STRF $1,284M×10% + STRK $1,402M×8% + STRE $911M×13% + STRD $1,402M×10%."
@@ -151,7 +151,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
         <MetricCard
           title="SATA Div Liability (ASST)"
           value={formatCurrency(SATA_ANNUAL_DIV)}
-          icon={Percent}
+          icon={Activity}
           accentClass="text-violet-400"
           subtitle={`$${SATA_NOTIONAL_M}M notional @ ${SATA_DIVIDEND_RATE}%`}
           tooltip={`Annual dividend liability from Strive's SATA preferred program. $${SATA_NOTIONAL_M}M × ${SATA_DIVIDEND_RATE}% = $${(SATA_ANNUAL_DIV / 1e6).toFixed(2)}M/yr. Profitable if BTC CAGR > ${SATA_DIVIDEND_RATE}%.`}
