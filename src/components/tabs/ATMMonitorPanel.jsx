@@ -85,25 +85,20 @@ export default function ATMMonitorPanel({ liveData }) {
   }
 
   const todayStr = new Date().toISOString().split("T")[0];
+  // Insert a new "today" live row at the top, keep the 5/1 row below it
   const strcRows = mergeLiveRows(
-    liveStrcRows?.map((r, idx) => {
-      // For the first row (most recent), use today's date + current spot price
-      if (idx === 0) {
-        return { date: todayStr, price: strcPrice, volume_M: null, pct_at_par: strcPrice >= 100 ? 100 : 0, proceeds_M: 0, btc_acquired: 0, isLive: true };
-      }
-      return { date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0, btc_acquired: 0, isLive: false };
-    }),
+    liveStrcRows ? [
+      { date: todayStr, price: strcPrice, volume_M: null, pct_at_par: strcPrice >= 100 ? 100 : 0, proceeds_M: 0, btc_acquired: 0, isLive: true },
+      ...liveStrcRows.map(r => ({ date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0, btc_acquired: 0, isLive: false }))
+    ] : null,
     STRC_RECENT_ACTIVITY
   );
 
   const sataRows = mergeLiveRows(
-    liveSataRows?.map((r, idx) => {
-      // For the first row (most recent), use today's date + current spot price
-      if (idx === 0) {
-        return { date: todayStr, price: sataPrice, volume_M: null, pct_at_par: sataPrice >= 100 ? 100 : 0, proceeds_M: 0, btc_acquired: 0, isLive: true };
-      }
-      return { date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0, btc_acquired: 0, isLive: false };
-    }),
+    liveSataRows ? [
+      { date: todayStr, price: sataPrice, volume_M: null, pct_at_par: sataPrice >= 100 ? 100 : 0, proceeds_M: 0, btc_acquired: 0, isLive: true },
+      ...liveSataRows.map(r => ({ date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0, btc_acquired: 0, isLive: false }))
+    ] : null,
     SATA_RECENT_ACTIVITY
   );
 
