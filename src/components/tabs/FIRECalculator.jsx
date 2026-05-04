@@ -997,11 +997,14 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             : null;
 
           // null out pre-withdrawal years; also cut SEPP at age 60
+          // Employment income ends at full retirement year
           const chartRows = withdrawalRows.map(row => {
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
+            const isFullyRetired = row.year >= fullRetireYear;
             return {
               ...row,
+              employmentIncome: isFullyRetired ? null : row.employmentIncome,
               incomeFlow: afterStart && !seppExpired ? row.investmentIncome : null,
             };
           });
