@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -103,7 +103,20 @@ function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
   );
 }
 
-export default function TaxAccountAllocator({ portfolioHoldings, prices }) {
+const STRATEGY_LABELS = {
+  swr: "Safe Withdrawal Rate (SWR)",
+  income_only: "Income Only (Dividends)",
+  rule_72t: "Rule 72(t) / SEPP",
+  fixed_income: "Fixed Monthly Draw",
+};
+
+const METHOD_72T_LABELS = {
+  rmd: "RMD Method",
+  amortization: "Fixed Amortization",
+  annuitization: "Fixed Annuitization",
+};
+
+export default function TaxAccountAllocator({ portfolioHoldings, prices, fireState, portfolioMonthlyIncome, portfolioProjections }) {
   // Account balances per account type
   const [accountBalances, setAccountBalances] = useState({
     taxable: 0,
@@ -119,6 +132,16 @@ export default function TaxAccountAllocator({ portfolioHoldings, prices }) {
     Object.fromEntries(ASSETS.map(a => [a, { taxable: 100, roth: 0, trad_ira: 0, k401: 0, hsa: 0 }]))
   );
 
+  // Sync growth rate from FIRE calculator when available
+  const portfolioCagr = useMemo(() => {
+    if (!portfolioProjections || portfolioProjections.length < 2) return null;
+    const first = portfolioProjections[0]?.portfolio_value;
+    const last  = portfolioProjections[portfolioProjections.length - 1]?.portfolio_value;
+    if (!first || first <= 0 || !last) return null;
+    const years = portfolioProjections.length - 1;
+    return (Math.pow(last / first, 1 / years) - 1) * 100;
+  }, [portfolioProjections]);
+
   // Marginal tax rates
   const [ordinaryTaxRate, setOrdinaryTaxRate] = useState(24);
   const [ltcgRate, setLtcgRate] = useState(15);
@@ -126,6 +149,16 @@ export default function TaxAccountAllocator({ portfolioHoldings, prices }) {
   const [futureWithdrawalRate, setFutureWithdrawalRate] = useState(22);
   const [projGrowthRate, setProjGrowthRate] = useState(30);
   const [projYears, setProjYears] = useState(10);
+
+  // Auto-sync portfolio CAGR from model
+  useEffect(() => {
+    if (portfolioCagr != null) setProjGrowthRate(parseFloat(portfolioCagr.toFixed(1)));
+  }, [portfolioCagr]);
+
+  // Auto-sync projection years from FIRE calculator
+  useEffect(() => {
+    if (fireState?.projYears) setProjYears(fireState.projYears);
+  }, [fireState?.projYears]);
 
   const setAllocation = (asset, accountId, val) => {
     setAssetAllocation(prev => {
@@ -237,6 +270,77 @@ export default function TaxAccountAllocator({ portfolioHoldings, prices }) {
         </p>
       )}
 
+      {/* FIRE / Withdrawal Context — pulled from FIRE Calculator above */}
+      {fireState && (
+        <div className="mb-4 p-3 bg-secondary/30 rounded-xl border border-border">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Withdrawal Strategy Context (from FIRE Calculator above)</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="p-2 bg-secondary/50 rounded-lg border border-border text-center">
+              <p className="text-[9px] text-muted-foreground">Strategy</p>
+              <p className="text-xs font-bold text-primary">{STRATEGY_LABELS[fireState.strategy] ?? fireState.strategy}</p>
+            </div>
+            <div className="p-2 bg-secondary/50 rounded-lg border border-border text-center">
+              <p className="text-[9px] text-muted-foreground">
+                {fireState.strategy === "swr" ? "Withdrawal Rate" :
+                 fireState.strategy === "rule_72t" ? "SEPP Method" :
+                 fireState.strategy === "income_only" ? "Monthly Income" :
+                 "Monthly Draw"}
+              </p>
+              <p className="text-xs font-bold text-cyan-400 font-mono">
+                {fireState.strategy === "swr" ? `${fireState.swrPct}%` :
+                 fireState.strategy === "rule_72t" ? METHOD_72T_LABELS[fireState.method72t] :
+                 fireState.strategy === "income_only" ? formatCurrency(portfolioMonthlyIncome ?? 0, 0) + "/mo" :
+                 formatCurrency(fireState.targetMonthlyIncome, 0) + "/mo"}
+              </p>
+            </div>
+            <div className="p-2 bg-secondary/50 rounded-lg border border-border text-center">
+              <p className="text-[9px] text-muted-foreground">Retirement Ages</p>
+              <p className="text-xs font-bold text-amber-400 font-mono">
+                {fireState.strategy === "rule_72t"
+                  ? `SEPP @ ${fireState.retirementAge} → Full @ ${fireState.fullRetirementAge}`
+                  : `Full @ ${fireState.fullRetirementAge}`}
+              </p>
+            </div>
+            <div className="p-2 bg-secondary/50 rounded-lg border border-border text-center">
+              <p className="text-[9px] text-muted-foreground">
+                {fireState.strategy === "rule_72t" ? "IRA Balance (SEPP)" : "Starting Portfolio"}
+              </p>
+              <p className="text-xs font-bold text-green-400 font-mono">
+                {fireState.strategy === "rule_72t"
+                  ? formatCurrency(fireState.iraBalance, 0)
+                  : formatCurrency(fireState.startBalance, 0)}
+              </p>
+            </div>
+          </div>
+          {fireState.strategy === "rule_72t" && fireState.selectedSeppAmount != null && (
+            <div className="mt-2 p-2 bg-cyan-400/10 border border-cyan-400/20 rounded-lg">
+              <p className="text-[10px] text-cyan-400">
+                SEPP Annual Distribution ({METHOD_72T_LABELS[fireState.method72t]}):
+                <span className="font-mono font-bold ml-1">{formatCurrency(fireState.selectedSeppAmount, 0)}/yr</span>
+                <span className="text-muted-foreground ml-2">→</span>
+                <span className="font-mono font-bold text-green-400 ml-2">{formatCurrency(fireState.selectedSeppAmount / 12, 0)}/mo</span>
+              </p>
+            </div>
+          )}
+          {fireState.strategy === "swr" && (
+            <div className="mt-2 p-2 bg-primary/10 border border-primary/20 rounded-lg">
+              <p className="text-[10px] text-primary">
+                SWR Annual Withdrawal:
+                <span className="font-mono font-bold ml-1">{formatCurrency(fireState.startBalance * fireState.swrPct / 100, 0)}/yr</span>
+                <span className="text-muted-foreground ml-2">→</span>
+                <span className="font-mono font-bold text-green-400 ml-2">{formatCurrency(fireState.startBalance * fireState.swrPct / 100 / 12, 0)}/mo</span>
+              </p>
+            </div>
+          )}
+          <p className="text-[9px] text-muted-foreground mt-1.5">
+            Employment income: <span className="font-mono text-blue-400">{formatCurrency(fireState.employmentIncome, 0)}/mo</span>
+            {" · "}Inflation: <span className="font-mono text-amber-400">{fireState.inflationRate}%</span>
+            {" · "}Portfolio return: <span className="font-mono text-primary">{fireState.annualReturn.toFixed(1)}%</span>
+            {" · "}Horizon: <span className="font-mono text-foreground">{fireState.projYears} yrs</span>
+          </p>
+        </div>
+      )}
+
       {/* Tax rate inputs */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 p-3 bg-secondary/30 rounded-xl border border-border">
         {[
@@ -244,7 +348,7 @@ export default function TaxAccountAllocator({ portfolioHoldings, prices }) {
           { label: "LT Cap Gains Rate", val: ltcgRate, set: setLtcgRate, color: "text-amber-400" },
           { label: "State Income Rate", val: stateRate, set: setStateRate, color: "text-cyan-400" },
           { label: "Future Withdrawal Rate", val: futureWithdrawalRate, set: setFutureWithdrawalRate, color: "text-purple-400" },
-          { label: "Portfolio Growth Rate", val: projGrowthRate, set: setProjGrowthRate, color: "text-primary" },
+          { label: portfolioCagr != null ? `Portfolio CAGR (from model)` : "Portfolio Growth Rate", val: projGrowthRate, set: setProjGrowthRate, color: "text-primary" },
         ].map(({ label, val, set, color }) => (
           <div key={label}>
             <Label className="text-[10px] text-muted-foreground">{label}</Label>

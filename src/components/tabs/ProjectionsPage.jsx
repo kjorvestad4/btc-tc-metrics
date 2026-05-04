@@ -86,6 +86,7 @@ function SectionHeader({ icon: Icon, title, color = "text-primary" }) {
 // ── Component ────────────────────────────────────────────────────────────────
 export default function ProjectionsPage({ liveData }) {
   const [activePreset, setActivePreset] = useState("Base");
+  const [fireState, setFireState] = useState(null);
 
   // MSTY calculator
   const [shareQty, setShareQty] = useState(1000);
@@ -316,6 +317,7 @@ export default function ProjectionsPage({ liveData }) {
       <FIRECalculator
         portfolioProjections={portfolioProjections}
         portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
+        onStateChange={setFireState}
         portfolioMonthlyIncome={(() => {
           // Monthly income from income assets using DRIP rate data
           const incomeAssets = {
@@ -340,6 +342,19 @@ export default function ProjectionsPage({ liveData }) {
           STRC: nowStrc, SATA: nowSata, STRF: nowStrf,
           STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty,
         }}
+        fireState={fireState}
+        portfolioMonthlyIncome={(() => {
+          const incomeAssets = {
+            STRC: { shares: portfolioHoldings.STRC, rate: dripRates.STRC ?? 11.5, price: nowStrc },
+            SATA: { shares: portfolioHoldings.SATA, rate: dripRates.SATA ?? 13.0, price: nowSata },
+            STRF: { shares: portfolioHoldings.STRF, rate: dripRates.STRF ?? 10.0, price: nowStrf },
+            STRK: { shares: portfolioHoldings.STRK, rate: dripRates.STRK ?? 8.0,  price: nowStrk },
+            STRD: { shares: portfolioHoldings.STRD, rate: dripRates.STRD ?? 10.0, price: nowStrd },
+            MSTY: { shares: portfolioHoldings.MSTY, rate: (mstyWeeklyDiv * 52) / nowMsty * 100, price: nowMsty },
+          };
+          return Object.values(incomeAssets).reduce((sum, a) => sum + (a.shares * a.price * (a.rate / 100)) / 12, 0);
+        })()}
+        portfolioProjections={portfolioProjections}
       />
 
     </div>

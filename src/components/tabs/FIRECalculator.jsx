@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -188,7 +188,7 @@ const RULE_72T_METHODS = [
   { id: "annuitization", label: "Fixed Annuitization", desc: "Uses annuity factor — typically slightly lower than amortization" },
 ];
 
-export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome, portfolioProjections }) {
+export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome, portfolioProjections, onStateChange }) {
   // Mode: "independent" = manual inputs, "portfolio" = derived from holdings model
   const [mode, setMode] = useState("independent");
 
@@ -420,6 +420,29 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   }), [startBalance, strategy, swrPct, annualReturn, inflationRate, targetMonthlyIncome, currentAge, retirementAge, partialRetirementEnabled, partialSalaryPct, fullRetirementAge, employmentIncome, engineIraBalance, iraMode, iraPct, method72t, interestRate72t, selectedSeppAmount, projYears, portfolioProjections, portfolioMonthlyIncome, mode]);
 
   const portfolioSurvives = withdrawalRows[withdrawalRows.length - 1]?.balance > 0;
+
+  // Emit key state upward so TaxAccountAllocator can consume it
+  useEffect(() => {
+    if (!onStateChange) return;
+    onStateChange({
+      strategy,
+      swrPct,
+      targetMonthlyIncome,
+      annualReturn,
+      inflationRate,
+      currentAge,
+      retirementAge,
+      fullRetirementAge,
+      employmentIncome,
+      iraBalance: engineIraBalance,
+      method72t,
+      interestRate72t,
+      selectedSeppAmount,
+      projYears,
+      startBalance: effectivePortfolioValue,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strategy, swrPct, targetMonthlyIncome, annualReturn, inflationRate, currentAge, retirementAge, fullRetirementAge, employmentIncome, engineIraBalance, method72t, interestRate72t, selectedSeppAmount, projYears, effectivePortfolioValue]);
 
   return (
     <div className="space-y-4">
