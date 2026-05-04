@@ -996,14 +996,31 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? new Date().getFullYear() + Math.max(0, 60 - currentAge)
             : null;
 
+          // Compute employment income per year INDEPENDENTLY — do not trust the engine value
+          // for years at or after fullRetireYear. Only show the line when there is actual income.
+          const annualEmpIncome = employmentIncome * 12;
+          const annualPartialIncome = employmentIncome * 12 * (partialSalaryPct / 100);
+          const partialStartYear = partialRetirementEnabled
+            ? new Date().getFullYear() + Math.max(0, retirementAge - currentAge)
+            : fullRetireYear;
+
           const chartRows = withdrawalRows.map(row => {
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
-            // Employment income: only show when actually non-zero (working years), null everything else
-            // This prevents a flat 0 line from rendering when user has no income or after retirement
-            const empIncome = (row.year < fullRetireYear && row.employmentIncome > 0)
-              ? row.employmentIncome
-              : null;
+
+            // Employment income: stop completely AT fullRetireYear, null = no line rendered
+            let empIncome = null;
+            if (row.year < fullRetireYear) {
+              if (partialRetirementEnabled && row.year >= partialStartYear) {
+                // partial retirement phase — reduced income
+                empIncome = annualPartialIncome > 0 ? annualPartialIncome : null;
+              } else {
+                // full working phase
+                empIncome = annualEmpIncome > 0 ? annualEmpIncome : null;
+              }
+            }
+            // row.year >= fullRetireYear → empIncome stays null (line disappears)
+
             return {
               ...row,
               employmentIncome: empIncome,
