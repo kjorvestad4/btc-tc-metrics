@@ -11,19 +11,20 @@ import {
   ResponsiveContainer, ReferenceLine, LineChart, Line, Legend
 } from "recharts";
 
-// April 2026 ASST (Strive Asset Management) defaults — from treasury.strive.com
+// May 2026 ASST (Strive Asset Management) defaults — from treasury.strive.com
+// BTC holdings & preferred notional updated from live credit tab (May 4 2026)
 export const ASST_DEFAULTS = {
-  btc_holdings: 13767.9,
+  btc_holdings: 15000.5,             // live from treasury.strive.com (May 4 2026)
   shares_outstanding_M: 69.72,       // basic shares from official data
   shares_diluted_M: 97.47,           // diluted shares
-  price: 15.61,                       // official share price Apr 17 2026
+  price: 16.40,                      // official share price May 4 2026
   btc_nav_per_share: 15.21,          // official NAV per basic share
-  ev_mnav_multiple: 1.32,            // official EV/BTC NAV = 1.32x
-  pref_notional_M: 0,
-  sata_notional_M: 437.32,           // Total Debt+Pref = $447.32M; debt = $10M; pref = $437.32M
-  debt_M: 10,                        // $10M total debt
-  total_debt_pref_M: 447.32,         // official $447.32M
-  amplification_pct: 42.2,           // official Amplification Ratio = 42.2%
+  ev_mnav_multiple: 1.30,            // official EV/BTC NAV = 1.30x (May 4 2026)
+  pref_notional_M: 495.95,           // SATA preferred notional from credit tab (May 4 2026)
+  sata_notional_M: 495.95,           // SATA notional = $495.95M (credit tab)
+  debt_M: 10,                        // $10M Semler Loan (credit tab)
+  total_debt_pref_M: 505.95,         // Debt $10M + Pref $495.95M = $505.95M (credit tab May 4 2026)
+  amplification_pct: 42.3,           // official Amplification Ratio = 42.3% (credit tab May 4 2026)
   sata_dividend_rate: 13.0,
   btc_accum_per_quarter: 2500,
   mstr_cross_ownership_btc: 0,

@@ -10,8 +10,8 @@ const MSTR_DEBT_M = 8254;       // $8,254M debt
 const MSTR_PREF_M = 11355;      // $11,355M preferred notional
 const MSTR_DEBT_PREF_M = MSTR_DEBT_M + MSTR_PREF_M; // $19,609M
 
-// SATA static defaults (Apr 2026)
-const SATA_NOTIONAL_M = 437.32;
+// SATA static defaults (May 2026) — from treasury.strive.com credit tab
+const SATA_NOTIONAL_M = 495.95;
 const SATA_DIVIDEND_RATE = 13.0;
 const SATA_ANNUAL_DIV = SATA_NOTIONAL_M * 1e6 * (SATA_DIVIDEND_RATE / 100);
 
@@ -112,7 +112,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
           icon={Activity}
           accentClass="text-blue-400"
           subtitle={`Total Debt+Pref $${ASST_DEFAULTS.total_debt_pref_M}M`}
-          tooltip={`ASST Amplification = Total Debt+Pref ($${ASST_DEFAULTS.total_debt_pref_M}M) ÷ BTC Reserve. Official treasury.strive.com shows 42.2% at BTC ~$77K. Updates dynamically with BTC price.`}
+          tooltip={`ASST Amplification = (Debt $${ASST_DEFAULTS.debt_M}M + SATA Pref $${ASST_DEFAULTS.sata_notional_M}M) ÷ BTC Reserve (${ASST_DEFAULTS.btc_holdings.toLocaleString()} BTC × live price). treasury.strive.com credit tab shows ${ASST_DEFAULTS.amplification_pct}% as of May 4 2026. Updates live with BTC price — higher BTC = lower amplification.`}
         />
       </div>
 
