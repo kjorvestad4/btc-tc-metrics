@@ -88,7 +88,7 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
       ? employmentIncome * 12
       : isPartial
         ? employmentIncome * 12 * (partialSalaryPct / 100)
-        : 0;
+        : null;
 
     if (y === 0) {
       rows.push({ year: startYear, balance, iraBalance: strategy === "rule_72t" ? trackingIra : null, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
@@ -1001,18 +1001,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           const chartRows = withdrawalRows.map(row => {
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
-            // Keep value up to (but not including) fullRetireYear, then one 0 point, then null
-            let empInc;
-            if (row.year < fullRetireYear) {
-              empInc = row.employmentIncome;
-            } else if (row.year === fullRetireYear) {
-              empInc = 0;
-            } else {
-              empInc = null;
-            }
             return {
               ...row,
-              employmentIncome: empInc,
               incomeFlow: afterStart && !seppExpired ? row.investmentIncome : null,
             };
           });
