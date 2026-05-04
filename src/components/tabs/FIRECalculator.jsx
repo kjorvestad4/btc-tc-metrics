@@ -5,7 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/calculations";
 import { Flame, Target, Shield, TrendingDown } from "lucide-react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
 } from "recharts";
 
@@ -241,6 +241,11 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [interestRate72t, setInterestRate72t] = useState(5);
   const [projYears, setProjYears] = useState(30);
   const [employmentIncome, setEmploymentIncome] = useState(8000); // always stored as monthly internally
+
+  // Post-SEPP reinvestment section
+  const [monthlyExpenses, setMonthlyExpenses] = useState(5000);
+  const [prefYieldPct, setPrefYieldPct] = useState(11.5); // avg preferred yield %
+  const [prefPricePerShare, setPrefPricePerShare] = useState(100); // par ~$100
   const [empIncomeInputMode, setEmpIncomeInputMode] = useState("monthly"); // "monthly" | "annual"
   const [empIncomeDisplay, setEmpIncomeDisplay] = useState("8000"); // raw string for input
 
@@ -986,12 +991,20 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? targetMonthlyIncome * 12
             : (selectedSeppAmount ?? 0);
 
-          // null out pre-withdrawal years so line only starts when income begins
-          // Use >= so the first withdrawal year is included
-          const chartRows = withdrawalRows.map(row => ({
-            ...row,
-            incomeFlow: row.year >= withdrawalStartYear && row.investmentIncome > 0 ? row.investmentIncome : null,
-          }));
+          // SEPP stops at age 59.5 (we cut at age 60)
+          const seppEndYear = strategy === "rule_72t"
+            ? new Date().getFullYear() + Math.max(0, 60 - currentAge)
+            : null;
+
+          // null out pre-withdrawal years; also cut SEPP at age 60
+          const chartRows = withdrawalRows.map(row => {
+            const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
+            const seppExpired = seppEndYear != null && row.year >= seppEndYear;
+            return {
+              ...row,
+              incomeFlow: afterStart && !seppExpired ? row.investmentIncome : null,
+            };
+          });
 
           return (
             <div>
@@ -1026,6 +1039,11 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     <ReferenceLine x={withdrawalStartYear} stroke="#22D3EE" strokeDasharray="4 2"
                       label={{ value: "SEPP Start", fontSize: 8, fill: "#22D3EE", position: "top" }} />
                   )}
+                  {/* SEPP end at age 60 */}
+                  {seppEndYear != null && seppEndYear > withdrawalStartYear && (
+                    <ReferenceLine x={seppEndYear} stroke="#F87171" strokeDasharray="4 2"
+                      label={{ value: "SEPP End (60)", fontSize: 8, fill: "#F87171", position: "top" }} />
+                  )}
                   {fullRetireYear > new Date().getFullYear() && (
                     <ReferenceLine x={fullRetireYear} stroke="#22C55E" strokeDasharray="4 2"
                       label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }} />
@@ -1048,6 +1066,129 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                   />
                 </LineChart>
               </ResponsiveContainer>
+            </div>
+          );
+        })()}
+
+        {/* ── Post-SEPP Capital Deployment ── */}
+        {strategy === "rule_72t" && (() => {
+          const seppAnnual = selectedSeppAmount ?? 0;
+          const annualExpenses = monthlyExpenses * 12;
+          const annualSurplus = Math.max(0, seppAnnual - annualExpenses);
+          const seppEndAge = 60;
+          const yearsPostSepp = Math.max(0, projYears - Math.max(0, seppEndAge - currentAge));
+
+          // Compound preferred share accumulation from surplus after SEPP ends
+          // Each year the surplus buys new pref shares; existing shares pay dividends which also buy more shares (DRIP)
+          const prefYield = prefYieldPct / 100;
+          const prefRows = [];
+          let prefShares = 0;
+          let prefValue = 0;
+          const seppEndYear = new Date().getFullYear() + Math.max(0, seppEndAge - currentAge);
+
+          for (let y = 0; y <= projYears; y++) {
+            const rowYear = new Date().getFullYear() + y;
+            if (rowYear >= seppEndYear) {
+              // Surplus buys new shares
+              const newSharesFromSurplus = annualSurplus / prefPricePerShare;
+              // Existing shares generate dividends reinvested (DRIP)
+              const dividendShares = prefShares * prefYield;
+              prefShares += newSharesFromSurplus + dividendShares;
+              prefValue = prefShares * prefPricePerShare;
+            }
+            prefRows.push({ year: rowYear, prefValue, prefShares: Math.round(prefShares), annualIncome: prefShares * prefPricePerShare * prefYield });
+          }
+
+          const finalRow = prefRows[prefRows.length - 1];
+          const postSeppAnnualIncome = finalRow?.annualIncome ?? 0;
+
+          return (
+            <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="w-4 h-4 text-cyan-400" />
+                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Post-SEPP Capital Deployment — Preferred Share Stack</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-3">
+                After SEPP ends at age 60, surplus SEPP income (above living expenses) is reinvested into Preferred shares (STRC/SATA/STRF/STRK/STRD) which are tax-advantaged and generate stable yield. Dividends are automatically reinvested (DRIP).
+              </p>
+
+              {/* Controls */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Monthly Living Expenses ($)</Label>
+                  <Input type="number" value={monthlyExpenses}
+                    onChange={e => setMonthlyExpenses(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={500} />
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Pref Avg Yield (%)</Label>
+                  <Input type="number" value={prefYieldPct}
+                    onChange={e => setPrefYieldPct(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={0.5} />
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Pref Price / Share ($)</Label>
+                  <Input type="number" value={prefPricePerShare}
+                    onChange={e => setPrefPricePerShare(Math.max(1, parseFloat(e.target.value) || 100))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={1} />
+                </div>
+                <div className="flex flex-col justify-end">
+                  <p className="text-[9px] text-muted-foreground">Annual Surplus to Deploy</p>
+                  <p className={`text-sm font-bold font-mono ${annualSurplus > 0 ? "text-cyan-400" : "text-amber-400"}`}>
+                    {annualSurplus > 0 ? `+${formatCurrency(annualSurplus, 0)}/yr` : "No surplus"}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground">{formatCurrency(seppAnnual, 0)} SEPP − {formatCurrency(annualExpenses, 0)} expenses</p>
+                </div>
+              </div>
+
+              {annualSurplus <= 0 && (
+                <div className="mb-3 p-2 bg-amber-400/10 border border-amber-400/20 rounded-lg text-[10px] text-amber-400">
+                  ⚠ SEPP income is fully consumed by expenses. Reduce monthly expenses or increase SEPP amount to generate a deployable surplus.
+                </div>
+              )}
+
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                {[
+                  { label: "SEPP Annual Income", value: formatCurrency(seppAnnual, 0), color: "text-cyan-400", sub: `${formatCurrency(seppAnnual/12, 0)}/mo` },
+                  { label: "Annual Expenses", value: formatCurrency(annualExpenses, 0), color: "text-amber-400", sub: `${formatCurrency(monthlyExpenses, 0)}/mo` },
+                  { label: `Pref Value (Yr ${projYears})`, value: formatCurrency(finalRow?.prefValue ?? 0, 0), color: "text-green-400", sub: `${(finalRow?.prefShares ?? 0).toLocaleString()} shares` },
+                  { label: `Annual Pref Income (Yr ${projYears})`, value: formatCurrency(postSeppAnnualIncome, 0), color: "text-primary", sub: `${formatCurrency(postSeppAnnualIncome / 12, 0)}/mo` },
+                ].map(c => (
+                  <div key={c.label} className="p-2.5 bg-secondary/40 rounded-xl border border-border text-center">
+                    <p className="text-[9px] text-muted-foreground">{c.label}</p>
+                    <p className={`text-xs font-bold font-mono mt-0.5 ${c.color}`}>{c.value}</p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">{c.sub}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Chart: Preferred value + annual income over time */}
+              {annualSurplus > 0 && (
+                <>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Preferred Share Stack Growth (Post-SEPP DRIP)</p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <ComposedChart data={prefRows.filter(r => r.year >= seppEndYear)} margin={{ top: 4, right: 16, bottom: 4, left: -10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                      <XAxis dataKey="year" tick={TICK_STYLE} />
+                      <YAxis yAxisId="val" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+                      <YAxis yAxisId="inc" orientation="right" tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+                      <Tooltip
+                        contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", fontSize: 11 }}
+                        formatter={(v, name) => [formatCurrency(v, 0), name]}
+                        labelFormatter={l => `Year ${l}`}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                      <Bar yAxisId="val" dataKey="prefValue" fill="#22D3EE" fillOpacity={0.7} name="Pref Portfolio Value" />
+                      <Line yAxisId="inc" type="monotone" dataKey="annualIncome" stroke="#22C55E" strokeWidth={2} name="Annual Dividend Income" dot={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </>
+              )}
+
+              <p className="text-[9px] text-muted-foreground/50 mt-2">
+                Assumes 100% DRIP of preferred dividends + annual surplus reinvestment at constant yield. Par price held stable. Tax treatment may vary — consult a tax advisor.
+              </p>
             </div>
           );
         })()}
