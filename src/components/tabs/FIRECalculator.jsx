@@ -967,11 +967,12 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             : "#F59E0B";
 
           // For 72(t)/SEPP, withdrawals start at partial retirement age; others at full retirement
+          const currentYear = new Date().getFullYear();
           const yearsToWithdrawalStart = strategy === "rule_72t"
             ? Math.max(0, retirementAge - currentAge)
             : Math.max(0, fullRetirementAge - currentAge);
-          const withdrawalStartYear = new Date().getFullYear() + yearsToWithdrawalStart;
-          const fullRetireYear = new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge);
+          const withdrawalStartYear = currentYear + yearsToWithdrawalStart;
+          const fullRetireYear = currentYear + Math.max(0, fullRetirementAge - currentAge);
 
           // Year-1 income at withdrawal start
           const iraAtStart = engineIraBalance * Math.pow(1 + annualReturn / 100, yearsToWithdrawalStart);
@@ -993,38 +994,34 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
           // SEPP stops at age 59.5 (we cut at age 60)
           const seppEndYear = strategy === "rule_72t"
-            ? new Date().getFullYear() + Math.max(0, 60 - currentAge)
+            ? currentYear + Math.max(0, 60 - currentAge)
             : null;
 
-          // Compute employment income per year INDEPENDENTLY — do not trust the engine value
-          // for years at or after fullRetireYear. Only show the line when there is actual income.
           const annualEmpIncome = employmentIncome * 12;
           const annualPartialIncome = employmentIncome * 12 * (partialSalaryPct / 100);
           const partialStartYear = partialRetirementEnabled
-            ? new Date().getFullYear() + Math.max(0, retirementAge - currentAge)
+            ? currentYear + Math.max(0, retirementAge - currentAge)
             : fullRetireYear;
 
           const chartRows = withdrawalRows.map(row => {
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
 
-            // Employment income: stop completely AT fullRetireYear, null = no line rendered
             let empIncome = null;
             if (row.year < fullRetireYear) {
               if (partialRetirementEnabled && row.year >= partialStartYear) {
-                // partial retirement phase — reduced income
                 empIncome = annualPartialIncome > 0 ? annualPartialIncome : null;
               } else {
-                // full working phase
                 empIncome = annualEmpIncome > 0 ? annualEmpIncome : null;
               }
             }
-            // row.year >= fullRetireYear → empIncome stays null (line disappears)
+
+            const incomeFlow = afterStart && !seppExpired ? row.investmentIncome : null;
 
             return {
               ...row,
               employmentIncome: empIncome,
-              incomeFlow: afterStart && !seppExpired ? row.investmentIncome : null,
+              incomeFlow,
             };
           });
 
@@ -1066,7 +1063,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     <ReferenceLine x={seppEndYear} stroke="#F87171" strokeDasharray="4 2"
                       label={{ value: "SEPP End (60)", fontSize: 8, fill: "#F87171", position: "top" }} />
                   )}
-                  {fullRetireYear > new Date().getFullYear() && (
+                  {fullRetireYear > currentYear && (
                     <ReferenceLine x={fullRetireYear} stroke="#22C55E" strokeDasharray="4 2"
                       label={{ value: "Full Retire", fontSize: 8, fill: "#22C55E", position: "top" }} />
                   )}
