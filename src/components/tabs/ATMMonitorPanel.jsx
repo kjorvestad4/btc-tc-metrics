@@ -15,6 +15,14 @@ const STRC_SEC_FILINGS = [
   { filed: "Mar 16, 2026", period: "Mar 9–15",     shares: "11,818,467", proceeds: "$1.18B",  btc: 16816, url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526107263/mstr-20260223.htm" },
 ];
 
+// Confirmed SEC filings (SATA) — updated May 4, 2026
+const SATA_SEC_FILINGS = [
+  { filed: "May 4, 2026",  period: "Apr 27–May 3", shares_M: "4.2", proceeds: "$418M", btc: 5542, url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
+  { filed: "Apr 27, 2026", period: "Apr 20–26",    shares_M: "3.8", proceeds: "$378M", btc: 4918,  url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
+  { filed: "Apr 13, 2026", period: "Apr 6–12",     shares_M: "4.5", proceeds: "$449M",  btc: 6237, url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
+  { filed: "Apr 6, 2026",  period: "Apr 1–5",      shares_M: "0.9", proceeds: "$90M", btc: 1254,  url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
+];
+
 function StatusBadge({ price, par = 100 }) {
   const diff = price - par;
   if (diff >= 0) return (
@@ -327,45 +335,91 @@ export default function ATMMonitorPanel({ liveData }) {
 
       {/* SEC Filings */}
       {tab === "sec" && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-muted-foreground">Confirmed STRC ATM 8-K filings — source: <SourceLink href="https://bitcoinquant.co/preferred-equity" label="bitcoinquant.co" /></p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[10px]">
-              <thead>
-                <tr className="text-muted-foreground border-b border-border">
-                  <th className="text-left py-1 pr-2">Filed</th>
-                  <th className="text-left pr-2">Period</th>
-                  <th className="text-right pr-2">Shares</th>
-                  <th className="text-right pr-2">Proceeds</th>
-                  <th className="text-right pr-2">BTC ₿</th>
-                  <th className="text-right">8-K</th>
-                </tr>
-              </thead>
-              <tbody>
-                {STRC_SEC_FILINGS.map((row, i) => (
-                  <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
-                    <td className="py-1 pr-2 font-mono text-muted-foreground">{row.filed}</td>
-                    <td className="pr-2 text-foreground">{row.period}</td>
-                    <td className="text-right pr-2 font-mono text-foreground">{row.shares}</td>
-                    <td className="text-right pr-2 font-mono text-purple-400 font-bold">{row.proceeds}</td>
-                    <td className="text-right pr-2 font-mono text-amber-400 font-bold">₿{row.btc.toLocaleString()}</td>
-                    <td className="text-right">
-                      <a href={row.url} target="_blank" rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-0.5">
-                        View <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    </td>
+        <div className="space-y-3">
+          {/* STRC Filings */}
+          <div>
+            <p className="text-[10px] text-muted-foreground mb-2">STRC ATM 8-K filings — source: <SourceLink href="https://bitcoinquant.co/preferred-equity" label="bitcoinquant.co" /></p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left py-1 pr-2">Filed</th>
+                    <th className="text-left pr-2">Period</th>
+                    <th className="text-right pr-2">Shares</th>
+                    <th className="text-right pr-2">Proceeds</th>
+                    <th className="text-right pr-2">BTC ₿</th>
+                    <th className="text-right">8-K</th>
                   </tr>
-                ))}
-                <tr className="border-t border-border font-bold text-foreground">
-                  <td className="py-1 pr-2 text-muted-foreground" colSpan={2}>TOTAL (shown above)</td>
-                  <td className="text-right pr-2 font-mono">43.6M sh</td>
-                  <td className="text-right pr-2 font-mono text-purple-400">$4.35B</td>
-                  <td className="text-right pr-2 font-mono text-amber-400">₿57,887</td>
-                  <td />
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {STRC_SEC_FILINGS.map((row, i) => (
+                    <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
+                      <td className="py-1 pr-2 font-mono text-muted-foreground">{row.filed}</td>
+                      <td className="pr-2 text-foreground">{row.period}</td>
+                      <td className="text-right pr-2 font-mono text-foreground">{row.shares}</td>
+                      <td className="text-right pr-2 font-mono text-purple-400 font-bold">{row.proceeds}</td>
+                      <td className="text-right pr-2 font-mono text-amber-400 font-bold">₿{row.btc.toLocaleString()}</td>
+                      <td className="text-right">
+                        <a href={row.url} target="_blank" rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-0.5">
+                          View <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-border font-bold text-foreground">
+                    <td className="py-1 pr-2 text-muted-foreground" colSpan={2}>TOTAL (shown above)</td>
+                    <td className="text-right pr-2 font-mono">43.6M sh</td>
+                    <td className="text-right pr-2 font-mono text-purple-400">$4.35B</td>
+                    <td className="text-right pr-2 font-mono text-amber-400">₿57,887</td>
+                    <td />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* SATA Filings */}
+          <div>
+            <p className="text-[10px] text-muted-foreground mb-2">SATA Preferred ATM 8-K filings — source: <SourceLink href="https://bitcoinquant.co/preferred-equity" label="bitcoinquant.co" /></p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left py-1 pr-2">Filed</th>
+                    <th className="text-left pr-2">Period</th>
+                    <th className="text-right pr-2">Shares (M)</th>
+                    <th className="text-right pr-2">Proceeds</th>
+                    <th className="text-right pr-2">BTC ₿</th>
+                    <th className="text-right">8-K</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {SATA_SEC_FILINGS.map((row, i) => (
+                    <tr key={i} className="border-b border-border/40 hover:bg-secondary/30">
+                      <td className="py-1 pr-2 font-mono text-muted-foreground">{row.filed}</td>
+                      <td className="pr-2 text-foreground">{row.period}</td>
+                      <td className="text-right pr-2 font-mono text-foreground">{row.shares_M}M</td>
+                      <td className="text-right pr-2 font-mono text-violet-400 font-bold">{row.proceeds}</td>
+                      <td className="text-right pr-2 font-mono text-amber-400 font-bold">₿{row.btc.toLocaleString()}</td>
+                      <td className="text-right">
+                        <a href={row.url} target="_blank" rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-0.5">
+                          View <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-border font-bold text-foreground">
+                    <td className="py-1 pr-2 text-muted-foreground" colSpan={2}>TOTAL (shown above)</td>
+                    <td className="text-right pr-2 font-mono">13.4M sh</td>
+                    <td className="text-right pr-2 font-mono text-violet-400">$1.335B</td>
+                    <td className="text-right pr-2 font-mono text-amber-400">₿17,951</td>
+                    <td />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
