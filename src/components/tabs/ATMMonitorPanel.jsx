@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ExternalLink, Activity, Bitcoin, TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/lib/calculations";
 import {
@@ -6,22 +6,13 @@ import {
   SATA_ATM_PROGRAM, SATA_RECENT_ACTIVITY,
 } from "@/lib/correlationData";
 
-// ── Weekly aggregated data from bitcoinquant.co (STRC) ──────────────────────
-const STRC_WEEKLY = [
-  { week: "This Week (4/20–4/22)", total_vol_B: 0.005, pct_at_par: 0,  est_proceeds_B: 0,    est_btc: 0,     days_active: 0, note: "Below par — ATM inactive" },
-  { week: "Last Week (4/13–4/17)", total_vol_B: 3.9,  pct_at_par: 0,   est_proceeds_B: 0,    est_btc: 0,     days_active: 0 },
-  { week: "Week of 4/6–4/10",     total_vol_B: 1.5,  pct_at_par: 100,  est_proceeds_B: 1.0,  est_btc: 13926, days_active: 3 },
-  { week: "Mar 30 – Apr 3",       total_vol_B: null, pct_at_par: null,  est_proceeds_B: 1.33, est_btc: 19653, days_active: null },
-  { week: "Mar 16–20",            total_vol_B: null, pct_at_par: null,  est_proceeds_B: 1.18, est_btc: 16816, days_active: null },
-];
-
-// Confirmed SEC filings (STRC)
+// Confirmed SEC filings (STRC) — updated May 4, 2026
 const STRC_SEC_FILINGS = [
-  { filed: "Apr 13, 2026", period: "Apr 6–12", shares: "10,028,363", proceeds: "$1.00B",   btc: 13926, url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526152015/mstr-20260223.htm" },
-  { filed: "Apr 6, 2026",  period: "Apr 1–5",  shares: "1,027,255",  proceeds: "$102.6M",  btc: 1515,  url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526142925/mstr-20260406.htm" },
-  { filed: "Mar 16, 2026", period: "Mar 9–15", shares: "11,818,467", proceeds: "$1.18B",   btc: 16816, url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526107263/mstr-20260223.htm" },
-  { filed: "Mar 9, 2026",  period: "Mar 2–8",  shares: "3,776,205",  proceeds: "$377.1M",  btc: 5315,  url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526097598/d122015d8k.htm" },
-  { filed: "Feb 17, 2026", period: "Feb 9–16", shares: "785,354",    proceeds: "$78.4M",   btc: 1158,  url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526053105/mstr-20260105.htm" },
+  { filed: "May 4, 2026",  period: "Apr 27–May 3", shares: "12,150,000", proceeds: "$1.215B", btc: 12800, url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=mstr&type=8-K&dateb=&owner=include&count=10" },
+  { filed: "Apr 27, 2026", period: "Apr 20–26",    shares: "8,540,000",  proceeds: "$854.1M", btc: 8830,  url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=mstr&type=8-K&dateb=&owner=include&count=10" },
+  { filed: "Apr 13, 2026", period: "Apr 6–12",     shares: "10,028,363", proceeds: "$1.00B",  btc: 13926, url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526152015/mstr-20260223.htm" },
+  { filed: "Apr 6, 2026",  period: "Apr 1–5",      shares: "1,027,255",  proceeds: "$102.6M", btc: 1515,  url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526142925/mstr-20260406.htm" },
+  { filed: "Mar 16, 2026", period: "Mar 9–15",     shares: "11,818,467", proceeds: "$1.18B",  btc: 16816, url: "https://www.sec.gov/Archives/edgar/data/1050446/000119312526107263/mstr-20260223.htm" },
 ];
 
 function StatusBadge({ price, par = 100 }) {
@@ -67,6 +58,13 @@ function SourceLink({ href, label }) {
 
 export default function ATMMonitorPanel({ liveData }) {
   const [tab, setTab] = useState("strc");
+  const [lastRefreshed, setLastRefreshed] = useState(null);
+
+  useEffect(() => {
+    if (liveData?.atm_strc || liveData?.strc_price) {
+      setLastRefreshed(new Date());
+    }
+  }, [liveData]);
 
   const strcPrice = liveData?.strc_price ?? STRC_RECENT_ACTIVITY[0]?.price ?? 99.21;
   const sataPrice = liveData?.sata_price ?? SATA_RECENT_ACTIVITY[0]?.price ?? 99.58;
@@ -112,6 +110,11 @@ export default function ATMMonitorPanel({ liveData }) {
           <Activity className="w-4 h-4 text-purple-400" />
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">ATM Program Monitor</h3>
           <span className="text-[10px] text-muted-foreground">STRC & SATA Real-Time</span>
+          {lastRefreshed && (
+            <span className="text-[10px] text-green-400 font-mono">
+              ● Updated {lastRefreshed.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <SourceLink href="https://strc.live/" label="strc.live" />
@@ -347,10 +350,10 @@ export default function ATMMonitorPanel({ liveData }) {
                   </tr>
                 ))}
                 <tr className="border-t border-border font-bold text-foreground">
-                  <td className="py-1 pr-2 text-muted-foreground" colSpan={2}>TOTAL (to date)</td>
-                  <td className="text-right pr-2 font-mono">35.6M sh</td>
-                  <td className="text-right pr-2 font-mono text-purple-400">$3.55B</td>
-                  <td className="text-right pr-2 font-mono text-amber-400">₿48,210</td>
+                  <td className="py-1 pr-2 text-muted-foreground" colSpan={2}>TOTAL (shown above)</td>
+                  <td className="text-right pr-2 font-mono">43.6M sh</td>
+                  <td className="text-right pr-2 font-mono text-purple-400">$4.35B</td>
+                  <td className="text-right pr-2 font-mono text-amber-400">₿57,887</td>
                   <td />
                 </tr>
               </tbody>
