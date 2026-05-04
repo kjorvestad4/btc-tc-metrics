@@ -246,17 +246,30 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   const [empIncomeDisplay, setEmpIncomeDisplay] = useState("8000"); // raw string for input
 
   // Post-SEPP / Preferred Deployment section
-  const [expenseInputMode, setExpenseInputMode] = useState("monthly"); // "monthly" | "annual"
-  const [expenseDisplay, setExpenseDisplay] = useState("5000"); // raw string for input
-  const [monthlyExpenses, setMonthlyExpenses] = useState(5000); // always stored monthly internally
-  const [deployPct, setDeployPct] = useState(80); // % of surplus to deploy into prefs
-  // Per-ticker allocation (must sum to 100)
-  const [prefAllocs, setPrefAllocs] = useState({ STRC: 40, STRF: 20, STRK: 20, STRD: 20 });
-  // STRC variable yield — others are fixed
+  const [expenseInputMode, setExpenseInputMode] = useState("monthly");
+  const [expenseDisplay, setExpenseDisplay] = useState("5000");
+  const [monthlyExpenses, setMonthlyExpenses] = useState(5000);
+  const [deployPct, setDeployPct] = useState(80);
+  // Per-ticker allocation (must sum to 100) — includes SATA now
+  const [prefAllocs, setPrefAllocs] = useState({ STRC: 35, SATA: 15, STRF: 20, STRK: 15, STRD: 15 });
+  // Variable yields (STRC and SATA are ATM-program variable)
   const [strcYield, setStrcYield] = useState(11.5);
-  // Fixed yields for the others
+  const [sataYield, setSataYield] = useState(13.0);
+  // Per-ticker DRIP vs cash mode
+  const [prefDrip, setPrefDrip] = useState({ STRC: true, SATA: true, STRF: true, STRK: true, STRD: true });
+  // Tax treatment per ticker: "roc_then_ltcg" | "roc_then_qdiv" | "ordinary"
+  const [prefTaxMode, setPrefTaxMode] = useState({ STRC: "roc_then_ltcg", SATA: "roc_then_ltcg", STRF: "roc_then_qdiv", STRK: "roc_then_qdiv", STRD: "roc_then_qdiv" });
+  // ROC years estimate per ticker (how many years until cost basis = 0)
+  const [rocYears, setRocYears] = useState({ STRC: 8, SATA: 8, STRF: 10, STRK: 12, STRD: 10 });
+  // Marginal tax rate for non-qualified income (ordinary)
+  const [ordinaryTaxRate, setOrdinaryTaxRate] = useState(22);
+  // LTCG / Qualified dividend tax rate
+  const [preferredTaxRate, setPreferredTaxRate] = useState(15);
+
+  // Fixed yields for non-variable tickers
   const PREF_FIXED_YIELDS = { STRF: 10.0, STRK: 8.0, STRD: 10.0 };
-  const PREF_COLORS = { STRC: "#22D3EE", STRF: "#60A5FA", STRK: "#FBBF24", STRD: "#FB923C" };
+  const PREF_COLORS = { STRC: "#22D3EE", SATA: "#A78BFA", STRF: "#60A5FA", STRK: "#FBBF24", STRD: "#FB923C" };
+  const TICKERS_ALL = ["STRC", "SATA", "STRF", "STRK", "STRD"];
 
   // FIRE number calculations
   const fireNumber = useMemo(() => ({
@@ -329,6 +342,59 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
   // The fixed SEPP amount from the table — used as the locked distribution in the chart
   const selectedSeppAmount = sepp72t.find(m => m.id === method72t)?.annual ?? null;
+
+  // ── Hoist pref simulation so income chart can consume it ──
+  const prefSimRows = useMemo(() => {
+    if (strategy !== "rule_72t") return [];
+    const seppAnnual = selectedSeppAmount ?? 0;
+    const annualExpenses = monthlyExpenses * 12;
+    const annualSurplus = Math.max(0, seppAnnual - annualExpenses);
+    const annualDeploy = annualSurplus * (deployPct / 100);
+    const baseYear = new Date().getFullYear();
+    const seppStartYear = baseYear + Math.max(0, Math.floor(Number(retirementAge) - Number(currentAge)));
+    const tickerYields = {
+      STRC: strcYield / 100,
+      SATA: sataYield / 100,
+      STRF: PREF_FIXED_YIELDS.STRF / 100,
+      STRK: PREF_FIXED_YIELDS.STRK / 100,
+      STRD: PREF_FIXED_YIELDS.STRD / 100,
+    };
+    const PAR = 100;
+    const tickerShares = { STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0 };
+    const rows = [];
+
+    function calcAfterTax(grossIncome, ticker, yearsSinceStart) {
+      const mode = prefTaxMode[ticker] ?? "roc_then_ltcg";
+      const rocYr = rocYears[ticker] ?? 10;
+      if (mode === "ordinary") return grossIncome * (1 - ordinaryTaxRate / 100);
+      if (yearsSinceStart <= rocYr) return grossIncome;
+      return grossIncome * (1 - preferredTaxRate / 100);
+    }
+
+    for (let y = 0; y <= projYears; y++) {
+      const rowYear = baseYear + y;
+      const isActive = rowYear >= seppStartYear;
+      const yearsSince = rowYear - seppStartYear;
+      if (isActive) {
+        TICKERS_ALL.forEach(t => {
+          const alloc = (prefAllocs[t] ?? 0) / 100;
+          const yr = tickerYields[t];
+          const isDrip = prefDrip[t] ?? true;
+          tickerShares[t] += (annualDeploy * alloc) / PAR;
+          if (isDrip) tickerShares[t] += tickerShares[t] * yr;
+        });
+      }
+      let totalAfterTax = 0;
+      TICKERS_ALL.forEach(t => {
+        const yr = tickerYields[t];
+        const gross = tickerShares[t] * PAR * yr;
+        totalAfterTax += calcAfterTax(gross, t, Math.max(0, yearsSince));
+      });
+      rows.push({ year: rowYear, prefAfterTaxIncome: isActive ? totalAfterTax : 0 });
+    }
+    return rows;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strategy, selectedSeppAmount, monthlyExpenses, deployPct, retirementAge, currentAge, strcYield, sataYield, prefAllocs, prefDrip, prefTaxMode, rocYears, ordinaryTaxRate, preferredTaxRate, projYears, PREF_FIXED_YIELDS, TICKERS_ALL]);
 
   const withdrawalRows = useMemo(() => projectWithdrawals({
     startBalance,
@@ -1019,6 +1085,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? targetMonthlyIncome * 12
             : (selectedSeppAmount ?? 0);
 
+          // Build pref income lookup from hoisted simulation
+          const prefByYear = {};
+          prefSimRows.forEach(r => { prefByYear[r.year] = r.prefAfterTaxIncome; });
+
           const chartRows = withdrawalRows.map(row => {
             const rowYear = Number(row.year);
             const investmentInc = Number(row.investmentIncome);
@@ -1039,10 +1109,16 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             // IncomeFlow (SEPP withdrawals) — stops at age 60 in SEPP mode
             const incomeFlow = afterStart && !seppExpired ? investmentInc : null;
 
+            // Preferred income — shown only when active (after SEPP start)
+            const prefIncome = (strategy === "rule_72t" && prefByYear[rowYear] > 0)
+              ? prefByYear[rowYear]
+              : null;
+
             return {
               ...row,
               employmentIncome: empIncome,
               incomeFlow,
+              prefIncome,
             };
           });
 
@@ -1104,6 +1180,18 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     dot={false}
                     connectNulls={false}
                   />
+                  {strategy === "rule_72t" && (
+                    <Line
+                      type="monotone"
+                      dataKey="prefIncome"
+                      stroke="#A78BFA"
+                      strokeWidth={2}
+                      name="Pref After-Tax Income"
+                      dot={false}
+                      connectNulls={false}
+                      strokeDasharray="5 3"
+                    />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -1121,67 +1209,105 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           const seppStartYear = baseYear + Math.max(0, Math.floor(Number(retirementAge) - Number(currentAge)));
           const seppEndYearLocal = baseYear + Math.max(0, Math.floor(60 - Number(currentAge)));
 
-          const TICKERS = ["STRC", "STRF", "STRK", "STRD"];
           const tickerYields = {
             STRC: strcYield / 100,
+            SATA: sataYield / 100,
             STRF: PREF_FIXED_YIELDS.STRF / 100,
             STRK: PREF_FIXED_YIELDS.STRK / 100,
             STRD: PREF_FIXED_YIELDS.STRD / 100,
           };
-          const PAR = 100; // all prefs trade near $100 par
+          const PAR = 100;
+
+          // ── After-tax income helper ──
+          // ROC phase: dividends reduce cost basis (tax-deferred, no current tax)
+          // After ROC exhausted (cost basis = 0): taxed as LTCG or Qualified Dividend
+          // "ordinary": always taxed at ordinary income rate (e.g., if held in taxable non-qual)
+          function afterTaxIncome(grossIncome, ticker, yearsSinceStart) {
+            const mode = prefTaxMode[ticker] ?? "roc_then_ltcg";
+            const rocYr = rocYears[ticker] ?? 10;
+            const ordRate = ordinaryTaxRate / 100;
+            const prefRate = preferredTaxRate / 100;
+            if (mode === "ordinary") return grossIncome * (1 - ordRate);
+            // ROC phase: no current tax (basis reduction), effectively 0% until sold
+            if (yearsSinceStart <= rocYr) return grossIncome; // tax deferred = full cash flow
+            // Post-ROC: LTCG or QDiv rate
+            return grossIncome * (1 - prefRate);
+          }
 
           // Simulate each ticker independently — DRIP + inflows starting at SEPP start
-          const tickerShares = { STRC: 0, STRF: 0, STRK: 0, STRD: 0 };
+          const tickerShares = { STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0 };
           const prefRows = [];
 
           for (let y = 0; y <= projYears; y++) {
             const rowYear = baseYear + y;
             const isActive = rowYear >= seppStartYear;
+            const yearsSinceStart = rowYear - seppStartYear;
 
             if (isActive) {
-              TICKERS.forEach(t => {
+              TICKERS_ALL.forEach(t => {
                 const alloc = (prefAllocs[t] ?? 0) / 100;
                 const yr = tickerYields[t];
-                // New shares from deployed surplus
+                const isDrip = prefDrip[t] ?? true;
+                // Buy new shares from deployed surplus
                 tickerShares[t] += (annualDeploy * alloc) / PAR;
-                // DRIP: existing shares generate dividends → buy more shares
-                tickerShares[t] += tickerShares[t] * yr;
+                // Dividend → DRIP (buy more shares) or cash (no reinvestment)
+                if (isDrip) {
+                  tickerShares[t] += tickerShares[t] * yr;
+                }
+                // If cash: shares stay flat, income is taken out
               });
             }
 
             const rowData = { year: rowYear };
             let totalValue = 0;
-            let totalIncome = 0;
-            TICKERS.forEach(t => {
+            let totalGrossIncome = 0;
+            let totalAfterTaxIncome = 0;
+            TICKERS_ALL.forEach(t => {
+              const yr = tickerYields[t];
               const val = tickerShares[t] * PAR;
-              const inc = tickerShares[t] * PAR * tickerYields[t];
+              const grossInc = tickerShares[t] * PAR * yr;
+              const yrsSince = Math.max(0, rowYear - seppStartYear);
+              const afterTax = afterTaxIncome(grossInc, t, yrsSince);
               rowData[`${t}_value`] = val;
-              rowData[`${t}_income`] = inc;
+              rowData[`${t}_gross_income`] = grossInc;
+              rowData[`${t}_after_tax_income`] = afterTax;
               totalValue += val;
-              totalIncome += inc;
+              totalGrossIncome += grossInc;
+              totalAfterTaxIncome += afterTax;
             });
             rowData.totalValue = totalValue;
-            rowData.totalIncome = totalIncome;
+            rowData.totalGrossIncome = totalGrossIncome;
+            rowData.totalAfterTaxIncome = totalAfterTaxIncome;
             prefRows.push(rowData);
           }
 
           const activeRows = prefRows.filter(r => r.year >= seppStartYear);
           const finalRow = prefRows[prefRows.length - 1];
-          const allocTotal = Object.values(prefAllocs).reduce((s, v) => s + v, 0);
+          const allocTotal = TICKERS_ALL.reduce((s, t) => s + (prefAllocs[t] ?? 0), 0);
+
+          // Expose prefRows to the income chart via a lookup map (year → afterTaxIncome)
+          // We attach it to a ref-like variable in this closure and pass into chartRows below
+          const prefIncomeByYear = {};
+          prefRows.forEach(r => { prefIncomeByYear[r.year] = r.totalAfterTaxIncome; });
+
+          const TAX_MODE_LABELS = {
+            roc_then_ltcg: "ROC → LTCG",
+            roc_then_qdiv: "ROC → QDiv",
+            ordinary: "Ordinary",
+          };
 
           return (
-            <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20">
+            <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20" id="pref-deploy-section">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-4 h-4 text-cyan-400" />
                 <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">SEPP Preferred Share Deployment</p>
               </div>
               <p className="text-[10px] text-muted-foreground mb-3">
-                Starting from SEPP payments ({seppStartYear}), surplus income (after expenses) is deployed into preferred shares. Dividends are reinvested (DRIP) automatically each year. SEPP ends at age 60 ({seppEndYearLocal}) but preferred income continues.
+                Starting from SEPP payments ({seppStartYear}), surplus income (after expenses) is deployed into STRC, SATA, STRF, STRK, STRD. DRIP compounds shares; Cash mode pays income. ROC phase defers tax; post-ROC income taxed at LTCG or Qualified Dividend rates. SEPP ends at age 60 ({seppEndYearLocal}) but preferred income continues indefinitely.
               </p>
 
-              {/* ── Controls Row 1: Expenses + Deploy % ── */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                {/* Living Expenses with monthly/annual toggle */}
+              {/* ── Row 1: Expenses, Deploy %, Yields ── */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between mb-1">
                     <Label className="text-[10px] text-muted-foreground">Living Expenses</Label>
@@ -1209,29 +1335,50 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     <span className="text-[10px] text-muted-foreground">{expenseInputMode === "monthly" ? "/mo" : "/yr"}</span>
                   </div>
                   <p className="text-[9px] text-muted-foreground mt-0.5">
-                    Annual: <span className="text-amber-400 font-mono">{formatCurrency(annualExpenses, 0)}</span>
-                    &nbsp;· Surplus: <span className={annualSurplus > 0 ? "text-green-400 font-mono" : "text-destructive font-mono"}>{formatCurrency(annualSurplus, 0)}/yr</span>
+                    Surplus: <span className={annualSurplus > 0 ? "text-green-400 font-mono" : "text-destructive font-mono"}>{formatCurrency(annualSurplus, 0)}/yr</span>
                   </p>
                 </div>
-
-                {/* % to deploy */}
                 <div>
                   <Label className="text-[10px] text-muted-foreground">% Surplus to Deploy</Label>
                   <Input type="number" value={deployPct}
                     onChange={e => setDeployPct(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
                     className="h-7 text-xs font-mono bg-card border-border mt-1" step={5} min={0} max={100} />
-                  <p className="text-[9px] text-muted-foreground mt-0.5">
-                    Deploying: <span className="text-cyan-400 font-mono">{formatCurrency(annualDeploy, 0)}/yr</span>
-                  </p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">→ <span className="text-cyan-400 font-mono">{formatCurrency(annualDeploy, 0)}/yr</span></p>
                 </div>
-
-                {/* STRC Yield (variable) */}
                 <div>
-                  <Label className="text-[10px] text-muted-foreground">STRC Yield (%/yr)</Label>
-                  <Input type="number" value={strcYield}
-                    onChange={e => setStrcYield(Math.max(0, parseFloat(e.target.value) || 0))}
+                  <Label className="text-[10px] text-muted-foreground">STRC Yield (%)</Label>
+                  <Input type="number" value={strcYield} onChange={e => setStrcYield(Math.max(0, parseFloat(e.target.value) || 0))}
                     className="h-7 text-xs font-mono bg-card border-border mt-1" step={0.5} />
-                  <p className="text-[9px] text-muted-foreground mt-0.5">STRF 10% · STRK 8% · STRD 10% (fixed)</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Variable (ATM)</p>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">SATA Yield (%)</Label>
+                  <Input type="number" value={sataYield} onChange={e => setSataYield(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={0.5} />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Variable (ATM)</p>
+                </div>
+              </div>
+
+              {/* ── Tax Rate inputs ── */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 p-2.5 bg-secondary/20 rounded-xl border border-border">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Ordinary Tax Rate (%)</Label>
+                  <Input type="number" value={ordinaryTaxRate} onChange={e => setOrdinaryTaxRate(Math.max(0, Math.min(50, parseFloat(e.target.value) || 0)))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={1} />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">For "Ordinary" tax mode</p>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">LTCG / QDiv Rate (%)</Label>
+                  <Input type="number" value={preferredTaxRate} onChange={e => setPreferredTaxRate(Math.max(0, Math.min(30, parseFloat(e.target.value) || 0)))}
+                    className="h-7 text-xs font-mono bg-card border-border mt-1" step={1} />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Post-ROC treatment</p>
+                </div>
+                <div className="md:col-span-2 flex items-end">
+                  <p className="text-[9px] text-muted-foreground leading-relaxed">
+                    <span className="text-amber-400 font-semibold">ROC phase</span>: dividends reduce cost basis (no current tax) until basis = $0.<br/>
+                    <span className="text-green-400 font-semibold">Post-ROC</span>: income taxed at LTCG or Qualified Dividend rate (usually 0–20%).<br/>
+                    DRIP during ROC phase: new shares have $0 basis — all future income is LTCG/QDiv.
+                  </p>
                 </div>
               </div>
 
@@ -1241,33 +1388,63 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 </div>
               )}
 
-              {/* ── Allocation per ticker ── */}
+              {/* ── Per-ticker config ── */}
               <div className="mb-3 p-3 bg-secondary/30 rounded-xl border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Allocation per Preferred Share</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Per-Ticker Allocation, DRIP &amp; Tax Mode</p>
                   <span className={`text-[10px] font-mono font-bold ${Math.abs(allocTotal - 100) < 1 ? "text-green-400" : "text-destructive"}`}>
                     {allocTotal}% {Math.abs(allocTotal - 100) < 1 ? "✓" : "(must = 100%)"}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {TICKERS.map(t => {
-                    const yr = t === "STRC" ? strcYield : PREF_FIXED_YIELDS[t];
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                  {TICKERS_ALL.map(t => {
+                    const yr = (t === "STRC" ? strcYield : t === "SATA" ? sataYield : PREF_FIXED_YIELDS[t] ?? 0);
+                    const isVariable = t === "STRC" || t === "SATA";
                     const color = PREF_COLORS[t];
+                    const isDrip = prefDrip[t] ?? true;
+                    const taxMode = prefTaxMode[t] ?? "roc_then_ltcg";
+                    const roc = rocYears[t] ?? 10;
                     return (
-                      <div key={t} className="p-2 rounded-lg border border-border bg-secondary/20">
-                        <div className="flex items-center justify-between mb-1">
+                      <div key={t} className="p-2 rounded-lg border border-border bg-secondary/20 space-y-1.5">
+                        <div className="flex items-center justify-between">
                           <span className="text-xs font-bold font-mono" style={{ color }}>{t}</span>
-                          <span className="text-[9px] text-muted-foreground">{yr}%/yr {t === "STRC" ? "(variable)" : "(fixed)"}</span>
+                          <span className="text-[9px] text-muted-foreground">{yr}%{isVariable ? " ▴" : " fixed"}</span>
                         </div>
+                        {/* Alloc % */}
                         <div className="flex items-center gap-1">
                           <Input type="number" value={prefAllocs[t] ?? 0}
                             onChange={e => setPrefAllocs(prev => ({ ...prev, [t]: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) }))}
-                            className="h-6 text-xs font-mono bg-card border-border" step={5} min={0} max={100} />
+                            className="h-6 text-xs font-mono bg-card border-border flex-1" step={5} min={0} max={100} />
                           <span className="text-[10px] text-muted-foreground">%</span>
                         </div>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">
-                          {formatCurrency(annualDeploy * (prefAllocs[t] ?? 0) / 100, 0)}/yr
-                        </p>
+                        {/* DRIP toggle */}
+                        <div className="flex gap-0.5">
+                          {[true, false].map(d => (
+                            <button key={String(d)} onClick={() => setPrefDrip(prev => ({ ...prev, [t]: d }))}
+                              className={`flex-1 text-[9px] py-0.5 rounded border font-semibold transition-colors ${
+                                isDrip === d
+                                  ? d ? "bg-green-500/20 border-green-500 text-green-400" : "bg-amber-500/20 border-amber-500 text-amber-400"
+                                  : "border-border text-muted-foreground hover:bg-secondary"
+                              }`}>{d ? "DRIP" : "Cash"}</button>
+                          ))}
+                        </div>
+                        {/* Tax mode */}
+                        <select value={taxMode} onChange={e => setPrefTaxMode(prev => ({ ...prev, [t]: e.target.value }))}
+                          className="w-full h-6 text-[9px] font-mono bg-card border border-border rounded px-1 text-foreground">
+                          <option value="roc_then_ltcg">ROC → LTCG</option>
+                          <option value="roc_then_qdiv">ROC → QDiv</option>
+                          <option value="ordinary">Ordinary</option>
+                        </select>
+                        {/* ROC years */}
+                        {taxMode !== "ordinary" && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-muted-foreground">ROC yrs:</span>
+                            <Input type="number" value={roc}
+                              onChange={e => setRocYears(prev => ({ ...prev, [t]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                              className="h-6 w-12 text-[9px] font-mono bg-card border-border" step={1} min={0} />
+                          </div>
+                        )}
+                        <p className="text-[9px] text-muted-foreground">{formatCurrency(annualDeploy * (prefAllocs[t] ?? 0) / 100, 0)}/yr</p>
                       </div>
                     );
                   })}
@@ -1275,10 +1452,10 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 {/* Quick presets */}
                 <div className="flex flex-wrap gap-1 mt-2">
                   {[
-                    { label: "Equal", v: { STRC: 25, STRF: 25, STRK: 25, STRD: 25 } },
-                    { label: "STRC Heavy", v: { STRC: 50, STRF: 20, STRK: 15, STRD: 15 } },
-                    { label: "STRC Only", v: { STRC: 100, STRF: 0, STRK: 0, STRD: 0 } },
-                    { label: "No STRC", v: { STRC: 0, STRF: 40, STRK: 30, STRD: 30 } },
+                    { label: "Equal", v: { STRC: 20, SATA: 20, STRF: 20, STRK: 20, STRD: 20 } },
+                    { label: "STRC+SATA Heavy", v: { STRC: 40, SATA: 20, STRF: 15, STRK: 10, STRD: 15 } },
+                    { label: "STRC Only", v: { STRC: 100, SATA: 0, STRF: 0, STRK: 0, STRD: 0 } },
+                    { label: "Fixed Only", v: { STRC: 0, SATA: 0, STRF: 40, STRK: 30, STRD: 30 } },
                   ].map(p => (
                     <button key={p.label} onClick={() => setPrefAllocs(p.v)}
                       className="text-[9px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors font-semibold">
@@ -1294,7 +1471,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                   { label: "SEPP Annual Income", value: formatCurrency(seppAnnual, 0), color: "text-cyan-400", sub: `${formatCurrency(seppAnnual / 12, 0)}/mo` },
                   { label: "Annual Expenses", value: formatCurrency(annualExpenses, 0), color: "text-amber-400", sub: `${formatCurrency(monthlyExpenses, 0)}/mo` },
                   { label: `Total Pref Value (Yr ${projYears})`, value: formatCurrency(finalRow?.totalValue ?? 0, 0), color: "text-green-400", sub: "all tickers" },
-                  { label: `Annual Pref Income (Yr ${projYears})`, value: formatCurrency(finalRow?.totalIncome ?? 0, 0), color: "text-primary", sub: `${formatCurrency((finalRow?.totalIncome ?? 0) / 12, 0)}/mo` },
+                  { label: `After-Tax Pref Income (Yr ${projYears})`, value: formatCurrency(finalRow?.totalAfterTaxIncome ?? 0, 0), color: "text-primary", sub: `${formatCurrency((finalRow?.totalAfterTaxIncome ?? 0) / 12, 0)}/mo` },
                 ].map(c => (
                   <div key={c.label} className="p-2.5 bg-secondary/40 rounded-xl border border-border text-center">
                     <p className="text-[9px] text-muted-foreground">{c.label}</p>
@@ -1314,21 +1491,30 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                         <th className="text-left py-1 pr-2">Ticker</th>
                         <th className="text-right py-1 pr-2">Yield</th>
                         <th className="text-right py-1 pr-2">Alloc</th>
+                        <th className="text-right py-1 pr-2">Mode</th>
+                        <th className="text-right py-1 pr-2">Tax</th>
                         <th className="text-right py-1 pr-2">Portfolio Value</th>
-                        <th className="text-right py-1">Annual Income</th>
+                        <th className="text-right py-1 pr-2">Gross Income</th>
+                        <th className="text-right py-1">After-Tax Income</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {TICKERS.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => {
-                        const yr = t === "STRC" ? strcYield : PREF_FIXED_YIELDS[t];
+                      {TICKERS_ALL.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => {
+                        const yr = (t === "STRC" ? strcYield : t === "SATA" ? sataYield : PREF_FIXED_YIELDS[t] ?? 0);
                         const color = PREF_COLORS[t];
+                        const yrsSince = Math.max(0, projYears);
+                        const gross = finalRow?.[`${t}_gross_income`] ?? 0;
+                        const afterTax = finalRow?.[`${t}_after_tax_income`] ?? 0;
                         return (
                           <tr key={t} className="border-b border-border/30">
                             <td className="py-1 pr-2 font-bold font-mono" style={{ color }}>{t}</td>
                             <td className="py-1 pr-2 text-right font-mono text-muted-foreground">{yr}%</td>
                             <td className="py-1 pr-2 text-right font-mono text-muted-foreground">{prefAllocs[t]}%</td>
+                            <td className="py-1 pr-2 text-right text-[9px] text-muted-foreground">{prefDrip[t] ? "DRIP" : "Cash"}</td>
+                            <td className="py-1 pr-2 text-right text-[9px] text-muted-foreground">{TAX_MODE_LABELS[prefTaxMode[t] ?? "roc_then_ltcg"]}</td>
                             <td className="py-1 pr-2 text-right font-mono text-foreground">{formatCurrency(finalRow?.[`${t}_value`] ?? 0, 0)}</td>
-                            <td className="py-1 text-right font-mono text-green-400">{formatCurrency(finalRow?.[`${t}_income`] ?? 0, 0)}</td>
+                            <td className="py-1 pr-2 text-right font-mono text-muted-foreground">{formatCurrency(gross, 0)}</td>
+                            <td className="py-1 text-right font-mono text-green-400">{formatCurrency(afterTax, 0)}</td>
                           </tr>
                         );
                       })}
@@ -1337,11 +1523,11 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 </div>
               )}
 
-              {/* ── Chart ── */}
+              {/* ── Stacked Value + After-Tax Income Chart ── */}
               {annualDeploy > 0 && activeRows.length > 0 && (
                 <>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Preferred Portfolio Value Over Time (by Ticker)</p>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Preferred Portfolio Value &amp; After-Tax Income Over Time</p>
+                  <ResponsiveContainer width="100%" height={240}>
                     <ComposedChart data={activeRows} margin={{ top: 4, right: 60, bottom: 4, left: -10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                       <XAxis dataKey="year" tick={TICK_STYLE} />
@@ -1353,17 +1539,18 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                         labelFormatter={l => `Year ${l}`}
                       />
                       <Legend wrapperStyle={{ fontSize: 10 }} />
-                      {TICKERS.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => (
+                      {TICKERS_ALL.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => (
                         <Bar key={t} yAxisId="val" dataKey={`${t}_value`} stackId="pref" fill={PREF_COLORS[t]} fillOpacity={0.75} name={`${t} Value`} />
                       ))}
-                      <Line yAxisId="inc" type="monotone" dataKey="totalIncome" stroke="#22C55E" strokeWidth={2} name="Total Annual Income" dot={false} />
+                      <Line yAxisId="inc" type="monotone" dataKey="totalGrossIncome" stroke="#94A3B8" strokeWidth={1.5} name="Gross Income" dot={false} strokeDasharray="4 2" />
+                      <Line yAxisId="inc" type="monotone" dataKey="totalAfterTaxIncome" stroke="#22C55E" strokeWidth={2} name="After-Tax Income" dot={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </>
               )}
 
               <p className="text-[9px] text-muted-foreground/50 mt-2">
-                All prefs modeled at $100 par. DRIP applied annually. STRC yield is variable; STRF/STRK/STRD use fixed rates. Tax treatment may vary — consult a tax advisor.
+                All prefs at $100 par. ROC reduces cost basis tax-free until basis = $0; post-ROC income taxed at LTCG/QDiv or ordinary rates. DRIP shares acquired during ROC phase carry $0 cost basis. Not financial or tax advice — consult a CPA.
               </p>
             </div>
           );
