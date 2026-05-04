@@ -17,10 +17,11 @@ const STRC_SEC_FILINGS = [
 
 // Confirmed SEC filings (SATA) — updated May 4, 2026
 const SATA_SEC_FILINGS = [
-  { filed: "May 4, 2026",  period: "Apr 27–May 3", shares_M: "4.2", proceeds: "$418M", btc: 5542, url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
-  { filed: "Apr 27, 2026", period: "Apr 20–26",    shares_M: "3.8", proceeds: "$378M", btc: 4918,  url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
-  { filed: "Apr 13, 2026", period: "Apr 6–12",     shares_M: "4.5", proceeds: "$449M",  btc: 6237, url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
-  { filed: "Apr 6, 2026",  period: "Apr 1–5",      shares_M: "0.9", proceeds: "$90M", btc: 1254,  url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001563408&type=8-K&dateb=&owner=include&count=10" },
+  { filed: "May 4, 2026",  period: "Apr 27–May 3", shares_M: "5.04", proceeds: "$501M", btc: 6236, url: "https://investors.strive.com/financial/sec-filings/sec-filings-details/default.aspx?FilingId=19404148" },
+  { filed: "May 1, 2026",  period: "Apr 24–30",    shares_M: "4.29", proceeds: "$427M", btc: 5325,  url: "https://investors.strive.com/financial/sec-filings/sec-filings-details/default.aspx?FilingId=19399955" },
+  { filed: "Apr 27, 2026", period: "Apr 20–26",    shares_M: "3.94", proceeds: "$392M",  btc: 4874, url: "https://investors.strive.com/financial/sec-filings/sec-filings-details/default.aspx?FilingId=19370705" },
+  { filed: "Apr 15, 2026", period: "Apr 8–14",     shares_M: "4.62", proceeds: "$460M", btc: 6417,  url: "https://investors.strive.com/financial/sec-filings/sec-filings-details/default.aspx?FilingId=19341988" },
+  { filed: "Apr 6, 2026",  period: "Mar 30–Apr 5", shares_M: "0.95", proceeds: "$94M", btc: 1308,  url: "https://investors.strive.com/financial/sec-filings/sec-filings-details/default.aspx?FilingId=19321603" },
 ];
 
 function StatusBadge({ price, par = 100 }) {
@@ -412,9 +413,9 @@ export default function ATMMonitorPanel({ liveData }) {
                   ))}
                   <tr className="border-t border-border font-bold text-foreground">
                     <td className="py-1 pr-2 text-muted-foreground" colSpan={2}>TOTAL (shown above)</td>
-                    <td className="text-right pr-2 font-mono">13.4M sh</td>
-                    <td className="text-right pr-2 font-mono text-violet-400">$1.335B</td>
-                    <td className="text-right pr-2 font-mono text-amber-400">₿17,951</td>
+                    <td className="text-right pr-2 font-mono">18.84M sh</td>
+                    <td className="text-right pr-2 font-mono text-violet-400">$1.874B</td>
+                    <td className="text-right pr-2 font-mono text-amber-400">₿24,160</td>
                     <td />
                   </tr>
                 </tbody>
