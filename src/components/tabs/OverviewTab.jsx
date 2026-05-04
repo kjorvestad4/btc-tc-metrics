@@ -35,13 +35,13 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
   // Amplification = (Debt + Pref) ÷ BTC Reserve — official formula
   const mstrAmplificationPct = mstrBtcNav > 0 ? (MSTR_DEBT_PREF_M * 1e6 / mstrBtcNav) * 100 : 0;
 
-  // ASST calcs — from official treasury.strive.com data (May 4 2026)
-  // EV mNAV = EV ÷ BTC NAV  (matches treasury.strive.com navPremium chart: 1.29x)
-  // EV = Market Cap + Total Debt + Total Preferred (no cash deduction per strive definition)
+  // ASST calcs — fully dynamic (live BTC price + live ASST price)
+  // EV mNAV = EV ÷ BTC NAV  (matches treasury.strive.com navPremium: ~1.29–1.30x)
+  // EV = Market Cap + Total Debt + Total Preferred − Cash
   const asstPrice = liveData?.asst_price ?? ASST_DEFAULTS.price;
-  const asstBtcNav = ASST_DEFAULTS.btc_holdings * btcPrice;
-  const asstMarketCap = asstPrice * ASST_DEFAULTS.shares_outstanding_M * 1e6;
-  const asstEV = asstMarketCap + ASST_DEFAULTS.total_debt_pref_M * 1e6;
+  const asstBtcNav = ASST_DEFAULTS.btc_holdings * btcPrice;          // dynamic: uses live BTC price
+  const asstMarketCap = asstPrice * ASST_DEFAULTS.shares_outstanding_M * 1e6; // dynamic: uses live ASST price
+  const asstEV = asstMarketCap + (ASST_DEFAULTS.total_debt_pref_M - ASST_DEFAULTS.cash_M) * 1e6;
   const asstMnav = asstBtcNav > 0 ? asstEV / asstBtcNav : 0;
   // Amplification = Total Debt+Pref ÷ BTC Reserve — official shows 42.2%
   const asstAmplificationPct = asstBtcNav > 0 ? (ASST_DEFAULTS.total_debt_pref_M * 1e6 / asstBtcNav) * 100 : 0;

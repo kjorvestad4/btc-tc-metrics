@@ -24,6 +24,7 @@ export const ASST_DEFAULTS = {
   sata_notional_M: 495.95,           // SATA notional = $495.95M (credit tab)
   debt_M: 10,                        // $10M Semler Loan (credit tab)
   total_debt_pref_M: 505.95,         // Debt $10M + Pref $495.95M = $505.95M (credit tab May 4 2026)
+  cash_M: 150,                       // ~$150M cash/equivalents (derived: EV $1.55B = Mkt Cap + $505.95M - $150M, treasury.strive.com May 4 2026)
   amplification_pct: 42.3,           // official Amplification Ratio = 42.3% (credit tab May 4 2026)
   sata_dividend_rate: 13.0,
   btc_accum_per_quarter: 2500,
@@ -91,12 +92,14 @@ function generateASST_Scatter() {
 
 export default function ASSTModelTab({ params, liveData, onRefresh, refreshing }) {
   const asstPrice = liveData?.asst_price ?? ASST_DEFAULTS.price;
+  const btcLive = liveData?.btc_price ?? params.btc_price;           // always use live BTC price
   const asstBtcHoldings = ASST_DEFAULTS.btc_holdings;
   const sharesM = ASST_DEFAULTS.shares_outstanding_M;
-  const btcNav = asstBtcHoldings * params.btc_price;
-  const mktCap = asstPrice * sharesM * 1e6;
-  const mnav = btcNav / (sharesM * 1e6);
-  const mnavMultiple = mnav > 0 ? asstPrice / mnav : 0;
+  const btcNav = asstBtcHoldings * btcLive;                          // dynamic
+  const mktCap = asstPrice * sharesM * 1e6;                          // dynamic
+  // EV mNAV = EV ÷ BTC NAV — matches treasury.strive.com formula
+  const asstEV = mktCap + (ASST_DEFAULTS.total_debt_pref_M - ASST_DEFAULTS.cash_M) * 1e6;
+  const mnavMultiple = btcNav > 0 ? asstEV / btcNav : 0;
   const sataDivLiability = ASST_DEFAULTS.sata_notional_M * 1e6 * (ASST_DEFAULTS.sata_dividend_rate / 100);
   const divToBtcNavRatio = btcNav > 0 ? (sataDivLiability / btcNav) * 100 : 0;
 
@@ -150,8 +153,8 @@ export default function ASSTModelTab({ params, liveData, onRefresh, refreshing }
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricCard title="ASST Price" value={formatCurrency(asstPrice, 2)} subtitle={isLive ? "Live" : "Default"} icon={DollarSign} accentClass="text-blue-400" />
         <MetricCard title="BTC Holdings" value={asstBtcHoldings.toLocaleString()} subtitle={`${(btcNav / 1e9).toFixed(2)}B reserve`} icon={Bitcoin} accentClass="text-amber-400" />
-        <MetricCard title="mNAV Multiple" value={`${mnavMultiple.toFixed(2)}x`} subtitle="share price ÷ BTC NAV/share" icon={TrendingUp} accentClass="text-primary"
-          tooltip="mNAV Multiple = ASST share price ÷ (BTC Reserve ÷ shares). Shows how much the market pays above raw BTC asset value. 1.0x = trading at BTC NAV. >1x = market premium." />
+        <MetricCard title="EV mNAV" value={`${mnavMultiple.toFixed(2)}x`} subtitle="EV ÷ BTC NAV (live)" icon={TrendingUp} accentClass="text-primary"
+          tooltip={`EV mNAV = Enterprise Value ÷ BTC NAV. EV = Market Cap + Debt ($${ASST_DEFAULTS.debt_M}M) + Pref ($${ASST_DEFAULTS.sata_notional_M}M) − Cash (~$${ASST_DEFAULTS.cash_M}M). Matches treasury.strive.com navPremium chart. Updates live with BTC and ASST prices.`} />
         <MetricCard title="Market Cap" value={formatCurrency(mktCap)} subtitle={`${sharesM}M shares`} icon={BarChart3} accentClass="text-purple-400" />
       </div>
 
