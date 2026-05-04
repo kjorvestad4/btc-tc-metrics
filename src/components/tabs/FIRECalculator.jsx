@@ -1058,7 +1058,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     <ReferenceLine y={year1Income} stroke={incomeLineColor} strokeDasharray="3 3" strokeOpacity={0.35}
                       label={{ value: `${formatCurrency(year1Income, 0)}/yr`, fontSize: 8, fill: incomeLineColor, position: "right" }} />
                   )}
-                  <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} />
+                  <Line type="monotone" dataKey="employmentIncome" stroke="#60A5FA" strokeWidth={2} name="Employment Income" dot={false} connectNulls={false} />
                   <Line
                     key={`income-${strategy}-${method72t}`}
                     type="monotone"
