@@ -1,12 +1,12 @@
 // PunterJeff MSTR Projection Engine - Core Calculations
 
 export const DEFAULT_PARAMS = {
-  // Official Strategy.com data — April 17 2026
-  btc_price: 77003,
+  // Official Strategy.com data — May 4 2026 (strategy.com/credit)
+  btc_price: 80066,
   btc_cagr: 40,
-  mstr_btc_holdings: 780897,
-  mstr_shares_outstanding: 346.9,   // $57,752M mcap ÷ $166.52 = ~346.9M shares
-  mstr_price: 166.52,
+  mstr_btc_holdings: 818337,        // BTC Reserve $65.52B ÷ $80,066 = ~818,337 BTC (strategy.com/credit, May 4 2026)
+  mstr_shares_outstanding: 350.95,  // $64,506M mcap ÷ $183.81 = ~350.95M shares
+  mstr_price: 183.81,
   amplification_ratio: 3.0,         // used in projections formula, not the balance-sheet amplification %
   btc_accumulation_per_quarter: 15000,
   dilution_rate_per_quarter: 1.5,
@@ -55,13 +55,13 @@ export const CAGR_CORRELATION_MATRIX = {
   }),
 };
 
-// Official data from strategy.com/credit (April 17, 2026)
+// Official data from strategy.com/credit (May 4, 2026)
 export const DEFAULT_PREFERREDS = [
-  { ticker: "STRC", name: "Strategy 11.5% Perpetual Preferred C (Variable)", notional_amount: 6358, dividend_rate: 11.5, payment_frequency: "semi-annual", is_btc_denominated: false, conversion_ratio: 0, current_price: 99.21, shares_outstanding: 63580000, liquidation_preference: 100 },
+  { ticker: "STRC", name: "Strategy 11.5% Perpetual Preferred C (Variable)", notional_amount: 8537, dividend_rate: 11.5, payment_frequency: "semi-annual", is_btc_denominated: false, conversion_ratio: 0, current_price: 99.21, shares_outstanding: 85370000, liquidation_preference: 100 },
   { ticker: "STRF", name: "Strategy 10% Perpetual Preferred F", notional_amount: 1284, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0, current_price: 92.50, shares_outstanding: 12840000, liquidation_preference: 100 },
   { ticker: "STRK", name: "Strategy 8% Perpetual Preferred K (Convertible)", notional_amount: 1402, dividend_rate: 8, payment_frequency: "quarterly", is_btc_denominated: false, conversion_ratio: 0.001, current_price: 87.00, shares_outstanding: 14020000, liquidation_preference: 100 },
-  { ticker: "STRE", name: "Strategy 13% Perpetual Preferred E (BTC-denominated)", notional_amount: 908, dividend_rate: 13, payment_frequency: "monthly", is_btc_denominated: true, conversion_ratio: 0, current_price: 78.00, shares_outstanding: 9080000, liquidation_preference: 100 },
-  { ticker: "STRD", name: "Strategy 10% Perpetual Preferred D (BTC-denominated)", notional_amount: 1402, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: true, conversion_ratio: 0.08, current_price: 77.14, shares_outstanding: 14024000, liquidation_preference: 100 },
+  { ticker: "STRE", name: "Strategy 13% Perpetual Preferred E (BTC-denominated)", notional_amount: 911, dividend_rate: 13, payment_frequency: "monthly", is_btc_denominated: true, conversion_ratio: 0, current_price: 78.00, shares_outstanding: 9110000, liquidation_preference: 100 },
+  { ticker: "STRD", name: "Strategy 10% Perpetual Preferred D (BTC-denominated)", notional_amount: 1402, dividend_rate: 10, payment_frequency: "quarterly", is_btc_denominated: true, conversion_ratio: 0.08, current_price: 77.14, shares_outstanding: 14020000, liquidation_preference: 100 },
 ];
 
 export const DEFAULT_SCENARIOS = [
@@ -122,10 +122,10 @@ export function generateProjections(params, preferreds, quarters = 20) {
   const totalPrefLiq = calcTotalPrefLiquidation(preferreds);
   const annualDividend = calcTotalAnnualDividend(preferreds);
 
-  // ASST projection constants (from ASST_DEFAULTS)
-  const ASST_BTC_HOLDINGS_NOW = 13767.9;
+  // ASST projection constants (May 4 2026, treasury.strive.com)
+  const ASST_BTC_HOLDINGS_NOW = 15000.5;
   const ASST_SHARES_M = 69.72;
-  const ASST_MNAV_MULTIPLE = 1.32; // EV/BTC NAV multiple
+  const ASST_MNAV_MULTIPLE = 1.30; // EV/BTC NAV multiple (treasury.strive.com, May 4 2026)
   const ASST_BTC_ACCUM_PER_Q = 2500;
   let asstBtcHoldings = ASST_BTC_HOLDINGS_NOW;
 

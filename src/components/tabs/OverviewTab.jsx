@@ -5,10 +5,10 @@ import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, Bar
 import { formatCurrency, formatNumber, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
 import { ASST_DEFAULTS } from "./ASSTModelTab";
 
-// Official Strategy.com figures (Apr 17 2026)
-const MSTR_DEBT_M = 8254;       // $8,254M debt
-const MSTR_PREF_M = 11355;      // $11,355M preferred notional
-const MSTR_DEBT_PREF_M = MSTR_DEBT_M + MSTR_PREF_M; // $19,609M
+// Official Strategy.com figures (May 4 2026) — from strategy.com/credit
+const MSTR_DEBT_M = 8214;       // $8,214M total debt (strategy.com/credit, May 4 2026)
+const MSTR_PREF_M = 13536;      // $13,536M preferred notional (STRF+STRC+STRE+STRK+STRD)
+const MSTR_DEBT_PREF_M = MSTR_DEBT_M + MSTR_PREF_M; // $21,750M total
 
 // SATA static defaults (May 2026) — from treasury.strive.com credit tab
 const SATA_NOTIONAL_M = 495.95;
@@ -104,7 +104,7 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
           icon={Activity}
           accentClass="text-primary"
           subtitle={`Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M`}
-          tooltip={`Amplification = (Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M) ÷ BTC Reserve. Official strategy.com shows 33% at BTC ~$77K. Updates dynamically with BTC price. Lower BTC = higher amplification.`}
+          tooltip={`Amplification = (Debt $${MSTR_DEBT_M.toLocaleString()}M + Pref $${MSTR_PREF_M.toLocaleString()}M) ÷ BTC Reserve. Total Debt+Pref = $${MSTR_DEBT_PREF_M.toLocaleString()}M per strategy.com/credit (May 4 2026). Updates live with BTC price — higher BTC = lower amplification.`}
         />
         <MetricCard
           title="ASST Amplification"
@@ -140,11 +140,11 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
       <div className="grid grid-cols-2 gap-3">
         <MetricCard
           title="MSTR Pref Div Liability"
-          value="$1,237M"
+          value="$1,481M"
           icon={Percent}
           accentClass="text-purple-400"
-          subtitle="official strategy.com annual dividends"
-          tooltip="Total annual preferred dividend obligation: $1,237M — source: strategy.com. Includes STRC, STRF, STRK, STRE, STRD."
+          subtitle="strategy.com/credit annual dividends"
+          tooltip="Total annual preferred dividend obligation: $1,481M — source: strategy.com/credit (May 4 2026). STRC $8,537M×11.5% + STRF $1,284M×10% + STRK $1,402M×8% + STRE $911M×13% + STRD $1,402M×10%."
         />
         <MetricCard
           title="SATA Div Liability (ASST)"
