@@ -84,13 +84,14 @@ export default function ATMMonitorPanel({ liveData }) {
     return [...liveSorted, ...staticOnly].slice(0, 12);
   }
 
+  const todayStr = new Date().toISOString().split("T")[0];
   const strcRows = mergeLiveRows(
-    liveStrcRows?.map(r => ({ date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0, btc_acquired: 0, isLive: true })),
+    liveStrcRows?.map((r, idx) => ({ date: idx === 0 ? todayStr : r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0, btc_acquired: 0, isLive: true })),
     STRC_RECENT_ACTIVITY
   );
 
   const sataRows = mergeLiveRows(
-    liveSataRows?.map(r => ({ date: r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0, btc_acquired: 0, isLive: true })),
+    liveSataRows?.map((r, idx) => ({ date: idx === 0 ? todayStr : r.date, price: r.price, volume_M: r.volume_M, pct_at_par: r.price >= 100 ? 100 : 0, proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0, btc_acquired: 0, isLive: true })),
     SATA_RECENT_ACTIVITY
   );
 
