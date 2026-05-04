@@ -84,18 +84,11 @@ function projectWithdrawals({ startBalance, strategy, swrPct, annualReturn, infl
     const isWorking  = !isPartial && !isRetired;
     const isWithdrawing = y >= yearsToWithdrawalStart;
 
-    // Emit the actual income while working/partial, drop to 0 at the retirement year,
-    // then undefined after so Recharts connectNulls=false cleanly ends the line.
-    let empIncome;
-    if (isWorking) {
-      empIncome = employmentIncome * 12;
-    } else if (isPartial) {
-      empIncome = employmentIncome * 12 * (partialSalaryPct / 100);
-    } else if (y === yearsToFull) {
-      empIncome = 0; // visible drop to zero at retirement
-    } else {
-      empIncome = undefined; // line disappears after retirement
-    }
+    const empIncome = isWorking
+      ? employmentIncome * 12
+      : isPartial
+        ? employmentIncome * 12 * (partialSalaryPct / 100)
+        : 0;
 
     if (y === 0) {
       rows.push({ year: startYear, balance, iraBalance: strategy === "rule_72t" ? trackingIra : null, withdrawal: 0, employmentIncome: empIncome, investmentIncome: 0 });
@@ -1008,7 +1001,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
             return {
               ...row,
-              employmentIncome: row.year >= fullRetireYear ? 0 : row.employmentIncome,
+              employmentIncome: row.year === fullRetireYear ? 0 : row.year > fullRetireYear ? null : row.employmentIncome,
               incomeFlow: afterStart && !seppExpired ? row.investmentIncome : null,
             };
           });
