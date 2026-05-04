@@ -996,12 +996,15 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             ? new Date().getFullYear() + Math.max(0, 60 - currentAge)
             : null;
 
+          // Find the last year where employment income was non-zero — everything after is null
+          const lastWorkingYear = withdrawalRows.reduce((last, row) => 
+            row.employmentIncome > 0 ? row.year : last, -1);
+
           const chartRows = withdrawalRows.map(row => {
             const afterStart = row.year >= withdrawalStartYear && row.investmentIncome > 0;
             const seppExpired = seppEndYear != null && row.year >= seppEndYear;
-            // Employment income: null for any year at or after full retirement so the line stops completely
-            const engineRetireYear = new Date().getFullYear() + Math.max(0, fullRetirementAge - currentAge);
-            const empIncome = row.year < engineRetireYear ? row.employmentIncome : null;
+            // Only show employment income up through the last working year; null after so the line stops
+            const empIncome = lastWorkingYear > 0 && row.year <= lastWorkingYear ? row.employmentIncome : null;
             return {
               ...row,
               employmentIncome: empIncome,
