@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   LayoutDashboard, Bitcoin, TrendingUp, BarChart3, Layers,
-  GitBranch, Building2, Wallet, LineChart, Target, Activity
+  GitBranch, Wallet, LineChart, Activity
 } from "lucide-react";
 import Navbar from "@/components/dashboard/Navbar";
 import OverviewTab from "@/components/tabs/OverviewTab";
@@ -11,7 +11,6 @@ import MSTRvsASSTTab from "@/components/tabs/MSTRvsASSTTab";
 import MSTYModelTab from "@/components/tabs/MSTYModelTab";
 import OtherPreferredsTab from "@/components/tabs/OtherPreferredsTab";
 import CorrelationsTab from "@/components/tabs/CorrelationsTab";
-import StrategyDashboardTab from "@/components/tabs/StrategyDashboardTab";
 import STRCvsSATATab from "@/components/tabs/STRCvsSATATab";
 import ProjectionsPage from "@/components/tabs/ProjectionsPage";
 import OptionsPage from "@/pages/OptionsPage";
@@ -81,7 +80,6 @@ export default function Dashboard() {
   const tabItems = [
     { value: "overview",      label: "Overview",        icon: LayoutDashboard },
     { value: "correlations",  label: "Correlations",    icon: GitBranch },
-    { value: "strategy",      label: "Strategy",        icon: Building2 },
     { value: "btc",           label: "BTC Models",      icon: Bitcoin },
     { value: "mstr-asst",     label: "BTC Treasuries",   icon: TrendingUp },
     { value: "strc-sata",     label: "STRC vs SATA",    icon: Layers },
@@ -122,17 +120,6 @@ export default function Dashboard() {
 
           <TabsContent value="overview">
             <OverviewTab
-              params={params}
-              preferreds={preferreds}
-              projections={projections}
-              liveData={liveData}
-              onRefresh={handleRefreshLive}
-              refreshing={refreshing}
-            />
-          </TabsContent>
-
-          <TabsContent value="strategy">
-            <StrategyDashboardTab
               params={params}
               preferreds={preferreds}
               projections={projections}
