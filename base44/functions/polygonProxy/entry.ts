@@ -71,6 +71,17 @@ Deno.serve(async (req) => {
   try {
     // No auth required — public price data endpoint
 
+    // Support dynamic ticker lookups — if body has `tickers` array, just return those prices
+    let body = {};
+    try { body = await req.json(); } catch { /* no body */ }
+
+    if (Array.isArray(body.tickers) && body.tickers.length > 0) {
+      const results = await Promise.all(body.tickers.map(getPrice));
+      const prices = {};
+      results.forEach(({ ticker, price }) => { prices[ticker] = price; });
+      return Response.json({ prices });
+    }
+
     const tickers = ["MSTR", "MSTY", "ASST", "STRC", "STRF", "STRK", "STRD", "SATA"];
 
     // Fetch BTC + all stock prices in parallel
