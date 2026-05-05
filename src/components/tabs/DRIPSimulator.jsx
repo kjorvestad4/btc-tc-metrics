@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/calculations";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Plus, X } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
@@ -16,16 +16,17 @@ export const DRIP_ASSETS = [
   { ticker: "MSTY", label: "MSTY", color: "#E879F9", defaultRate: null,  desc: "YieldMax MSTR Income ETF" },
 ];
 
+const ALL_REDIRECT_OPTIONS = ["MSTR", "ASST", "CASH", "STRC", "SATA", "STRF", "STRK", "STRD", "MSTY"];
+
 // Default per-instrument DRIP config
+// redirectTargets: [{ ticker: "MSTR", pct: 100 }]
 export function defaultDripConfig() {
   const out = {};
   for (const a of DRIP_ASSETS) {
     out[a.ticker] = {
-      mode: "drip",          // "drip" | "redirect"
+      mode: "drip",
       dripPct: 100,
-      redirectTarget: "MSTR", // "MSTR" | "ASST" | "CASH" | custom ticker
-      redirectMstrPct: 50,
-      redirectAsstPct: 50,
+      redirectTargets: [{ ticker: "MSTR", pct: 100 }],
     };
   }
   return out;
@@ -33,13 +34,15 @@ export function defaultDripConfig() {
 
 /**
  * Run DRIP simulation for a single asset.
- * dripConfig: { mode, dripPct, redirectMstrPct, redirectAsstPct }
- * Returns array of { year, shares, value, totalDivs, redirectedToMstr, redirectedToAsst }
+ * dripConfig: { mode, dripPct, redirectTargets: [{ticker, pct}] }
+ * Returns array of { year, shares, value, totalDivs, totalRedirected }
  */
 export function runDRIP({ shares, price, annualRatesPct, years, dripConfig = { mode: "drip", dripPct: 100 } }) {
-  const rows = [{ year: 0, shares, value: shares * price, totalDivs: 0, redirectedToMstr: 0, redirectedToAsst: 0 }];
+  const rows = [{ year: 0, shares, value: shares * price, totalDivs: 0, totalRedirected: 0,
+    // legacy compat
+    redirectedToMstr: 0, redirectedToAsst: 0 }];
   let currentShares = shares;
-  let totalDivs = 0, redirectedToMstr = 0, redirectedToAsst = 0;
+  let totalDivs = 0, totalRedirected = 0;
 
   for (let y = 1; y <= years; y++) {
     const annualDivIncome = currentShares * price * (annualRatesPct / 100);
@@ -47,17 +50,13 @@ export function runDRIP({ shares, price, annualRatesPct, years, dripConfig = { m
 
     if (dripConfig.mode === "drip") {
       const reinvestPct = (dripConfig.dripPct ?? 100) / 100;
-      const reinvestAmt = annualDivIncome * reinvestPct;
-      currentShares += reinvestAmt / price;
+      currentShares += (annualDivIncome * reinvestPct) / price;
     } else {
-      // redirect mode — no new shares in this instrument
-      const mstrPct = (dripConfig.redirectMstrPct ?? 50) / 100;
-      const asstPct = (dripConfig.redirectAsstPct ?? 50) / 100;
-      redirectedToMstr += annualDivIncome * mstrPct;
-      redirectedToAsst += annualDivIncome * asstPct;
+      totalRedirected += annualDivIncome;
     }
 
-    rows.push({ year: y, shares: currentShares, value: currentShares * price, totalDivs, redirectedToMstr, redirectedToAsst });
+    rows.push({ year: y, shares: currentShares, value: currentShares * price, totalDivs, totalRedirected,
+      redirectedToMstr: totalRedirected, redirectedToAsst: 0 });
   }
   return rows;
 }
@@ -65,10 +64,29 @@ export function runDRIP({ shares, price, annualRatesPct, years, dripConfig = { m
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 
 // ── Per-instrument config row ─────────────────────────────────────────────────
-function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rates, setRates, mstyWeeklyDiv, setMstyWeeklyDiv, simResult, years, customRedirectTargets }) {
-  const cfg = config ?? { mode: "drip", dripPct: 100, redirectMstrPct: 50, redirectAsstPct: 50 };
+function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rates, setRates, mstyWeeklyDiv, setMstyWeeklyDiv, simResult, years, allRedirectOptions }) {
+  const cfg = config ?? { mode: "drip", dripPct: 100, redirectTargets: [{ ticker: "MSTR", pct: 100 }] };
+  const redirectTargets = cfg.redirectTargets ?? [{ ticker: "MSTR", pct: 100 }];
   const update = (field, val) => onConfigChange({ ...cfg, [field]: val });
   const hasHoldings = (holdings?.[asset.ticker] ?? 0) > 0;
+
+  const totalRedirectPct = redirectTargets.reduce((s, t) => s + (t.pct || 0), 0);
+
+  const addTarget = () => {
+    const used = redirectTargets.map(t => t.ticker);
+    const next = allRedirectOptions.find(o => !used.includes(o));
+    if (!next) return;
+    update("redirectTargets", [...redirectTargets, { ticker: next, pct: 0 }]);
+  };
+
+  const updateTarget = (i, field, val) => {
+    const updated = redirectTargets.map((t, idx) => idx === i ? { ...t, [field]: val } : t);
+    update("redirectTargets", updated);
+  };
+
+  const removeTarget = (i) => {
+    update("redirectTargets", redirectTargets.filter((_, idx) => idx !== i));
+  };
 
   return (
     <div className={`bg-secondary/30 border border-border rounded-lg p-2.5 space-y-2 ${!hasHoldings ? "opacity-50" : ""}`}>
@@ -134,42 +152,46 @@ function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rate
         </div>
       )}
 
-      {/* Redirect sub-config */}
+      {/* Multi-target redirect config */}
       {cfg.mode === "redirect" && (
         <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Label className="text-[9px] text-muted-foreground w-16 shrink-0">Redirect →</Label>
-            <select value={cfg.redirectTarget ?? "MSTR"}
-              onChange={e => update("redirectTarget", e.target.value)}
-              className="flex-1 h-6 text-[9px] font-mono bg-card border border-border rounded px-1 text-foreground">
-              <option value="MSTR">MSTR</option>
-              <option value="ASST">ASST</option>
-              <option value="CASH">Cash (save)</option>
-              <option value="STRC">STRC</option>
-              <option value="SATA">SATA</option>
-              <option value="STRF">STRF</option>
-              <option value="STRK">STRK</option>
-              <option value="STRD">STRD</option>
-              {customRedirectTargets?.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+          <div className="flex items-center justify-between">
+            <Label className="text-[9px] text-muted-foreground">Redirect targets</Label>
+            <span className={`text-[9px] font-mono font-bold ${totalRedirectPct === 100 ? "text-green-400" : "text-amber-400"}`}>
+              {totalRedirectPct}% total
+            </span>
           </div>
-          {(cfg.redirectTarget === "MSTR" || cfg.redirectTarget === undefined || cfg.redirectTarget === null) && (
-            <>
-              <div className="flex items-center gap-1.5">
-                <Label className="text-[9px] text-muted-foreground w-16 shrink-0">→ MSTR %</Label>
-                <Input type="number" value={cfg.redirectMstrPct ?? 50}
-                  onChange={e => update("redirectMstrPct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                  className="h-6 text-xs font-mono bg-card border-border flex-1" min={0} max={100} step={5} />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Label className="text-[9px] text-muted-foreground w-16 shrink-0">→ ASST %</Label>
-                <Input type="number" value={cfg.redirectAsstPct ?? 50}
-                  onChange={e => update("redirectAsstPct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                  className="h-6 text-xs font-mono bg-card border-border flex-1" min={0} max={100} step={5} />
-              </div>
-            </>
+
+          {redirectTargets.map((target, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <select
+                value={target.ticker}
+                onChange={e => updateTarget(i, "ticker", e.target.value)}
+                className="flex-1 h-6 text-[9px] font-mono bg-card border border-border rounded px-1 text-foreground"
+              >
+                {allRedirectOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt === "CASH" ? "Cash (save)" : opt}</option>
+                ))}
+              </select>
+              <Input
+                type="number"
+                value={target.pct}
+                onChange={e => updateTarget(i, "pct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                className="h-6 w-14 text-[10px] font-mono bg-card border-border text-center"
+                min={0} max={100} step={5}
+              />
+              <span className="text-[9px] text-muted-foreground">%</span>
+              <button onClick={() => removeTarget(i)} className="text-muted-foreground hover:text-destructive transition-colors">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+
+          {redirectTargets.length < allRedirectOptions.length && (
+            <button onClick={addTarget}
+              className="w-full flex items-center justify-center gap-1 text-[9px] py-1 rounded border border-dashed border-border text-muted-foreground hover:border-amber-500 hover:text-amber-400 transition-colors">
+              <Plus className="w-3 h-3" /> Add target
+            </button>
           )}
         </div>
       )}
@@ -183,12 +205,10 @@ function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rate
               Y{years}: {simResult[years]?.shares.toLocaleString(undefined, { maximumFractionDigits: 0 })} sh
             </span>
           </div>
-          {cfg.mode === "redirect" && simResult[years]?.redirectedToMstr > 0 && (
+          {cfg.mode === "redirect" && (simResult[years]?.totalRedirected ?? 0) > 0 && (
             <div className="flex justify-between">
-              <span>Total → MSTR/ASST</span>
-              <span className="text-amber-400">
-                {formatCurrency((simResult[years]?.redirectedToMstr ?? 0) + (simResult[years]?.redirectedToAsst ?? 0), 0)}
-              </span>
+              <span>Total redirected</span>
+              <span className="text-amber-400">{formatCurrency(simResult[years].totalRedirected, 0)}</span>
             </div>
           )}
         </div>
@@ -207,8 +227,8 @@ export default function DRIPSimulator({
   dripConfigs, setDripConfigs,
   customStocks = [],
 }) {
-  // Custom redirect targets derived from custom stocks
   const customRedirectTargets = customStocks.filter(s => s.ticker).map(s => s.ticker);
+  const allRedirectOptions = [...ALL_REDIRECT_OPTIONS, ...customRedirectTargets];
   const activeAssets = DRIP_ASSETS.filter(a => (holdings?.[a.ticker] ?? 0) > 0);
 
   const simResults = useMemo(() => {
@@ -233,7 +253,7 @@ export default function DRIPSimulator({
       for (const ticker of Object.keys(simResults)) {
         totalValue     += simResults[ticker]?.[y]?.value ?? 0;
         totalDivs      += simResults[ticker]?.[y]?.totalDivs ?? 0;
-        totalRedirected += (simResults[ticker]?.[y]?.redirectedToMstr ?? 0) + (simResults[ticker]?.[y]?.redirectedToAsst ?? 0);
+        totalRedirected += simResults[ticker]?.[y]?.totalRedirected ?? 0;
       }
       rows.push({ year: y, totalValue, totalDivs, totalRedirected });
     }
@@ -271,7 +291,7 @@ export default function DRIPSimulator({
           />
         </div>
         <p className="text-[10px] text-muted-foreground ml-1">
-          Each instrument: choose <span className="text-green-400 font-semibold">DRIP</span> (reinvest back into same) or <span className="text-amber-400 font-semibold">Redirect</span> dividends → MSTR / ASST
+          Each instrument: <span className="text-green-400 font-semibold">DRIP</span> (reinvest) or <span className="text-amber-400 font-semibold">Redirect</span> to multiple targets with custom % split
         </p>
       </div>
 
@@ -291,7 +311,7 @@ export default function DRIPSimulator({
             setMstyWeeklyDiv={setMstyWeeklyDiv}
             simResult={simResults[asset.ticker]}
             years={years}
-            customRedirectTargets={customRedirectTargets}
+            allRedirectOptions={allRedirectOptions}
           />
         ))}
       </div>
@@ -319,7 +339,7 @@ export default function DRIPSimulator({
                 <Legend wrapperStyle={{ fontSize: 10 }} />
                 <Line type="monotone" dataKey="totalValue" stroke="#4ADE80" strokeWidth={2} name="Portfolio Value" dot={false} />
                 <Line type="monotone" dataKey="totalDivs" stroke="#FBBF24" strokeWidth={1.5} name="Cumulative Dividends" dot={false} strokeDasharray="4 2" />
-                <Line type="monotone" dataKey="totalRedirected" stroke="#FB923C" strokeWidth={1.5} name="Cumulative Redirected → MSTR/ASST" dot={false} strokeDasharray="2 2" />
+                <Line type="monotone" dataKey="totalRedirected" stroke="#FB923C" strokeWidth={1.5} name="Cumulative Redirected" dot={false} strokeDasharray="2 2" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -334,6 +354,7 @@ export default function DRIPSimulator({
                 const first = sim[0];
                 const cfg = dripConfigs?.[asset.ticker] ?? { mode: "drip" };
                 const sharesGained = last.shares - first.shares;
+                const targets = cfg.redirectTargets ?? [];
                 return (
                   <div key={asset.ticker} className="bg-secondary/30 border border-border rounded-lg p-2.5">
                     <p className="text-xs font-bold mb-1" style={{ color: asset.color }}>{asset.ticker}</p>
@@ -352,11 +373,19 @@ export default function DRIPSimulator({
                           <span className="font-mono text-green-400">+{sharesGained.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                         </div>
                       )}
-                      {dripEnabled && cfg.mode === "redirect" && (last.redirectedToMstr + last.redirectedToAsst) > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Redirected → MSTR/ASST</span>
-                          <span className="font-mono text-amber-400">{formatCurrency(last.redirectedToMstr + last.redirectedToAsst, 0)}</span>
-                        </div>
+                      {dripEnabled && cfg.mode === "redirect" && last.totalRedirected > 0 && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total redirected</span>
+                            <span className="font-mono text-amber-400">{formatCurrency(last.totalRedirected, 0)}</span>
+                          </div>
+                          {targets.map((t, i) => (
+                            <div key={i} className="flex justify-between pl-2">
+                              <span className="text-muted-foreground/70">→ {t.ticker}</span>
+                              <span className="font-mono text-amber-300">{formatCurrency(last.totalRedirected * (t.pct / 100), 0)}</span>
+                            </div>
+                          ))}
+                        </>
                       )}
                     </div>
                   </div>
@@ -368,7 +397,7 @@ export default function DRIPSimulator({
       )}
 
       <p className="text-[9px] text-muted-foreground/50 text-center">
-        DRIP reinvests dividends at current market price. Redirect mode shows capital available to deploy into MSTR/ASST. Not financial advice.
+        DRIP reinvests dividends at current market price. Redirect mode shows capital available to deploy. Not financial advice.
       </p>
     </div>
   );
