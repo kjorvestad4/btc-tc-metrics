@@ -1564,6 +1564,24 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                         className="h-6 text-xs font-mono bg-card border-border mt-0.5" step={0.5} />
                     </div>
                   ))}
+                  {/* Custom asset CAGR/Yield inputs — separate from BTC-correlated assets */}
+                  {customDeployAssets.filter(a => a.ticker).map(a => (
+                    <div key={a.ticker} className="col-span-1">
+                      <Label className="text-[9px] font-semibold" style={{ color: a.color ?? "#94A3B8" }}>
+                        {a.ticker} {a.isGrowth ? "CAGR" : "Yield"} %
+                      </Label>
+                      <Input
+                        type="number"
+                        value={a.cagr ?? 10}
+                        onChange={e => updateCustomAsset(a.id, { cagr: Math.max(0, parseFloat(e.target.value) || 0) })}
+                        className="h-6 text-xs font-mono bg-card border-border mt-0.5"
+                        step={0.5}
+                      />
+                      <p className="text-[9px] mt-0.5" style={{ color: a.color ?? "#94A3B8" }}>
+                        Non-BTC · {a.isGrowth ? "growth" : "income"}
+                      </p>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
