@@ -1,7 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Zap, CheckCircle2, AlertCircle, Clock, Activity } from "lucide-react";
-import { Link } from "react-router-dom";
+import { RefreshCw, Zap, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey, params }) {
   const btcPrice = liveData?.btc_price ?? params?.btc_price;
@@ -47,11 +46,6 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
       </div>
 
       <div className="flex items-center gap-2">
-        <Link to="/options"
-          className="hidden sm:flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors font-semibold">
-          <Activity className="w-3 h-3 text-primary" />
-          Options
-        </Link>
         {!hasPolygonKey &&
         <span className="hidden lg:inline text-[10px] text-amber-400/70 font-medium">
             Add Polygon key on Overview for full live data
