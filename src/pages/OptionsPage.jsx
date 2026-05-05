@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import OptionsChainTable from "@/components/options/OptionsChainTable";
 import OptionsSimulator from "@/components/options/OptionsSimulator";
 import OptionsDefinitions from "@/components/options/OptionsDefinitions";
+import LeapShareMaximizer from "@/components/options/LeapShareMaximizer";
 import { formatCurrency } from "@/lib/calculations";
 
 const SUPPORTED_TICKERS = ["MSTR", "MSTY", "ASST", "STRC", "STRF", "STRK", "STRD", "SATA", "SPY", "QQQ", "NVDA", "AAPL", "TSLA"];
@@ -273,6 +274,9 @@ export default function OptionsPage({ liveData }) {
           liveData={liveData}
         />
       )}
+
+      {/* LEAP Share Maximizer */}
+      <LeapShareMaximizer liveData={liveData} />
 
       {/* Definitions */}
       <OptionsDefinitions />
