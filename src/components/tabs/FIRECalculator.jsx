@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/calculations";
-import { Flame, Target, Shield, TrendingDown } from "lucide-react";
+import { Flame, Target, Shield, TrendingDown, Plus, X, Loader2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import {
   LineChart, Line, ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Legend,
@@ -188,6 +189,65 @@ const RULE_72T_METHODS = [
   { id: "annuitization", label: "Fixed Annuitization", desc: "Uses annuity factor — typically slightly lower than amortization" },
 ];
 
+// ── Custom Asset Input (ticker lookup) ─────────────────────────────────────
+function CustomAssetInput({ asset, onUpdate, onRemove, onConfirm }) {
+  const [tickerInput, setTickerInput] = useState(asset.ticker || "");
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const debounceRef = useRef(null);
+
+  const lookupTicker = async (ticker) => {
+    if (!ticker || ticker.length < 1) return;
+    setFetching(true);
+    setFetchError(null);
+    try {
+      const res = await base44.functions.invoke("polygonProxy", { tickers: [ticker] });
+      const prices = res.data?.prices;
+      if (prices && prices[ticker] != null) {
+        onConfirm(asset.id, ticker, asset.label || ticker);
+      } else {
+        setFetchError("Not found");
+      }
+    } catch {
+      setFetchError("Lookup failed");
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleTickerChange = (raw) => {
+    const t = raw.toUpperCase();
+    setTickerInput(t);
+    setFetchError(null);
+    clearTimeout(debounceRef.current);
+    if (t.length >= 1) {
+      debounceRef.current = setTimeout(() => lookupTicker(t), 700);
+    }
+  };
+
+  return (
+    <div className="mt-2 p-2.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 space-y-2">
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] text-primary font-semibold flex-1">New Asset</p>
+        <button onClick={() => onRemove(asset.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative">
+          <Input value={tickerInput} onChange={e => handleTickerChange(e.target.value)}
+            placeholder="AAPL" className="h-7 w-24 text-xs font-mono font-bold bg-card border-border pr-6" />
+          {fetching && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground absolute right-1.5 top-2" />}
+        </div>
+        <Input value={asset.label || ""} onChange={e => onUpdate(asset.id, { label: e.target.value })}
+          placeholder="Name (optional)" className="h-7 flex-1 min-w-24 text-xs bg-card border-border" />
+        {fetchError && <span className="text-[9px] text-destructive">{fetchError}</span>}
+      </div>
+      <p className="text-[9px] text-muted-foreground">Type any ticker — it will be auto-confirmed when found.</p>
+    </div>
+  );
+}
+
 export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome, portfolioProjections, onStateChange }) {
   // Mode: "independent" = manual inputs, "portfolio" = derived from holdings model
   const [mode, setMode] = useState("independent");
@@ -266,11 +326,18 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
   // LTCG / Qualified dividend tax rate
   const [preferredTaxRate, setPreferredTaxRate] = useState(15);
 
+  // Custom assets added by the user
+  const [customDeployAssets, setCustomDeployAssets] = useState([]); // [{id, ticker, label, cagr, isGrowth, color}]
+  const [nextCustomId, setNextCustomId] = useState(1);
+
   // Fixed yields for non-variable tickers
   const PREF_FIXED_YIELDS = { STRF: 10.0, STRK: 8.0, STRD: 10.0 };
-  // All deployable asset tickers
-  const TICKERS_ALL = ["STRC", "SATA", "STRF", "STRK", "STRD", "MSTY", "MSTR", "ASST", "BTC", "CASH"];
-  const PREF_COLORS = { STRC: "#22D3EE", SATA: "#A78BFA", STRF: "#60A5FA", STRK: "#FBBF24", STRD: "#FB923C", MSTY: "#E879F9", MSTR: "#4ADE80", ASST: "#60A5FA", BTC: "#F59E0B", CASH: "#34D399" };
+  // All deployable asset tickers (base + custom)
+  const TICKERS_BASE = ["STRC", "SATA", "STRF", "STRK", "STRD", "MSTY", "MSTR", "ASST", "BTC", "CASH"];
+  const CUSTOM_COLORS = ["#F472B6", "#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB923C", "#22D3EE", "#E879F9"];
+  const TICKERS_ALL = [...TICKERS_BASE, ...customDeployAssets.map(a => a.ticker).filter(Boolean)];
+  const PREF_COLORS = { STRC: "#22D3EE", SATA: "#A78BFA", STRF: "#60A5FA", STRK: "#FBBF24", STRD: "#FB923C", MSTY: "#E879F9", MSTR: "#4ADE80", ASST: "#60A5FA", BTC: "#F59E0B", CASH: "#34D399",
+    ...Object.fromEntries(customDeployAssets.filter(a => a.ticker).map((a, i) => [a.ticker, a.color || CUSTOM_COLORS[i % CUSTOM_COLORS.length]])) };
   // Yield/return assumptions for non-preferred assets
   const [mstyYield, setMstyYield] = useState(60); // % annual (can be edited)
   const [mstrCagr, setMstrCagr] = useState(40);
@@ -377,7 +444,16 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
     if (t === "ASST") return asstCagr / 100;
     if (t === "BTC") return btcCagr / 100;
     if (t === "CASH") return cashApy / 100;
+    const custom = customDeployAssets.find(a => a.ticker === t);
+    if (custom) return (custom.cagr ?? 10) / 100;
     return 0;
+  };
+
+  // Helper: is a ticker a growth (no-income) asset?
+  const isGrowthTicker = (t) => {
+    if (["MSTR", "ASST", "BTC"].includes(t)) return true;
+    const custom = customDeployAssets.find(a => a.ticker === t);
+    return custom ? (custom.isGrowth ?? true) : false;
   };
 
   // ── Hoist pref simulation so income chart can consume it ──
@@ -414,16 +490,12 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
         TICKERS_ALL.forEach(t => {
           const alloc = (prefAllocs[t] ?? 0) / 100;
           const rate = yr(t);
-          // Add new capital each year
           tickerValues[t] += annualDeploy * alloc;
-          // Compound growth (DRIP = reinvest, cash = no compounding on income)
           const isDrip = prefDrip[t] ?? false;
           if (isDrip) {
             tickerValues[t] *= (1 + rate);
           } else {
-            // growth assets: still appreciate even in "cash" mode
-            const isGrowthAsset = ["MSTR", "ASST", "BTC"].includes(t);
-            if (isGrowthAsset) tickerValues[t] *= (1 + rate);
+            if (isGrowthTicker(t)) tickerValues[t] *= (1 + rate);
           }
         });
       }
@@ -432,16 +504,16 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
       TICKERS_ALL.forEach(t => {
         const rate = yr(t);
         const val = tickerValues[t];
-        const isGrowthAsset = ["MSTR", "ASST", "BTC"].includes(t);
+        const isGrowthAsset = isGrowthTicker(t);
         const isIncome = !isGrowthAsset && t !== "CASH";
-        const grossInc = isIncome ? val * rate : 0; // growth assets have no income yield
+        const grossInc = isIncome ? val * rate : 0;
         totalAfterTax += isIncome ? calcAfterTax(grossInc, t, Math.max(0, yearsSince)) : 0;
       });
       rows.push({ year: rowYear, prefAfterTaxIncome: isActive ? totalAfterTax : 0 });
     }
     return rows;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [strategy, strategyAnnualIncome, monthlyExpenses, deployPct, retirementAge, fullRetirementAge, currentAge, strcYield, sataYield, mstyYield, mstrCagr, asstCagr, btcCagr, cashApy, prefAllocs, prefDrip, prefTaxMode, rocYears, ordinaryTaxRate, preferredTaxRate, projYears]);
+  }, [strategy, strategyAnnualIncome, monthlyExpenses, deployPct, retirementAge, fullRetirementAge, currentAge, strcYield, sataYield, mstyYield, mstrCagr, asstCagr, btcCagr, cashApy, prefAllocs, prefDrip, prefTaxMode, rocYears, ordinaryTaxRate, preferredTaxRate, projYears, customDeployAssets]);
 
   const withdrawalRows = useMemo(() => projectWithdrawals({
     startBalance,
@@ -1304,7 +1376,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                 const alloc = (prefAllocs[t] ?? 0) / 100;
                 const rate = getTickerYield(t);
                 const isDrip = prefDrip[t] ?? false;
-                const isGrowthAsset = ["MSTR", "ASST", "BTC"].includes(t);
+                const isGrowthAsset = isGrowthTicker(t);
                 // Deploy new capital
                 tickerValues[t] += annualDeploy * alloc;
                 // Compound
@@ -1320,7 +1392,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
             let totalValue = 0, totalGrossIncome = 0, totalAfterTaxIncome = 0;
             TICKERS_ALL.forEach(t => {
               const rate = getTickerYield(t);
-              const isGrowthAsset = ["MSTR", "ASST", "BTC"].includes(t);
+              const isGrowthAsset = isGrowthTicker(t);
               const isIncome = !isGrowthAsset && t !== "CASH";
               const val = tickerValues[t];
               const grossInc = isIncome ? val * rate : 0;
@@ -1342,6 +1414,29 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           const activeRows = prefRows.filter(r => r.year >= deployStartYear);
           const finalRow = prefRows[prefRows.length - 1];
           const allocTotal = TICKERS_ALL.reduce((s, t) => s + (prefAllocs[t] ?? 0), 0);
+
+          // Helper to add a new custom asset
+          const addCustomAsset = () => {
+            const id = nextCustomId;
+            setNextCustomId(n => n + 1);
+            const color = CUSTOM_COLORS[(customDeployAssets.length) % CUSTOM_COLORS.length];
+            setCustomDeployAssets(prev => [...prev, { id, ticker: "", label: "", cagr: 10, isGrowth: true, color, fetching: false, fetchError: null }]);
+          };
+
+          const removeCustomAsset = (id) => {
+            const asset = customDeployAssets.find(a => a.id === id);
+            if (asset?.ticker) {
+              setPrefAllocs(prev => { const n = {...prev}; delete n[asset.ticker]; return n; });
+              setPrefDrip(prev => { const n = {...prev}; delete n[asset.ticker]; return n; });
+              setPrefTaxMode(prev => { const n = {...prev}; delete n[asset.ticker]; return n; });
+              setRocYears(prev => { const n = {...prev}; delete n[asset.ticker]; return n; });
+            }
+            setCustomDeployAssets(prev => prev.filter(a => a.id !== id));
+          };
+
+          const updateCustomAsset = (id, data) => {
+            setCustomDeployAssets(prev => prev.map(a => a.id === id ? { ...a, ...data } : a));
+          };
 
           return (
             <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20" id="fixed-income-deploy-section">
@@ -1473,7 +1568,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   {TICKERS_ALL.map(t => {
-                    const isGrowthAsset = ["MSTR", "ASST", "BTC"].includes(t);
+                    const isGrowthAsset = isGrowthTicker(t);
                     const isCash = t === "CASH";
                     const yr = getTickerYield(t) * 100;
                     const color = PREF_COLORS[t];
@@ -1481,14 +1576,48 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     const taxMode = prefTaxMode[t] ?? "roc_then_ltcg";
                     const roc = rocYears[t] ?? 0;
                     const isVariable = t === "STRC" || t === "SATA";
+                    const isCustom = !TICKERS_BASE.includes(t);
                     return (
                       <div key={t} className="p-2 rounded-lg border border-border bg-secondary/20 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold font-mono" style={{ color }}>{t}</span>
-                          <span className="text-[9px] text-muted-foreground">
-                            {yr.toFixed(1)}%{isGrowthAsset ? " CAGR" : isCash ? " APY" : isVariable ? " ▴" : " fixed"}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-muted-foreground">
+                              {yr.toFixed(1)}%{isGrowthAsset ? " CAGR" : isCash ? " APY" : isVariable ? " ▴" : " fixed"}
+                            </span>
+                            {isCustom && (
+                              <button onClick={() => removeCustomAsset(customDeployAssets.find(a => a.ticker === t)?.id)}
+                                className="text-muted-foreground hover:text-destructive transition-colors ml-0.5">
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         </div>
+                        {/* Custom CAGR/Yield input */}
+                        {isCustom && (
+                          <div className="flex items-center gap-1">
+                            <Input type="number" value={customDeployAssets.find(a=>a.ticker===t)?.cagr ?? 10}
+                              onChange={e => updateCustomAsset(customDeployAssets.find(a=>a.ticker===t)?.id, { cagr: Math.max(0, parseFloat(e.target.value)||0) })}
+                              className="h-6 text-xs font-mono bg-card border-border flex-1" step={1} min={0} placeholder="CAGR%" />
+                            <span className="text-[9px] text-muted-foreground">%</span>
+                          </div>
+                        )}
+                        {/* Growth/Income toggle for custom assets */}
+                        {isCustom && (
+                          <div className="flex gap-0.5">
+                            {[true, false].map(g => {
+                              const asset = customDeployAssets.find(a=>a.ticker===t);
+                              return (
+                                <button key={String(g)} onClick={() => updateCustomAsset(asset?.id, { isGrowth: g })}
+                                  className={`flex-1 text-[9px] py-0.5 rounded border font-semibold transition-colors ${
+                                    (asset?.isGrowth ?? true) === g
+                                      ? g ? "bg-blue-500/20 border-blue-500 text-blue-400" : "bg-green-500/20 border-green-500 text-green-400"
+                                      : "border-border text-muted-foreground hover:bg-secondary"
+                                  }`}>{g ? "Growth" : "Income"}</button>
+                              );
+                            })}
+                          </div>
+                        )}
                         {/* Alloc % */}
                         <div className="flex items-center gap-1">
                           <Input type="number" value={prefAllocs[t] ?? 0}
@@ -1496,7 +1625,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                             className="h-6 text-xs font-mono bg-card border-border flex-1" step={5} min={0} max={100} />
                           <span className="text-[10px] text-muted-foreground">%</span>
                         </div>
-                        {/* DRIP/Reinvest toggle — label differs by asset type */}
+                        {/* DRIP/Reinvest toggle */}
                         {!isCash && (
                           <div className="flex gap-0.5">
                             {[true, false].map(d => (
@@ -1505,7 +1634,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                                   isDrip === d
                                     ? d ? "bg-green-500/20 border-green-500 text-green-400" : "bg-amber-500/20 border-amber-500 text-amber-400"
                                     : "border-border text-muted-foreground hover:bg-secondary"
-                                }`}>{d ? (isGrowthAsset ? "DRIP" : "DRIP") : "Cash"}</button>
+                                }`}>{d ? "DRIP" : "Cash"}</button>
                             ))}
                           </div>
                         )}
@@ -1517,7 +1646,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                           <option value="ltcg">LTCG / Cap Gains</option>
                           <option value="ordinary">Ordinary</option>
                         </select>
-                        {/* ROC years — only for preferred */}
+                        {/* ROC years */}
                         {taxMode !== "ordinary" && taxMode !== "ltcg" && !isGrowthAsset && !isCash && (
                           <div className="flex items-center gap-1">
                             <span className="text-[9px] text-muted-foreground">ROC yrs:</span>
@@ -1531,6 +1660,24 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                     );
                   })}
                 </div>
+
+                {/* ── Custom asset input rows ── */}
+                {customDeployAssets.filter(a => !a.ticker).map(asset => (
+                  <CustomAssetInput key={asset.id} asset={asset} onUpdate={updateCustomAsset} onRemove={removeCustomAsset}
+                    onConfirm={(id, ticker, label) => {
+                      updateCustomAsset(id, { ticker, label });
+                      setPrefAllocs(prev => ({ ...prev, [ticker]: 0 }));
+                      setPrefDrip(prev => ({ ...prev, [ticker]: false }));
+                      setPrefTaxMode(prev => ({ ...prev, [ticker]: "ltcg" }));
+                      setRocYears(prev => ({ ...prev, [ticker]: 0 }));
+                    }} />
+                ))}
+
+                <button onClick={addCustomAsset}
+                  className="w-full flex items-center justify-center gap-2 text-[11px] py-2 mt-2 rounded-xl border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                  <Plus className="w-3.5 h-3.5" /> Add Any Asset / ETF / Stock
+                </button>
+
                 {/* Quick presets */}
                 <div className="flex flex-wrap gap-1 mt-2">
                   {[
@@ -1587,7 +1734,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                         const color = PREF_COLORS[t];
                         const gross = finalRow?.[`${t}_gross_income`] ?? 0;
                         const afterTax = finalRow?.[`${t}_after_tax_income`] ?? 0;
-                        const isGrowth = ["MSTR","ASST","BTC"].includes(t);
+                        const isGrowth = isGrowthTicker(t);
                         return (
                           <tr key={t} className="border-b border-border/30">
                             <td className="py-1 pr-2 font-bold font-mono" style={{ color }}>{t}</td>
@@ -1622,8 +1769,8 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
                         labelFormatter={l => `Year ${l}`}
                       />
                       <Legend wrapperStyle={{ fontSize: 10 }} />
-                      {TICKERS_ALL.filter(t => (prefAllocs[t] ?? 0) > 0).map(t => (
-                        <Bar key={t} yAxisId="val" dataKey={`${t}_value`} stackId="pref" fill={PREF_COLORS[t]} fillOpacity={0.75} name={`${t} Value`} />
+                      {TICKERS_ALL.filter(t => (prefAllocs[t] ?? 0) > 0 && t in (finalRow || {})).map(t => (
+                        <Bar key={t} yAxisId="val" dataKey={`${t}_value`} stackId="pref" fill={PREF_COLORS[t] ?? "#94A3B8"} fillOpacity={0.75} name={`${t} Value`} />
                       ))}
                       <Line yAxisId="inc" type="monotone" dataKey="totalGrossIncome" stroke="#94A3B8" strokeWidth={1.5} name="Gross Income" dot={false} strokeDasharray="4 2" />
                       <Line yAxisId="inc" type="monotone" dataKey="totalAfterTaxIncome" stroke="#22C55E" strokeWidth={2} name="After-Tax Income" dot={false} />
