@@ -222,6 +222,18 @@ export default function ProjectionsPage({ liveData }) {
   const annualIncome      = shareQty * latestWeeklyDiv * 52;
   const investmentValue   = shareQty * nowMsty;
 
+  const portfolioMonthlyIncome = useMemo(() => {
+    const incomeAssets = {
+      STRC: { shares: portfolioHoldings.STRC, rate: dripRates.STRC ?? 11.5, price: nowStrc },
+      SATA: { shares: portfolioHoldings.SATA, rate: dripRates.SATA ?? 13.0, price: nowSata },
+      STRF: { shares: portfolioHoldings.STRF, rate: dripRates.STRF ?? 10.0, price: nowStrf },
+      STRK: { shares: portfolioHoldings.STRK, rate: dripRates.STRK ?? 8.0,  price: nowStrk },
+      STRD: { shares: portfolioHoldings.STRD, rate: dripRates.STRD ?? 10.0, price: nowStrd },
+      MSTY: { shares: portfolioHoldings.MSTY, rate: (mstyWeeklyDiv * 52) / nowMsty * 100, price: nowMsty },
+    };
+    return Object.values(incomeAssets).reduce((sum, a) => sum + (a.shares * a.price * (a.rate / 100)) / 12, 0);
+  }, [portfolioHoldings, dripRates, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty, mstyWeeklyDiv]);
+
   return (
     <div className="space-y-4">
 
@@ -251,144 +263,151 @@ export default function ProjectionsPage({ liveData }) {
         </div>
       </Card>
 
-      {/* ── Bitcoin24 Dynamic Equity Simulator ── */}
-      <Bitcoin24Simulator liveData={liveData} />
+      {/* ── Sidebar layout: holdings panel (sticky) + main content ── */}
+      <div className="flex gap-4 items-start">
 
-      {/* ── My Portfolio Investment Calculator ── */}
-      <Card>
-        <SectionHeader icon={Users} title="My Portfolio Investment Calculator" color="text-green-400" />
-        <p className="text-[10px] text-muted-foreground mb-3">
-          BTC, MSTR &amp; ASST are projected using the Bitcoin24 model. Preferred stocks held at par. <span className="text-blue-400 font-semibold">Other Stocks &amp; Bonds</span> use your own per-stock CAGR — independent of crypto.
-        </p>
-        <InvestmentCalculator
-          liveData={liveData}
-          onHoldingsChange={setPortfolioHoldings}
-          onCustomStocksChange={setCustomStocks}
-          onCashChange={setCashState}
-        />
-      </Card>
-
-      {/* ── Additional Capital Inflows ── */}
-      <Card>
-        <SectionHeader icon={TrendingUp} title="Additional Capital Contributions" color="text-cyan-400" />
-        <p className="text-[10px] text-muted-foreground mb-3">
-          Model periodic contributions and how they compound your portfolio over time. Set the amount, frequency, and allocation % per instrument.
-        </p>
-        <AdditionalCapitalPanel
-          amount={inflowAmount}              setAmount={setInflowAmount}
-          frequency={inflowFrequency}        setFrequency={setInflowFrequency}
-          allocations={inflowAllocations}    setAllocations={setInflowAllocations}
-          customStocks={customStocks}
-          customStockAllocations={customStockInflowAllocations}
-          setCustomStockAllocations={setCustomStockInflowAllocations}
-        />
-      </Card>
-
-      {/* ── DRIP Simulator ── */}
-      <Card>
-        <SectionHeader icon={Users} title="Preferred & Income DRIP Simulator" color="text-green-400" />
-        <p className="text-[10px] text-muted-foreground mb-3">
-          Per-instrument: choose to <strong className="text-green-400">DRIP</strong> dividends back into the same instrument, or <strong className="text-amber-400">Redirect</strong> them to MSTR or ASST. Set allocation % for each.
-        </p>
-        <DRIPSimulator
-          holdings={portfolioHoldings}
-          prices={{ STRC: nowStrc, SATA: nowSata, STRF: nowStrf, STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty }}
-          liveData={liveData}
-          dripEnabled={dripEnabled}     setDripEnabled={setDripEnabled}
-          years={dripYears}             setYears={setDripYears}
-          rates={dripRates}             setRates={setDripRates}
-          mstyWeeklyDiv={mstyWeeklyDiv} setMstyWeeklyDiv={setMstyWeeklyDiv}
-          dripConfigs={dripConfigs}     setDripConfigs={setDripConfigs}
-          customStocks={customStocks}
-        />
-      </Card>
-
-      {/* ── Your Portfolio Valuation by Scenario ── */}
-      <Card>
-        <SectionHeader icon={Users} title="Your Portfolio Valuation — Bitcoin24 Projection" color="text-green-400" />
-        <p className="text-[10px] text-muted-foreground mb-3">
-          BTC, MSTR & ASST prices from Bitcoin24 ({activePreset} scenario). Preferred & MSTY use DRIP-compounded share counts from the simulator above ({dripEnabled ? "DRIP ON" : "DRIP OFF"}).
-        </p>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={portfolioProjections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
-            <XAxis dataKey="year" tick={TICK_STYLE} />
-            <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
-            <Tooltip
-              contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }}
-              formatter={v => formatCurrency(v, 0)}
-              labelFormatter={l => `Year ${l}`}
+        {/* ── LEFT: Sticky My Portfolio sidebar ── */}
+        <div className="hidden xl:block w-80 shrink-0 sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <div className="bg-card border border-green-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 text-green-400" />
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">My Portfolio</h3>
+            </div>
+            <p className="text-[10px] text-muted-foreground mb-3">
+              BTC/MSTR/ASST via Bitcoin24. <span className="text-blue-400">Other stocks</span> use custom CAGR.
+            </p>
+            <InvestmentCalculator
+              liveData={liveData}
+              onHoldingsChange={setPortfolioHoldings}
+              onCustomStocksChange={setCustomStocks}
+              onCashChange={setCashState}
             />
-            <Legend />
-            <Line type="monotone" dataKey="btc_val"       stroke="#F59E0B" strokeWidth={1.5} name="BTC"        dot={false} opacity={0.8} />
-            <Line type="monotone" dataKey="mstr_val"      stroke="#22C55E" strokeWidth={1.5} name="MSTR"       dot={false} opacity={0.8} />
-            <Line type="monotone" dataKey="asst_val"      stroke="#60A5FA" strokeWidth={1.5} name="ASST"       dot={false} opacity={0.8} />
-            <Line type="monotone" dataKey="strc_val"      stroke="#34D399" strokeWidth={1}   name="STRC"       dot={false} opacity={0.6} />
-            <Line type="monotone" dataKey="sata_val"      stroke="#A78BFA" strokeWidth={1}   name="SATA"       dot={false} opacity={0.6} />
-            <Line type="monotone" dataKey="strf_val"      stroke="#06B6D4" strokeWidth={1}   name="STRF"       dot={false} opacity={0.6} />
-            <Line type="monotone" dataKey="strk_val"      stroke="#FBBF24" strokeWidth={1}   name="STRK"       dot={false} opacity={0.6} />
-            <Line type="monotone" dataKey="strd_val"      stroke="#FB923C" strokeWidth={1}   name="STRD"       dot={false} opacity={0.6} />
-            <Line type="monotone" dataKey="msty_val"      stroke="#E879F9" strokeWidth={1}   name="MSTY"       dot={false} opacity={0.6} />
-            {customStocks.filter(s => s.ticker).length > 0 && (
-              <Line type="monotone" dataKey="custom_val" stroke="#F97316" strokeWidth={1} name="Other Stocks" dot={false} opacity={0.7} />
-            )}
-            {cashState.balance > 0 && (
-              <Line type="monotone" dataKey="cash_val"   stroke="#34D399" strokeWidth={1} name="Cash"         dot={false} opacity={0.7} />
-            )}
-            <Line type="monotone" dataKey="portfolio_value" stroke="#10B981" strokeWidth={2.5} name="Total"    dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card>
+          </div>
+        </div>
 
-      {/* ── Monte Carlo Simulator ── */}
-      <MonteCarloSimulator
-        portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
-        activePreset={activePreset}
-      />
+        {/* ── RIGHT: Main content column ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-      {/* ── FIRE Calculator + Withdrawal Strategies ── */}
-      <FIRECalculator
-        portfolioProjections={portfolioProjections}
-        portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
-        onStateChange={setFireState}
-        portfolioMonthlyIncome={(() => {
-          // Monthly income from income assets using DRIP rate data
-          const incomeAssets = {
-            STRC: { shares: portfolioHoldings.STRC, rate: dripRates.STRC ?? 11.5, price: nowStrc },
-            SATA: { shares: portfolioHoldings.SATA, rate: dripRates.SATA ?? 13.0, price: nowSata },
-            STRF: { shares: portfolioHoldings.STRF, rate: dripRates.STRF ?? 10.0, price: nowStrf },
-            STRK: { shares: portfolioHoldings.STRK, rate: dripRates.STRK ?? 8.0,  price: nowStrk },
-            STRD: { shares: portfolioHoldings.STRD, rate: dripRates.STRD ?? 10.0, price: nowStrd },
-            MSTY: { shares: portfolioHoldings.MSTY, rate: (mstyWeeklyDiv * 52) / nowMsty * 100, price: nowMsty },
-          };
-          return Object.values(incomeAssets).reduce((sum, a) => {
-            return sum + (a.shares * a.price * (a.rate / 100)) / 12;
-          }, 0);
-        })()}
-      />
+          {/* Mobile: My Portfolio inline (shown only below xl) */}
+          <div className="xl:hidden">
+            <Card>
+              <SectionHeader icon={Users} title="My Portfolio Investment Calculator" color="text-green-400" />
+              <p className="text-[10px] text-muted-foreground mb-3">
+                BTC, MSTR &amp; ASST are projected using the Bitcoin24 model. Preferred stocks held at par. <span className="text-blue-400 font-semibold">Other Stocks &amp; Bonds</span> use your own per-stock CAGR — independent of crypto.
+              </p>
+              <InvestmentCalculator
+                liveData={liveData}
+                onHoldingsChange={setPortfolioHoldings}
+                onCustomStocksChange={setCustomStocks}
+                onCashChange={setCashState}
+              />
+            </Card>
+          </div>
 
-      {/* ── Tax Account Allocator ── */}
-      <TaxAccountAllocator
-        portfolioHoldings={portfolioHoldings}
-        prices={{
-          BTC: nowBtc, MSTR: nowMstr, ASST: nowAsst,
-          STRC: nowStrc, SATA: nowSata, STRF: nowStrf,
-          STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty,
-        }}
-        fireState={fireState}
-        portfolioMonthlyIncome={(() => {
-          const incomeAssets = {
-            STRC: { shares: portfolioHoldings.STRC, rate: dripRates.STRC ?? 11.5, price: nowStrc },
-            SATA: { shares: portfolioHoldings.SATA, rate: dripRates.SATA ?? 13.0, price: nowSata },
-            STRF: { shares: portfolioHoldings.STRF, rate: dripRates.STRF ?? 10.0, price: nowStrf },
-            STRK: { shares: portfolioHoldings.STRK, rate: dripRates.STRK ?? 8.0,  price: nowStrk },
-            STRD: { shares: portfolioHoldings.STRD, rate: dripRates.STRD ?? 10.0, price: nowStrd },
-            MSTY: { shares: portfolioHoldings.MSTY, rate: (mstyWeeklyDiv * 52) / nowMsty * 100, price: nowMsty },
-          };
-          return Object.values(incomeAssets).reduce((sum, a) => sum + (a.shares * a.price * (a.rate / 100)) / 12, 0);
-        })()}
-        portfolioProjections={portfolioProjections}
-      />
+          {/* ── Bitcoin24 Dynamic Equity Simulator ── */}
+          <Bitcoin24Simulator liveData={liveData} />
+
+          {/* ── Additional Capital Inflows ── */}
+          <Card>
+            <SectionHeader icon={TrendingUp} title="Additional Capital Contributions" color="text-cyan-400" />
+            <p className="text-[10px] text-muted-foreground mb-3">
+              Model periodic contributions and how they compound your portfolio over time. Set the amount, frequency, and allocation % per instrument.
+            </p>
+            <AdditionalCapitalPanel
+              amount={inflowAmount}              setAmount={setInflowAmount}
+              frequency={inflowFrequency}        setFrequency={setInflowFrequency}
+              allocations={inflowAllocations}    setAllocations={setInflowAllocations}
+              customStocks={customStocks}
+              customStockAllocations={customStockInflowAllocations}
+              setCustomStockAllocations={setCustomStockInflowAllocations}
+            />
+          </Card>
+
+          {/* ── DRIP Simulator ── */}
+          <Card>
+            <SectionHeader icon={Users} title="Preferred & Income DRIP Simulator" color="text-green-400" />
+            <p className="text-[10px] text-muted-foreground mb-3">
+              Per-instrument: choose to <strong className="text-green-400">DRIP</strong> dividends back into the same instrument, or <strong className="text-amber-400">Redirect</strong> them to MSTR or ASST. Set allocation % for each.
+            </p>
+            <DRIPSimulator
+              holdings={portfolioHoldings}
+              prices={{ STRC: nowStrc, SATA: nowSata, STRF: nowStrf, STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty }}
+              liveData={liveData}
+              dripEnabled={dripEnabled}     setDripEnabled={setDripEnabled}
+              years={dripYears}             setYears={setDripYears}
+              rates={dripRates}             setRates={setDripRates}
+              mstyWeeklyDiv={mstyWeeklyDiv} setMstyWeeklyDiv={setMstyWeeklyDiv}
+              dripConfigs={dripConfigs}     setDripConfigs={setDripConfigs}
+              customStocks={customStocks}
+            />
+          </Card>
+
+          {/* ── Your Portfolio Valuation by Scenario ── */}
+          <Card>
+            <SectionHeader icon={Users} title="Your Portfolio Valuation — Bitcoin24 Projection" color="text-green-400" />
+            <p className="text-[10px] text-muted-foreground mb-3">
+              BTC, MSTR & ASST prices from Bitcoin24 ({activePreset} scenario). Preferred & MSTY use DRIP-compounded share counts ({dripEnabled ? "DRIP ON" : "DRIP OFF"}).
+            </p>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={portfolioProjections} margin={{ top: 4, right: 8, bottom: 4, left: -10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(217 33% 17%)" />
+                <XAxis dataKey="year" tick={TICK_STYLE} />
+                <YAxis tick={TICK_STYLE} tickFormatter={v => formatCurrency(v)} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)" }}
+                  formatter={v => formatCurrency(v, 0)}
+                  labelFormatter={l => `Year ${l}`}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="btc_val"       stroke="#F59E0B" strokeWidth={1.5} name="BTC"        dot={false} opacity={0.8} />
+                <Line type="monotone" dataKey="mstr_val"      stroke="#22C55E" strokeWidth={1.5} name="MSTR"       dot={false} opacity={0.8} />
+                <Line type="monotone" dataKey="asst_val"      stroke="#60A5FA" strokeWidth={1.5} name="ASST"       dot={false} opacity={0.8} />
+                <Line type="monotone" dataKey="strc_val"      stroke="#34D399" strokeWidth={1}   name="STRC"       dot={false} opacity={0.6} />
+                <Line type="monotone" dataKey="sata_val"      stroke="#A78BFA" strokeWidth={1}   name="SATA"       dot={false} opacity={0.6} />
+                <Line type="monotone" dataKey="strf_val"      stroke="#06B6D4" strokeWidth={1}   name="STRF"       dot={false} opacity={0.6} />
+                <Line type="monotone" dataKey="strk_val"      stroke="#FBBF24" strokeWidth={1}   name="STRK"       dot={false} opacity={0.6} />
+                <Line type="monotone" dataKey="strd_val"      stroke="#FB923C" strokeWidth={1}   name="STRD"       dot={false} opacity={0.6} />
+                <Line type="monotone" dataKey="msty_val"      stroke="#E879F9" strokeWidth={1}   name="MSTY"       dot={false} opacity={0.6} />
+                {customStocks.filter(s => s.ticker).length > 0 && (
+                  <Line type="monotone" dataKey="custom_val" stroke="#F97316" strokeWidth={1} name="Other Stocks" dot={false} opacity={0.7} />
+                )}
+                {cashState.balance > 0 && (
+                  <Line type="monotone" dataKey="cash_val"   stroke="#34D399" strokeWidth={1} name="Cash"         dot={false} opacity={0.7} />
+                )}
+                <Line type="monotone" dataKey="portfolio_value" stroke="#10B981" strokeWidth={2.5} name="Total"    dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* ── Monte Carlo Simulator ── */}
+          <MonteCarloSimulator
+            portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
+            activePreset={activePreset}
+          />
+
+          {/* ── FIRE Calculator + Withdrawal Strategies ── */}
+          <FIRECalculator
+            portfolioProjections={portfolioProjections}
+            portfolioValue={portfolioProjections[0]?.portfolio_value ?? 0}
+            onStateChange={setFireState}
+            portfolioMonthlyIncome={portfolioMonthlyIncome}
+          />
+
+          {/* ── Tax Account Allocator ── */}
+          <TaxAccountAllocator
+            portfolioHoldings={portfolioHoldings}
+            prices={{
+              BTC: nowBtc, MSTR: nowMstr, ASST: nowAsst,
+              STRC: nowStrc, SATA: nowSata, STRF: nowStrf,
+              STRK: nowStrk, STRD: nowStrd, MSTY: nowMsty,
+            }}
+            fireState={fireState}
+            portfolioMonthlyIncome={portfolioMonthlyIncome}
+            portfolioProjections={portfolioProjections}
+          />
+
+        </div>
+      </div>
 
     </div>
   );
