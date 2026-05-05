@@ -1221,7 +1221,7 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           );
         })()}
 
-        {/* ── SEPP Preferred Share Deployment ── */}
+        {/* ── Fixed Income Share Deployment ── */}
         {strategy === "rule_72t" && (() => {
           const seppAnnual = selectedSeppAmount ?? 0;
           const annualExpenses = monthlyExpenses * 12;
@@ -1320,13 +1320,13 @@ export default function FIRECalculator({ portfolioValue, portfolioMonthlyIncome,
           };
 
           return (
-            <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20" id="pref-deploy-section">
+            <div className="mt-4 p-3 bg-cyan-400/5 rounded-xl border border-cyan-400/20" id="fixed-income-deploy-section">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-4 h-4 text-cyan-400" />
-                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">SEPP Preferred Share Deployment</p>
+                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Fixed Income Share Deployment</p>
               </div>
               <p className="text-[10px] text-muted-foreground mb-3">
-                Starting from SEPP payments ({seppStartYear}), surplus income (after expenses) is deployed into STRC, SATA, STRF, STRK, STRD. DRIP compounds shares; Cash mode pays income. ROC phase defers tax; post-ROC income taxed at LTCG or Qualified Dividend rates. SEPP ends at age 60 ({seppEndYearLocal}) but preferred income continues indefinitely.
+                Starting from your distribution payments ({seppStartYear}), surplus income (after expenses) is deployed into preferred shares or other assets. DRIP compounds shares; Cash mode pays income. ROC phase defers tax; post-ROC income taxed at LTCG or Qualified Dividend rates. Distribution ends at age 60 ({seppEndYearLocal}) but preferred income continues indefinitely.
               </p>
 
               {/* ── Row 1: Expenses, Deploy %, Yields ── */}

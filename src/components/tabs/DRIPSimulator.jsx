@@ -22,9 +22,10 @@ export function defaultDripConfig() {
   for (const a of DRIP_ASSETS) {
     out[a.ticker] = {
       mode: "drip",          // "drip" | "redirect"
-      dripPct: 100,          // % reinvested back into same instrument (when mode=drip)
-      redirectMstrPct: 50,   // % redirected to MSTR (when mode=redirect)
-      redirectAsstPct: 50,   // % redirected to ASST (remainder)
+      dripPct: 100,
+      redirectTarget: "MSTR", // "MSTR" | "ASST" | "CASH" | custom ticker
+      redirectMstrPct: 50,
+      redirectAsstPct: 50,
     };
   }
   return out;
@@ -64,7 +65,7 @@ export function runDRIP({ shares, price, annualRatesPct, years, dripConfig = { m
 const TICK_STYLE = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 
 // ── Per-instrument config row ─────────────────────────────────────────────────
-function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rates, setRates, mstyWeeklyDiv, setMstyWeeklyDiv, simResult, years }) {
+function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rates, setRates, mstyWeeklyDiv, setMstyWeeklyDiv, simResult, years, customRedirectTargets }) {
   const cfg = config ?? { mode: "drip", dripPct: 100, redirectMstrPct: 50, redirectAsstPct: 50 };
   const update = (field, val) => onConfigChange({ ...cfg, [field]: val });
   const hasHoldings = (holdings?.[asset.ticker] ?? 0) > 0;
@@ -135,25 +136,40 @@ function AssetDripConfig({ asset, config, onConfigChange, holdings, prices, rate
 
       {/* Redirect sub-config */}
       {cfg.mode === "redirect" && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
-            <Label className="text-[9px] text-muted-foreground w-16 shrink-0">→ MSTR %</Label>
-            <Input
-              type="number" value={cfg.redirectMstrPct ?? 50}
-              onChange={e => update("redirectMstrPct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-              className="h-6 text-xs font-mono bg-card border-border flex-1" min={0} max={100} step={5}
-            />
+            <Label className="text-[9px] text-muted-foreground w-16 shrink-0">Redirect →</Label>
+            <select value={cfg.redirectTarget ?? "MSTR"}
+              onChange={e => update("redirectTarget", e.target.value)}
+              className="flex-1 h-6 text-[9px] font-mono bg-card border border-border rounded px-1 text-foreground">
+              <option value="MSTR">MSTR</option>
+              <option value="ASST">ASST</option>
+              <option value="CASH">Cash (save)</option>
+              <option value="STRC">STRC</option>
+              <option value="SATA">SATA</option>
+              <option value="STRF">STRF</option>
+              <option value="STRK">STRK</option>
+              <option value="STRD">STRD</option>
+              {customRedirectTargets?.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Label className="text-[9px] text-muted-foreground w-16 shrink-0">→ ASST %</Label>
-            <Input
-              type="number" value={cfg.redirectAsstPct ?? 50}
-              onChange={e => update("redirectAsstPct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-              className="h-6 text-xs font-mono bg-card border-border flex-1" min={0} max={100} step={5}
-            />
-          </div>
-          {((cfg.redirectMstrPct ?? 50) + (cfg.redirectAsstPct ?? 50)) !== 100 && (
-            <p className="text-[9px] text-destructive">MSTR + ASST must equal 100%</p>
+          {(cfg.redirectTarget === "MSTR" || cfg.redirectTarget === undefined || cfg.redirectTarget === null) && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <Label className="text-[9px] text-muted-foreground w-16 shrink-0">→ MSTR %</Label>
+                <Input type="number" value={cfg.redirectMstrPct ?? 50}
+                  onChange={e => update("redirectMstrPct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                  className="h-6 text-xs font-mono bg-card border-border flex-1" min={0} max={100} step={5} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Label className="text-[9px] text-muted-foreground w-16 shrink-0">→ ASST %</Label>
+                <Input type="number" value={cfg.redirectAsstPct ?? 50}
+                  onChange={e => update("redirectAsstPct", Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                  className="h-6 text-xs font-mono bg-card border-border flex-1" min={0} max={100} step={5} />
+              </div>
+            </>
           )}
         </div>
       )}
@@ -189,7 +205,10 @@ export default function DRIPSimulator({
   rates, setRates,
   mstyWeeklyDiv, setMstyWeeklyDiv,
   dripConfigs, setDripConfigs,
+  customStocks = [],
 }) {
+  // Custom redirect targets derived from custom stocks
+  const customRedirectTargets = customStocks.filter(s => s.ticker).map(s => s.ticker);
   const activeAssets = DRIP_ASSETS.filter(a => (holdings?.[a.ticker] ?? 0) > 0);
 
   const simResults = useMemo(() => {
@@ -272,6 +291,7 @@ export default function DRIPSimulator({
             setMstyWeeklyDiv={setMstyWeeklyDiv}
             simResult={simResults[asset.ticker]}
             years={years}
+            customRedirectTargets={customRedirectTargets}
           />
         ))}
       </div>

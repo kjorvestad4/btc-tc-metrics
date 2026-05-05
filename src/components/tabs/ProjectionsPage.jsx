@@ -95,6 +95,8 @@ export default function ProjectionsPage({ liveData }) {
   const [portfolioHoldings, setPortfolioHoldings] = useState({
     BTC: 0, MSTR: 0, ASST: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, MSTY: 0,
   });
+  const [customStocks, setCustomStocks] = useState([]);
+  const [cashState, setCashState] = useState({ balance: 0, apy: 4.5 });
 
   // DRIP state — owned here so portfolio chart can use compounded share counts
   const [dripEnabled, setDripEnabled] = useState(true);
@@ -111,8 +113,9 @@ export default function ProjectionsPage({ liveData }) {
   const [inflowAmount, setInflowAmount] = useState(500);
   const [inflowFrequency, setInflowFrequency] = useState("monthly");
   const [inflowAllocations, setInflowAllocations] = useState({
-    MSTR: 50, ASST: 50, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0,
+    MSTR: 50, ASST: 50, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0,
   });
+  const [customStockInflowAllocations, setCustomStockInflowAllocations] = useState({});
 
   // Current (now) prices
   const nowBtc  = liveData?.btc_price  ?? 84000;
@@ -138,7 +141,8 @@ export default function ProjectionsPage({ liveData }) {
   // Annual inflows per ticker
   const annualInflows = useMemo(() => calcAnnualInflows({
     amount: inflowAmount, frequency: inflowFrequency, allocations: inflowAllocations,
-  }), [inflowAmount, inflowFrequency, inflowAllocations]);
+    customStockAllocations: customStockInflowAllocations,
+  }), [inflowAmount, inflowFrequency, inflowAllocations, customStockInflowAllocations]);
 
   // Pre-compute DRIP share counts per income asset per year (indexed by year offset 0..HORIZON)
   const dripSharesByYear = useMemo(() => {
@@ -191,11 +195,25 @@ export default function ProjectionsPage({ liveData }) {
       const mstyInflowShares = i === 0 ? 0 : (annualInflows.MSTY ?? 0) / nowMsty * i;
       const msty_val = ((dripSharesByYear.MSTY?.[i] ?? portfolioHoldings.MSTY) + mstyInflowShares) * nowMsty * mstrRatio;
 
-      const portfolio_value = btc_val + mstr_val + asst_val + strc_val + sata_val + strf_val + strk_val + strd_val + msty_val;
+      // Custom stocks: grow at user-defined CAGR
+      let custom_val = 0;
+      customStocks.forEach(s => {
+        if (!s.shares || !s.price) return;
+        const cagr = (s.cagr ?? 10) / 100;
+        const inflows = i === 0 ? 0 : (annualInflows[`custom_${s.id}`] ?? 0) * i / (s.price || 1);
+        custom_val += ((s.shares + inflows) * s.price * Math.pow(1 + cagr, i));
+      });
 
-      return { year: r.year, btc_val, mstr_val, asst_val, strc_val, sata_val, strf_val, strk_val, strd_val, msty_val, portfolio_value };
+      // Cash: grows at savings rate
+      const cashInflow = i === 0 ? 0 : (annualInflows.CASH ?? 0) * i;
+      const cashApy = (cashState.apy ?? 4.5) / 100;
+      const cash_val = (cashState.balance + cashInflow) * Math.pow(1 + cashApy, i);
+
+      const portfolio_value = btc_val + mstr_val + asst_val + strc_val + sata_val + strf_val + strk_val + strd_val + msty_val + custom_val + cash_val;
+
+      return { year: r.year, btc_val, mstr_val, asst_val, strc_val, sata_val, strf_val, strk_val, strd_val, msty_val, custom_val, cash_val, portfolio_value };
     });
-  }, [simRows, portfolioHoldings, dripSharesByYear, nowBtc, nowMstr, nowAsst, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty]);
+  }, [simRows, portfolioHoldings, dripSharesByYear, nowBtc, nowMstr, nowAsst, nowStrc, nowSata, nowStrf, nowStrk, nowStrd, nowMsty, customStocks, cashState, annualInflows]);
 
   // MSTY income metrics
   const latestWeeklyDiv   = liveData?.msty_latest_div ?? 0.2500;
@@ -242,7 +260,12 @@ export default function ProjectionsPage({ liveData }) {
         <p className="text-[10px] text-muted-foreground mb-3">
           Enter your holdings below. Growth assets (BTC, MSTR, ASST) are projected using the Bitcoin24 model. Preferred stocks are held at current price.
         </p>
-        <InvestmentCalculator liveData={liveData} onHoldingsChange={setPortfolioHoldings} />
+        <InvestmentCalculator
+          liveData={liveData}
+          onHoldingsChange={setPortfolioHoldings}
+          onCustomStocksChange={setCustomStocks}
+          onCashChange={setCashState}
+        />
       </Card>
 
       {/* ── Additional Capital Inflows ── */}
@@ -252,9 +275,12 @@ export default function ProjectionsPage({ liveData }) {
           Model periodic contributions and how they compound your portfolio over time. Set the amount, frequency, and allocation % per instrument.
         </p>
         <AdditionalCapitalPanel
-          amount={inflowAmount}       setAmount={setInflowAmount}
-          frequency={inflowFrequency} setFrequency={setInflowFrequency}
-          allocations={inflowAllocations} setAllocations={setInflowAllocations}
+          amount={inflowAmount}              setAmount={setInflowAmount}
+          frequency={inflowFrequency}        setFrequency={setInflowFrequency}
+          allocations={inflowAllocations}    setAllocations={setInflowAllocations}
+          customStocks={customStocks}
+          customStockAllocations={customStockInflowAllocations}
+          setCustomStockAllocations={setCustomStockInflowAllocations}
         />
       </Card>
 
@@ -273,6 +299,7 @@ export default function ProjectionsPage({ liveData }) {
           rates={dripRates}             setRates={setDripRates}
           mstyWeeklyDiv={mstyWeeklyDiv} setMstyWeeklyDiv={setMstyWeeklyDiv}
           dripConfigs={dripConfigs}     setDripConfigs={setDripConfigs}
+          customStocks={customStocks}
         />
       </Card>
 
@@ -302,6 +329,12 @@ export default function ProjectionsPage({ liveData }) {
             <Line type="monotone" dataKey="strk_val"      stroke="#FBBF24" strokeWidth={1}   name="STRK"       dot={false} opacity={0.6} />
             <Line type="monotone" dataKey="strd_val"      stroke="#FB923C" strokeWidth={1}   name="STRD"       dot={false} opacity={0.6} />
             <Line type="monotone" dataKey="msty_val"      stroke="#E879F9" strokeWidth={1}   name="MSTY"       dot={false} opacity={0.6} />
+            {customStocks.filter(s => s.ticker).length > 0 && (
+              <Line type="monotone" dataKey="custom_val" stroke="#F97316" strokeWidth={1} name="Other Stocks" dot={false} opacity={0.7} />
+            )}
+            {cashState.balance > 0 && (
+              <Line type="monotone" dataKey="cash_val"   stroke="#34D399" strokeWidth={1} name="Cash"         dot={false} opacity={0.7} />
+            )}
             <Line type="monotone" dataKey="portfolio_value" stroke="#10B981" strokeWidth={2.5} name="Total"    dot={false} />
           </LineChart>
         </ResponsiveContainer>
