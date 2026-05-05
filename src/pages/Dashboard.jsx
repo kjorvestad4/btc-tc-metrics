@@ -83,7 +83,7 @@ export default function Dashboard() {
     { value: "correlations",  label: "Correlations",    icon: GitBranch },
     { value: "strategy",      label: "Strategy",        icon: Building2 },
     { value: "btc",           label: "BTC Models",      icon: Bitcoin },
-    { value: "mstr-asst",     label: "MSTR vs ASST",    icon: TrendingUp },
+    { value: "mstr-asst",     label: "BTC Treasuries",   icon: TrendingUp },
     { value: "strc-sata",     label: "STRC vs SATA",    icon: Layers },
     { value: "preferred",     label: "Other Preferreds",icon: Wallet },
     { value: "msty",          label: "MSTY",            icon: BarChart3 },
