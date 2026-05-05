@@ -258,7 +258,7 @@ export default function ProjectionsPage({ liveData }) {
       <Card>
         <SectionHeader icon={Users} title="My Portfolio Investment Calculator" color="text-green-400" />
         <p className="text-[10px] text-muted-foreground mb-3">
-          Enter your holdings below. Growth assets (BTC, MSTR, ASST) are projected using the Bitcoin24 model. Preferred stocks are held at current price.
+          BTC, MSTR &amp; ASST are projected using the Bitcoin24 model. Preferred stocks held at par. <span className="text-blue-400 font-semibold">Other Stocks &amp; Bonds</span> use your own per-stock CAGR — independent of crypto.
         </p>
         <InvestmentCalculator
           liveData={liveData}

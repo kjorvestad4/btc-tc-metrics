@@ -257,9 +257,12 @@ export default function InvestmentCalculator({ liveData, onHoldingsChange, onCus
         </div>
       </div>
 
-      {/* Growth Assets */}
+      {/* Growth Assets — BTC Correlated */}
       <div className="space-y-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">Growth Assets (BTC-Correlated)</p>
+        <div className="flex items-center gap-2 px-1">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Growth Assets</p>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 font-semibold">BTC-Correlated · Bitcoin24 Model</span>
+        </div>
 
         {/* BTC */}
         <div className="bg-secondary/30 border border-border rounded-xl p-3 space-y-2">
@@ -292,16 +295,25 @@ export default function InvestmentCalculator({ liveData, onHoldingsChange, onCus
           <AssetRow key={t} ticker={t} asset={ASSET_DEFAULTS[t]} price={prices[t]}
             shares={holdings[t]} setShares={v => setShares(t, v)} annualIncome={null} />
         ))}
+      </div>
 
-        {/* Custom non-BTC stocks */}
+      {/* Non-BTC Correlated Stocks & Bonds — independent CAGR projection */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 px-1 pt-1">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Other Stocks &amp; Bonds</p>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-400 font-semibold">Non-BTC · Custom CAGR</span>
+        </div>
+        <div className="p-2.5 bg-blue-500/5 border border-blue-500/20 rounded-xl text-[10px] text-muted-foreground">
+          These assets are projected using your own CAGR assumption — <span className="text-blue-400 font-semibold">completely independent</span> of the Bitcoin24 model. Set the growth rate per stock via the "Growth Path" button on each row.
+        </div>
         {customStocks.map(s => (
           <CustomStockRow key={s.id} stock={s}
             onChange={data => updateCustomStock(s.id, data)}
             onRemove={() => removeCustomStock(s.id)} />
         ))}
         <button onClick={addCustomStock}
-          className="w-full flex items-center justify-center gap-2 text-[11px] py-2 rounded-xl border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors">
-          <Plus className="w-3.5 h-3.5" /> Add Other Stock (non-BTC correlated)
+          className="w-full flex items-center justify-center gap-2 text-[11px] py-2 rounded-xl border border-dashed border-blue-500/30 text-blue-400/70 hover:border-blue-400 hover:text-blue-400 transition-colors">
+          <Plus className="w-3.5 h-3.5" /> Add Stock / ETF / Bond (non-BTC)
         </button>
       </div>
 
