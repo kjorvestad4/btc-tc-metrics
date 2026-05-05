@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/calculations";
 import { MSTY_DISTRIBUTION_HISTORY } from "@/lib/marketData";
-import { DollarSign, TrendingUp, Layers, BarChart3, Bitcoin, Plus, Trash2, PiggyBank } from "lucide-react";
+import { DollarSign, TrendingUp, Layers, BarChart3, Bitcoin, Plus, Trash2, PiggyBank, Loader2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const ASSET_DEFAULTS = {
   MSTR:  { label: "MSTR",  color: "text-primary",    price: 166.52, icon: TrendingUp,  desc: "Strategy common stock" },
@@ -73,18 +74,55 @@ function AssetRow({ ticker, asset, price, shares, setShares, annualIncome }) {
 // Custom (non-BTC correlated) stock row
 function CustomStockRow({ stock, onChange, onRemove }) {
   const [showGrowthPanel, setShowGrowthPanel] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const debounceRef = useRef(null);
   const value = (stock.shares || 0) * (stock.price || 0);
+
+  const lookupTicker = async (ticker) => {
+    if (!ticker || ticker.length < 1) return;
+    setFetching(true);
+    setFetchError(null);
+    try {
+      const res = await base44.functions.invoke("polygonProxy", { tickers: [ticker] });
+      const prices = res.data?.prices;
+      if (prices && prices[ticker] != null) {
+        onChange({ ...stock, ticker, price: prices[ticker], label: stock.label || ticker });
+      } else {
+        setFetchError("Not found");
+      }
+    } catch {
+      setFetchError("Lookup failed");
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleTickerChange = (raw) => {
+    const ticker = raw.toUpperCase();
+    onChange({ ...stock, ticker });
+    clearTimeout(debounceRef.current);
+    if (ticker.length >= 1) {
+      debounceRef.current = setTimeout(() => lookupTicker(ticker), 800);
+    }
+  };
 
   return (
     <div className="bg-secondary/30 border border-border rounded-xl p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 flex-wrap">
-          <Input value={stock.ticker} onChange={e => onChange({ ...stock, ticker: e.target.value.toUpperCase() })}
-            placeholder="AAPL" className="h-7 w-20 text-xs font-mono font-bold bg-card border-border text-foreground" />
-          <Input value={stock.label || ""} onChange={e => onChange({ ...stock, label: e.target.value })}
-            placeholder="Company name" className="h-7 flex-1 min-w-24 text-xs bg-card border-border" />
+          <div className="relative">
+            <Input value={stock.ticker} onChange={e => handleTickerChange(e.target.value)}
+              placeholder="AAPL" className="h-7 w-20 text-xs font-mono font-bold bg-card border-border text-foreground pr-6" />
+            {fetching && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground absolute right-1.5 top-2" />}
+          </div>
+          <div className="flex items-center gap-1 flex-1 min-w-24">
+            <Input value={stock.label || ""} onChange={e => onChange({ ...stock, label: e.target.value })}
+              placeholder="Company name" className="h-7 flex-1 text-xs bg-card border-border" />
+            {fetchError && <span className="text-[9px] text-destructive shrink-0">{fetchError}</span>}
+          </div>
         </div>
-        <button onClick={onRemove} className="text-muted-foreground hover:text-destructive transition-colors shrink-0">
+        <button onClick={onRemove} className="text-muted-foreground hover:text-destructive transition-colors shrink-0 ml-1">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -93,6 +131,7 @@ function CustomStockRow({ stock, onChange, onRemove }) {
           <Label className="text-[10px] text-muted-foreground w-10 shrink-0">Price</Label>
           <Input type="number" step="0.01" value={stock.price || ""} onChange={e => onChange({ ...stock, price: parseFloat(e.target.value) || 0 })}
             placeholder="0.00" className="h-7 w-24 text-xs font-mono bg-card border-border" />
+          {stock.price > 0 && !fetching && !fetchError && <span className="text-[9px] text-green-400">●</span>}
         </div>
         <div className="flex items-center gap-1">
           <Label className="text-[10px] text-muted-foreground w-12 shrink-0">Shares</Label>
