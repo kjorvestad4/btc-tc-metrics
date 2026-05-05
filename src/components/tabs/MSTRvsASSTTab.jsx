@@ -11,29 +11,18 @@ import {
 const TICK = { fontSize: 9, fill: "hsl(215 20% 55%)" };
 const GRID = "hsl(217 33% 17%)";
 
-// Static data for companies we can't fetch live (updated May 5, 2026)
+// Static data for companies — sourced from strategytracker.com (May 5, 2026)
 const COMPANIES_STATIC = [
   {
     name: "Strategy Inc.",
     ticker: "MSTR",
     color: "#f97316",
     treasury_url: "https://saylortracker.com",
-    btc_holdings: 553555,      // updated live below
+    btc_holdings: 818334,      // strategy.com, May 5 2026
     btc_yield_ytd: 9.57,
     btc_yield_qtd: 5.92,
     bse_return: 1412.14,
-    avg_cost: 68459,
-  },
-  {
-    name: "Strive, Inc.",
-    ticker: "ASST",
-    color: "#f43f5e",
-    treasury_url: "https://treasury.strive.com",
-    btc_holdings: ASST_DEFAULTS.btc_holdings,
-    btc_yield_ytd: 18.70,
-    btc_yield_qtd: 4.34,
-    bse_return: 35.33,
-    avg_cost: null,
+    sats_per_share_static: 213644,  // strategytracker.com, May 5 2026
   },
   {
     name: "Metaplanet Inc.",
@@ -44,41 +33,22 @@ const COMPANIES_STATIC = [
     btc_yield_ytd: 2.87,
     btc_yield_qtd: 0.00,
     bse_return: 1610.53,
-    avg_cost: null,
     price_static: 2.06,
     market_cap_static: 2.62e9,
     mnav_static: 1.02,
     sats_per_share_static: 2473,
   },
   {
-    name: "Semler Scientific",
-    ticker: "SMLR",
-    color: "#06b6d4",
-    treasury_url: "https://www.semlerscientific.com",
-    btc_holdings: 3192,
-    btc_yield_ytd: 12.4,
-    btc_yield_qtd: 3.1,
-    bse_return: 120.5,
-    avg_cost: null,
-    price_static: 36.80,
-    market_cap_static: 0.21e9,
-    mnav_static: 0.98,
-    sats_per_share_static: 5430,
-  },
-  {
-    name: "Marathon Digital",
-    ticker: "MARA",
-    color: "#eab308",
-    treasury_url: "https://www.mara.com",
-    btc_holdings: 47600,
-    btc_yield_ytd: 6.2,
-    btc_yield_qtd: 1.8,
-    bse_return: -38.4,
-    avg_cost: null,
-    price_static: 13.40,
-    market_cap_static: 3.1e9,
-    mnav_static: 1.36,
-    sats_per_share_static: 9820,
+    name: "Strive, Inc.",
+    ticker: "ASST",
+    color: "#f43f5e",
+    treasury_url: "https://treasury.strive.com",
+    btc_holdings: 15000.5,     // strategytracker.com, May 5 2026
+    btc_yield_ytd: 18.70,
+    btc_yield_qtd: 4.34,
+    bse_return: 35.33,
+    sats_per_share_static: 20222,  // strategytracker.com, May 5 2026
+    mnav_static: 1.00,
   },
 ];
 
@@ -105,14 +75,14 @@ export default function MSTRvsASSTTab({ params, liveData, onRefresh, refreshing 
       const btcNav = c.btc_holdings * btcPrice;
       const ev = marketCap + (MSTR_DEBT_PREF_M - MSTR_CASH_M) * 1e6;
       mnav = btcNav > 0 ? ev / btcNav : 0;
-      satsPerShare = ((c.btc_holdings / (MSTR_SHARES_M * 1.18 * 1e6)) * 1e8);
+      satsPerShare = c.sats_per_share_static; // strategytracker.com: 213,644
     } else if (c.ticker === "ASST") {
       price = asstPrice;
       marketCap = price * ASST_DEFAULTS.shares_outstanding_M * 1e6;
       const btcNav = c.btc_holdings * btcPrice;
       const ev = marketCap + ASST_DEFAULTS.total_debt_pref_M * 1e6;
       mnav = btcNav > 0 ? ev / btcNav : 0;
-      satsPerShare = ((c.btc_holdings / (ASST_DEFAULTS.shares_outstanding_M * 1e6)) * 1e8);
+      satsPerShare = c.sats_per_share_static; // strategytracker.com: 20,222
     } else {
       price = c.price_static;
       marketCap = c.market_cap_static;
@@ -365,7 +335,7 @@ export default function MSTRvsASSTTab({ params, liveData, onRefresh, refreshing 
       </div>
 
       <p className="text-[10px] text-muted-foreground/40 text-center">
-        MSTR/ASST prices live. Metaplanet, Semler, Marathon data static (May 5 2026). Source: strategytracker.com, strategy.com, treasury.strive.com. Educational use only.
+        MSTR &amp; ASST prices live. All other data static as of May 5, 2026. Source: strategytracker.com, strategy.com, treasury.strive.com. Educational use only.
       </p>
     </div>
   );
