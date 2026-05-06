@@ -11,6 +11,7 @@ const FREQUENCIES = [
 ];
 
 const ALLOC_ASSETS = [
+  { ticker: "BTC",   label: "BTC",   color: "#F59E0B" },
   { ticker: "MSTR",  label: "MSTR",  color: "#22C55E" },
   { ticker: "ASST",  label: "ASST",  color: "#60A5FA" },
   { ticker: "MSTY",  label: "MSTY",  color: "#E879F9" },
@@ -122,20 +123,22 @@ export default function AdditionalCapitalPanel({
 
         {/* Quick presets */}
         <div className="flex gap-2 mt-2 flex-wrap">
-          <button onClick={() => setAllocations({ MSTR: 100, ASST: 0, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
+          <button onClick={() => setAllocations({ BTC: 100, MSTR: 0, ASST: 0, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
+            className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">All BTC</button>
+          <button onClick={() => setAllocations({ BTC: 0, MSTR: 100, ASST: 0, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
             className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">All MSTR</button>
-          <button onClick={() => setAllocations({ MSTR: 0, ASST: 100, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
+          <button onClick={() => setAllocations({ BTC: 0, MSTR: 0, ASST: 100, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
             className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">All ASST</button>
-          <button onClick={() => setAllocations({ MSTR: 50, ASST: 50, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
+          <button onClick={() => setAllocations({ BTC: 0, MSTR: 50, ASST: 50, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
             className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">50/50 MSTR+ASST</button>
-          <button onClick={() => setAllocations({ MSTR: 0, ASST: 0, MSTY: 100, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
+          <button onClick={() => setAllocations({ BTC: 0, MSTR: 0, ASST: 0, MSTY: 100, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 })}
             className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">All MSTY</button>
-          <button onClick={() => setAllocations({ MSTR: 25, ASST: 25, MSTY: 25, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 25, CASH: 0 })}
+          <button onClick={() => setAllocations({ BTC: 25, MSTR: 25, ASST: 0, MSTY: 25, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 25, CASH: 0 })}
             className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">Balanced</button>
-          <button onClick={() => setAllocations({ MSTR: 40, ASST: 30, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 30 })}
+          <button onClick={() => setAllocations({ BTC: 30, MSTR: 40, ASST: 0, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 30 })}
             className="text-[10px] px-2 py-1 rounded border border-border text-muted-foreground hover:bg-secondary">Growth+Cash</button>
           <button onClick={() => {
-            setAllocations({ MSTR: 0, ASST: 0, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 });
+            setAllocations({ BTC: 0, MSTR: 0, ASST: 0, MSTY: 0, STRC: 0, SATA: 0, STRF: 0, STRK: 0, STRD: 0, CASH: 0 });
             if (setCustomStockAllocations) setCustomStockAllocations({});
           }} className="text-[10px] px-2 py-1 rounded border border-destructive/40 text-destructive/70 hover:bg-destructive/10">Clear</button>
         </div>
