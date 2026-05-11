@@ -122,32 +122,39 @@ Deno.serve(async (req) => {
       : Promise.resolve(null);
 
     // Fetch last 15 trading days of OHLCV for STRC and SATA
+    // Use simple ISO date string (YYYY-MM-DD) — Polygon bars use midnight UTC timestamps
+    // so shifting by -4h (ET offset) ensures we get the correct US trading date
+    const toISODate = (ms) => {
+      const d = new Date(ms - 4 * 60 * 60 * 1000); // shift by ET offset (approx)
+      return d.toISOString().split("T")[0];
+    };
+
     const atmPromise = POLYGON_KEY
       ? (async () => {
-          try {
-            const toDate = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-            const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-            const [strcData, sataData] = await Promise.all([
-              fetchJSON(`https://api.polygon.io/v2/aggs/ticker/STRC/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=desc&limit=15&apiKey=${POLYGON_KEY}`),
-              fetchJSON(`https://api.polygon.io/v2/aggs/ticker/SATA/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=desc&limit=15&apiKey=${POLYGON_KEY}`),
-            ]);
-            const mapBar = (bar) => ({
-              date: new Date(bar.t).toLocaleDateString("en-CA", { timeZone: "America/New_York" }),
-              price: bar.c,
-              volume_M: parseFloat(((bar.v * bar.vw) / 1_000_000).toFixed(2)),
-              open: bar.o,
-              high: bar.h,
-              low: bar.l,
-              close: bar.c,
-              vwap: parseFloat(bar.vw?.toFixed(2) ?? bar.c),
-            });
-            const strc = (strcData.results ?? []).map(mapBar);
-            const sata = (sataData.results ?? []).map(mapBar);
-            return { strc, sata };
-          } catch (e) {
-            return null;
-          }
-        })()
+          const toDate = toISODate(Date.now());
+          const fromDate = toISODate(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          const fetchAgg = async (ticker) => {
+            const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=desc&limit=15&apiKey=${POLYGON_KEY}`;
+            const res = await fetch(url, { headers: { Accept: "application/json" } });
+            const json = await res.json();
+            return json;
+          };
+          const mapBar = (bar) => ({
+            date: toISODate(bar.t),
+            price: bar.c,
+            volume_M: parseFloat(((bar.v * bar.vw) / 1_000_000).toFixed(2)),
+            open: bar.o,
+            high: bar.h,
+            low: bar.l,
+            close: bar.c,
+            vwap: parseFloat((bar.vw ?? bar.c).toFixed(2)),
+          });
+          const [strcData, sataData] = await Promise.all([fetchAgg("STRC"), fetchAgg("SATA")]);
+          const strc = (strcData.results ?? []).map(mapBar);
+          const sata = (sataData.results ?? []).map(mapBar);
+          if (!strc.length && !sata.length) return null;
+          return { strc, sata };
+        })().catch(() => null)
       : Promise.resolve(null);
 
     const [iv, divs, atmData] = await Promise.all([ivPromise, divsPromise, atmPromise]);
