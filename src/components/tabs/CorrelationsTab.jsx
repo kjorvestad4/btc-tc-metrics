@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import ATMMonitorPanel from "./ATMMonitorPanel";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import MetricCard from "../dashboard/MetricCard";
@@ -687,56 +688,7 @@ function STRCATMPanel({ params, liveData }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Recent Daily Activity (Last 10 Trading Days)</p>
-        {liveData?.atm_strc ? <span className="text-[10px] text-green-400 font-semibold">● Live (Polygon)</span> : <span className="text-[10px] text-muted-foreground">Static fallback</span>}
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th className="text-left py-1.5 pr-2 font-medium">Date</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Price</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Vol ($M)</th>
-              <th className="text-right py-1.5 pr-2 font-medium">ATM Status</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Est. Proceeds</th>
-              <th className="text-right py-1.5 font-medium">BTC</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(() => {
-              const liveRows = liveData?.atm_strc;
-              const staticRows = STRC_RECENT_ACTIVITY;
-              let rows = staticRows;
-              if (liveRows?.length) {
-                const liveMap = new Map(liveRows.map(r => [r.date, r]));
-                const liveMapped = [...liveRows].sort((a, b) => b.date.localeCompare(a.date)).map(r => ({
-                  date: r.date, price: r.price, volume_M: r.volume_M,
-                  pct_at_par: r.price >= 100 ? 100 : 0, capture_pct: r.price >= 100 ? 65 : 0,
-                  proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.65).toFixed(2)) : 0,
-                  btc_acquired: 0, isLive: true,
-                }));
-                rows = [...liveMapped, ...staticRows.filter(r => !liveMap.has(r.date))].slice(0, 12);
-              }
-              return rows.map((row, i) => {
-                const atPar = (row.price ?? 0) >= 100;
-                return (
-                  <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-primary/5" : ""} ${row.isLive ? "bg-green-500/5" : ""}`}>
-                    <td className="py-1 pr-2 font-mono text-foreground">
-                      {row.date}{i === 0 && row.isLive && <span className="text-[9px] text-green-400 ml-1">●</span>}
-                    </td>
-                    <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-primary font-bold" : "text-muted-foreground"}`}>${(row.price ?? 0).toFixed(2)}{atPar ? " ✓" : ""}</td>
-                    <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M != null ? row.volume_M.toFixed(2) : "—"}</td>
-                    <td className={`py-1 pr-2 text-right font-mono font-bold ${atPar ? "text-green-400" : "text-red-400"}`}>{atPar ? "≥ PAR ✓" : "Below Par"}</td>
-                    <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
-                    <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-primary font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
-                  </tr>
-                );
-              });
-            })()}
-          </tbody>
-        </table>
-      </div>
+      <ATMMonitorPanel liveData={liveData} />
     </Card>
   );
 }
@@ -801,56 +753,6 @@ function SATAATMPanel({ params, liveData }) {
             </div>
           ))}
         </div>
-      </div>
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Recent Daily SATA Activity (Last 10 Trading Days)</p>
-        {liveData?.atm_sata ? <span className="text-[10px] text-green-400 font-semibold">● Live (Polygon)</span> : <span className="text-[10px] text-muted-foreground">Static fallback</span>}
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th className="text-left py-1.5 pr-2 font-medium">Date</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Price</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Vol ($M)</th>
-              <th className="text-right py-1.5 pr-2 font-medium">ATM Status</th>
-              <th className="text-right py-1.5 pr-2 font-medium">Est. Proceeds</th>
-              <th className="text-right py-1.5 font-medium">BTC</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(() => {
-              const liveRows = liveData?.atm_sata;
-              const staticRows = SATA_RECENT_ACTIVITY;
-              let rows = staticRows;
-              if (liveRows?.length) {
-                const liveMap = new Map(liveRows.map(r => [r.date, r]));
-                const liveMapped = [...liveRows].sort((a, b) => b.date.localeCompare(a.date)).map(r => ({
-                  date: r.date, price: r.price, volume_M: r.volume_M,
-                  pct_at_par: r.price >= 100 ? 100 : 0, capture_pct: r.price >= 100 ? 72 : 0,
-                  proceeds_M: r.price >= 100 ? parseFloat((r.volume_M * 0.72).toFixed(2)) : 0,
-                  btc_acquired: 0, isLive: true,
-                }));
-                rows = [...liveMapped, ...staticRows.filter(r => !liveMap.has(r.date))].slice(0, 12);
-              }
-              return rows.map((row, i) => {
-                const atPar = (row.price ?? 0) >= 100;
-                return (
-                  <tr key={row.date} className={`border-b border-border/30 ${atPar ? "bg-violet-400/5" : ""} ${row.isLive ? "bg-green-500/5" : ""}`}>
-                    <td className="py-1 pr-2 font-mono text-foreground">
-                      {row.date}{i === 0 && row.isLive && <span className="text-[9px] text-green-400 ml-1">●</span>}
-                    </td>
-                    <td className={`py-1 pr-2 text-right font-mono ${atPar ? "text-violet-400 font-bold" : "text-muted-foreground"}`}>${(row.price ?? 0).toFixed(2)}{atPar ? " ✓" : ""}</td>
-                    <td className="py-1 pr-2 text-right font-mono text-foreground">{row.volume_M != null ? row.volume_M.toFixed(2) : "—"}</td>
-                    <td className={`py-1 pr-2 text-right font-mono font-bold ${atPar ? "text-green-400" : "text-red-400"}`}>{atPar ? "≥ PAR ✓" : "Below Par"}</td>
-                    <td className={`py-1 pr-2 text-right font-mono ${row.proceeds_M > 0 ? "text-cyan-400" : "text-muted-foreground"}`}>{row.proceeds_M > 0 ? `$${row.proceeds_M.toFixed(2)}M` : "—"}</td>
-                    <td className={`py-1 text-right font-mono ${row.btc_acquired > 0 ? "text-violet-400 font-semibold" : "text-muted-foreground"}`}>{row.btc_acquired > 0 ? row.btc_acquired.toLocaleString() : "—"}</td>
-                  </tr>
-                );
-              });
-            })()}
-          </tbody>
-        </table>
       </div>
     </Card>
   );
@@ -996,7 +898,7 @@ export default function CorrelationsTab({ params, liveData }) {
           <STRCATMPanel params={params} liveData={liveData} />
         </div>
 
-        {/* SATA ATM — full width */}
+        {/* SATA ATM Simulator — full width */}
         <div className="grid grid-cols-1 gap-4">
           <SATAATMPanel params={params} liveData={liveData} />
         </div>
