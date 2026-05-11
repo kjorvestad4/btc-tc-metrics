@@ -47,8 +47,8 @@ function SourceLink({ href, label }) {
   );
 }
 
-export default function ATMMonitorPanel({ liveData }) {
-  const [tab, setTab] = useState("strc");
+export default function ATMMonitorPanel({ liveData, defaultTab = "strc" }) {
+  const [tab, setTab] = useState(defaultTab);
   const [lastRefreshed, setLastRefreshed] = useState(null);
 
   useEffect(() => {
@@ -201,7 +201,7 @@ export default function ATMMonitorPanel({ liveData }) {
             className={`text-[10px] px-2.5 py-1 rounded-t font-semibold transition-colors ${
               tab === t ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}>
-            {t === "strc" ? "STRC Weekly" : "SATA Daily"}
+            {t === "strc" ? "STRC Daily" : "SATA Daily"}
           </button>
         ))}
       </div>

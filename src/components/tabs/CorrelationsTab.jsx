@@ -688,7 +688,7 @@ function STRCATMPanel({ params, liveData }) {
           </div>
         </div>
       </div>
-      <ATMMonitorPanel liveData={liveData} />
+      <ATMMonitorPanel liveData={liveData} defaultTab="strc" />
     </Card>
   );
 }
@@ -754,6 +754,7 @@ function SATAATMPanel({ params, liveData }) {
           ))}
         </div>
       </div>
+      <ATMMonitorPanel liveData={liveData} defaultTab="sata" />
     </Card>
   );
 }
