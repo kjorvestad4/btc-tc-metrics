@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
               fetchJSON(`https://api.polygon.io/v2/aggs/ticker/SATA/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=desc&limit=15&apiKey=${POLYGON_KEY}`),
             ]);
             const mapBar = (bar) => ({
-              date: new Date(bar.t).toISOString().split("T")[0],
+              date: new Date(bar.t).toLocaleDateString("en-CA", { timeZone: "America/New_York" }),
               price: bar.c,
               volume_M: parseFloat(((bar.v * bar.vw) / 1_000_000).toFixed(2)),
               open: bar.o,
