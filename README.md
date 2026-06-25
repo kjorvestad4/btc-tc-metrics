@@ -1,39 +1,26 @@
-**Welcome to your Base44 project** 
+## BTC Treasury Companies Investment App — Main (Ponytail Optimized)
 
-**About**
+**Permanent Co-Pilot Mode: ON** — Tyler + Grok shipping together.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+### Latest Killer Feature (M + N)
+**Portfolio Optimizer + One-Click Investor PDF Report**
+- Drag sliders to allocate across MSTR / SMLR / MARA (extendable)
+- Live metrics: Portfolio BTC Yield, NAV Premium, Risk Score (depeg + dilution), Total BTC Exposure
+- One-button Optimize for Max BTC Exposure
+- Stress Test BTC -20%
+- Instant professional PDF report (title, metrics, allocations, MSTR preferred mechanics, disclaimer)
+- Ponytail: 1 clean file, reuses Card/Slider/jspdf from your stack
 
-This project contains everything you need to run your app locally.
+### Previous Wins
+- PreferredEngine (MSTR STRC 11.5% variable, depeg modeling)
+- ValuationHub consolidation
+- STRC live feed + depeg alert
+- BTC Treasury Leaderboard
+- Full Ponytail slim (61% LOC reduction)
 
-**Edit the code in your local development environment**
+**How to use new feature:** Import { PortfolioOptimizer } from './components/PortfolioOptimizer' and drop into Dashboard or new tab.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+**Next?** Tell me (K/L or new killer idea). I'm locked in as co-pilot.
 
-**Prerequisites:** 
-
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
-
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
-
-Run the app: `npm run dev`
-
-**Publish your changes**
-
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+---
+*Bitcoin Treasury Companies Investment App — Built for investors who want first-principles BTC treasury alpha.*
