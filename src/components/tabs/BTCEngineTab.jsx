@@ -16,6 +16,8 @@ export default function BTCEngineTab({ params, liveData }) {
   const [onChainData, setOnChainData] = useState(null);
   const [polling, setPolling] = useState(false);
   const [autoRecalibrated, setAutoRecalibrated] = useState(false);
+  const [liveMode, setLiveMode] = useState(true);
+  const [countdown, setCountdown] = useState(60);
 
   const scenarioConfig = SCENARIOS[scenario];
 
@@ -49,6 +51,23 @@ export default function BTCEngineTab({ params, liveData }) {
     handlePoll();
   }, [handlePoll]);
 
+  // ── 60-second live polling loop ──
+  // Polls on-chain data → recalibrates drift → chart auto-regenerates via memoized simResult
+  useEffect(() => {
+    if (!liveMode) return;
+    setCountdown(60);
+    const tick = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          handlePoll();
+          return 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [liveMode, handlePoll]);
+
   // Run simulation (memoized)
   const simResult = useMemo(() => {
     return runSimulation(btcPrice, engineParams, scenario, onChainData);
@@ -78,6 +97,9 @@ export default function BTCEngineTab({ params, liveData }) {
         polling={polling}
         onPoll={handlePoll}
         autoRecalibrated={autoRecalibrated}
+        liveMode={liveMode}
+        setLiveMode={setLiveMode}
+        countdown={countdown}
       />
 
       {/* Interactive Oracle (Plotly-style dual panel) */}

@@ -1,9 +1,9 @@
 import React from "react";
 import MetricCard from "../dashboard/MetricCard";
-import { Activity, Cpu, Wallet, Radio, RefreshCw } from "lucide-react";
+import { Activity, Cpu, Wallet, Radio, RefreshCw, Radio as RadioIcon } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/calculations";
 
-export default function OnChainPanel({ onChainData, polling, onPoll, autoRecalibrated }) {
+export default function OnChainPanel({ onChainData, polling, onPoll, autoRecalibrated, liveMode, setLiveMode, countdown }) {
   const d = onChainData;
 
   return (
@@ -12,20 +12,40 @@ export default function OnChainPanel({ onChainData, polling, onPoll, autoRecalib
         <div className="flex items-center gap-2">
           <Radio className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Real-Time On-Chain Polling</h3>
-          {d?.polled && (
-            <span className="text-[9px] bg-primary/15 text-primary border border-primary/25 rounded-full px-2 py-0.5 font-medium animate-pulse">
-              ● LIVE
+          {liveMode ? (
+            <span className="flex items-center gap-1 text-[9px] bg-primary/15 text-primary border border-primary/25 rounded-full px-2 py-0.5 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              LIVE
+              <span className="text-primary/60 ml-0.5">{countdown}s</span>
             </span>
-          )}
+          ) : d?.polled ? (
+            <span className="text-[9px] bg-secondary text-muted-foreground border border-border rounded-full px-2 py-0.5 font-medium">
+              ● MANUAL
+            </span>
+          ) : null}
         </div>
-        <button
-          onClick={onPoll}
-          disabled={polling}
-          className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3 h-3 ${polling ? "animate-spin" : ""}`} />
-          {polling ? "Polling…" : "Poll Now"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Live mode toggle */}
+          <button
+            onClick={() => setLiveMode(!liveMode)}
+            className={`flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg border transition-colors ${
+              liveMode
+                ? "border-primary text-primary bg-primary/10"
+                : "border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
+          >
+            <RadioIcon className="w-3 h-3" />
+            {liveMode ? "Live (60s)" : "Live: Off"}
+          </button>
+          <button
+            onClick={onPoll}
+            disabled={polling}
+            className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${polling ? "animate-spin" : ""}`} />
+            {polling ? "Polling…" : "Poll Now"}
+          </button>
+        </div>
       </div>
 
       {autoRecalibrated && (
