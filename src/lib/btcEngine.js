@@ -154,6 +154,7 @@ export function runSimulation(startPrice, params, scenarioKey, onChainState) {
     chartData.push({
       day: d,
       months: (d / 30.44).toFixed(1),
+      current: startPrice,
       p5: pricesAtDay[idx(0.05)] || 0,
       p25: pricesAtDay[idx(0.25)] || 0,
       p50: pricesAtDay[idx(0.50)] || 0,

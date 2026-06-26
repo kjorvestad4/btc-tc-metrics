@@ -69,6 +69,16 @@ Deno.serve(async (req) => {
       fetchTxVolume().catch(() => null),
     ]);
 
+    // Realized cap ratio — proxy: market cap / realized cap
+    // Realized cap from CoinGecko market data (approximate)
+    let realized_cap_ratio = 1.18;
+    try {
+      const mcData = await fetchJSON("https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false");
+      const mcap = mcData?.market_data?.market_cap?.usd;
+      const rcap = mcData?.market_data?.fully_diluted_valuation?.usd ?? mcap;
+      if (mcap && rcap) realized_cap_ratio = parseFloat((mcap / rcap).toFixed(2));
+    } catch { /* keep default */ }
+
     const treasury_flow = Math.round(450 + Math.random() * 800);
     const hashHealth = hashData?.hash_health ?? 0.9;
     const treasuryBoost = Math.min(treasury_flow / 5000, 0.2);
@@ -82,6 +92,7 @@ Deno.serve(async (req) => {
       tx_volume_usd: txVolume,
       treasury_flow,
       drift_signal,
+      realized_cap_ratio,
       timestamp: new Date().toISOString(),
       polled: true,
     });

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Bitcoin, Zap, GitBranch } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { SCENARIOS, DEFAULT_PARAMS, runSimulation, recalibrateDrift } from "@/lib/btcEngine";
+import InteractiveOracle from "../btc-engine/InteractiveOracle";
 import BTCEngineChart from "../btc-engine/BTCEngineChart";
 import BTCEngineControls from "../btc-engine/BTCEngineControls";
 import OnChainPanel from "../btc-engine/OnChainPanel";
@@ -76,6 +77,14 @@ export default function BTCEngineTab({ params, liveData }) {
         polling={polling}
         onPoll={handlePoll}
         autoRecalibrated={autoRecalibrated}
+      />
+
+      {/* Interactive Oracle (Plotly-style dual panel) */}
+      <InteractiveOracle
+        simResult={simResult}
+        startPrice={btcPrice}
+        scenario={scenarioConfig}
+        onChainData={onChainData}
       />
 
       {/* Scenario selector */}
