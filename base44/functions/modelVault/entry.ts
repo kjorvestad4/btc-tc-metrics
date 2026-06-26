@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
       const existing = await base44.asServiceRole.entities.ModelVault.filter({ vault_key: vaultKey });
       const record = {
         vault_key: vaultKey,
-        model_name: body.model_name || "NETSSPLSM v2.1",
+        model_name: body.model_name || "BTC Price Engine",
         version: body.version || "v2.1",
         serialized_params: JSON.stringify(params),
         scenario,
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
       const vaultKey = "apbpe_netss_v2";
       const record = {
         vault_key: vaultKey,
-        model_name: "NETSSPLSM v2.1",
+        model_name: "BTC Price Engine",
         version: "v2.1",
         serialized_params: JSON.stringify(params),
         scenario: scenarioKey,

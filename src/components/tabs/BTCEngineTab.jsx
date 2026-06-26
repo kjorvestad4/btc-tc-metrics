@@ -82,10 +82,10 @@ export default function BTCEngineTab({ params, liveData }) {
             <Bitcoin className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-foreground">NETSSPLSM v2.1 — Universal BTC Price Engine</h2>
+            <h2 className="text-base font-bold text-foreground">Universal BTC Price Engine</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Monte Carlo simulation with regime shifts, herding dynamics, treasury Nash equilibrium,
-              and real-time on-chain recalibration. {engineParams.simulations} paths × {engineParams.horizon_years}y horizon.
+              and real-time on-chain recalibration. {engineParams.simulations} paths × {engineParams.horizon_years}y horizon — starting {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.
             </p>
           </div>
         </div>
@@ -168,12 +168,12 @@ export default function BTCEngineTab({ params, liveData }) {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Starting Price", value: `$${btcPrice.toLocaleString()}`, color: "text-foreground" },
-            { label: "p5 (Bear)", value: `$${Math.round(simResult.percentiles.p5).toLocaleString()}`, color: "text-red-400" },
-            { label: "p50 (Median)", value: `$${Math.round(simResult.percentiles.p50).toLocaleString()}`, color: "text-amber-400" },
-            { label: "p95 (Bull)", value: `$${Math.round(simResult.percentiles.p95).toLocaleString()}`, color: "text-green-400" },
+            { label: "Bear Case (p5)", value: `$${Math.round(simResult.percentiles.p5).toLocaleString()}`, color: "text-red-400" },
+            { label: "Median Outcome (p50)", value: `$${Math.round(simResult.percentiles.p50).toLocaleString()}`, color: "text-amber-400" },
+            { label: "Bull Case (p95)", value: `$${Math.round(simResult.percentiles.p95).toLocaleString()}`, color: "text-green-400" },
             {
-              label: "Upside (p50)",
-              value: `+${((simResult.percentiles.p50 / btcPrice - 1) * 100).toFixed(0)}%`,
+              label: "Median Upside",
+              value: `${simResult.percentiles.p50 > btcPrice ? "+" : ""}${((simResult.percentiles.p50 / btcPrice - 1) * 100).toFixed(0)}%`,
               color: simResult.percentiles.p50 > btcPrice ? "text-green-400" : "text-red-400",
             },
           ].map(s => (
@@ -185,9 +185,35 @@ export default function BTCEngineTab({ params, liveData }) {
         </div>
       </div>
 
+      {/* Percentile notation explainer */}
+      <div className="bg-secondary/30 border border-border rounded-xl p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Zap className="w-3.5 h-3.5 text-amber-400" />
+          <h4 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">Understanding Percentile Outcomes</h4>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-[10px]">
+          <div className="flex items-start gap-2">
+            <span className="text-red-400 font-bold font-mono shrink-0">p5</span>
+            <span className="text-muted-foreground"><strong className="text-red-400">Bear Case:</strong> 95% of simulations ended above this price. Only the worst 5% of outcomes were lower. Think of it as a "things go badly" scenario.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-amber-400 font-bold font-mono shrink-0">p50</span>
+            <span className="text-muted-foreground"><strong className="text-amber-400">Median:</strong> Half the simulations ended above this price, half below. The "most likely" middle outcome — not a prediction, just the center of the range.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-green-400 font-bold font-mono shrink-0">p95</span>
+            <span className="text-muted-foreground"><strong className="text-green-400">Bull Case:</strong> Only 5% of simulations ended above this price. The optimistic ceiling — possible but unlikely. Think "things go very well."</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-muted-foreground font-bold font-mono shrink-0">Range</span>
+            <span className="text-muted-foreground">The spread between p5 and p95 shows uncertainty. A narrow band means the model is more confident; a wide band means high volatility and less certainty about the future.</span>
+          </div>
+        </div>
+      </div>
+
       <p className="text-[10px] text-muted-foreground/40 text-center">
-        NETSSPLSM v2.1 — Educational Monte Carlo simulation. Not financial advice.
-        On-chain data via blockchain.info + CoinGecko. Past performance does not guarantee future results.
+        Educational Monte Carlo simulation. Not financial advice.
+        On-chain data via blockchain.info + CoinGecko + Yahoo Finance. Past performance does not guarantee future results.
       </p>
     </div>
   );

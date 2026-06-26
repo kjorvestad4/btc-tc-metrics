@@ -1,4 +1,4 @@
-// NETSSPLSM v2.1 — Universal BTC Price Engine
+// Universal BTC Price Engine
 // Monte Carlo simulation with regime shifts, herding dynamics, and on-chain recalibration
 
 export const SCENARIOS = {
@@ -147,13 +147,16 @@ export function runSimulation(startPrice, params, scenarioKey, onChainState) {
   const p95 = percentile(0.95);
 
   // Build chart data: average the percentile bands across paths per day
+  const startYear = new Date().getFullYear();
   const chartData = [];
   for (let d = 0; d <= days; d += Math.max(1, Math.floor(days / 120))) {
     const pricesAtDay = allPaths.map(p => p[Math.min(d, p.length - 1)].price).sort((a, b) => a - b);
     const idx = (pct) => Math.floor(pct * pricesAtDay.length);
+    const yearsAhead = d / 365.25;
     chartData.push({
       day: d,
-      months: (d / 30.44).toFixed(1),
+      years: yearsAhead.toFixed(1),
+      yearLabel: String(startYear + Math.round(yearsAhead)),
       current: startPrice,
       p5: pricesAtDay[idx(0.05)] || 0,
       p25: pricesAtDay[idx(0.25)] || 0,

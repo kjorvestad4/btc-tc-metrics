@@ -30,7 +30,7 @@ export default function ModelVaultPanel({ engineParams, scenario, onChainData, b
       const res = await base44.functions.invoke("modelVault", {
         action: "save",
         vault_key: "apbpe_netss_v2",
-        model_name: "NETSSPLSM v2.1",
+        model_name: "BTC Price Engine",
         version: "v2.1",
         params: engineParams,
         scenario,

@@ -32,7 +32,7 @@ export default function InteractiveOracle({ simResult, startPrice, scenario, onC
         <div className="flex items-center gap-2">
           <Radio className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-            Interactive Price Oracle Dashboard — NETSS-PLSM v2.1
+            Interactive Price Oracle Dashboard
           </h3>
         </div>
         {onChainData?.polled && (
@@ -56,21 +56,18 @@ export default function InteractiveOracle({ simResult, startPrice, scenario, onC
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-          <XAxis dataKey="months" tick={TICK} label={{ value: "Months Ahead", position: "insideBottom", offset: -4, fontSize: 9, fill: "hsl(215 20% 55%)" }} />
+          <XAxis dataKey="yearLabel" tick={TICK} label={{ value: "Year", position: "insideBottom", offset: -4, fontSize: 9, fill: "hsl(215 20% 55%)" }} />
           <YAxis tick={TICK} tickFormatter={formatPrice} scale="log" domain={[startPrice * 0.1, "auto"]} />
           <Tooltip
             contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", borderRadius: 6, fontSize: 11 }}
             formatter={(v) => formatPrice(v)}
-            labelFormatter={(l) => `Month ${l}`}
+            labelFormatter={(l) => l}
           />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-          {/* P90 (upper band) */}
-          <Area type="monotone" dataKey="p95" name="P90 (bull)" stroke="none" fill="url(#oracleBand)" />
-          <Area type="monotone" dataKey="p5" name="P10 (bear)" stroke="none" fill="hsl(222 47% 8%)" />
-          {/* P50 Median */}
-          <Line type="monotone" dataKey="p50" name="Median" stroke="#3B82F6" strokeWidth={2.5} dot={false} />
-          {/* Current price (flat line) */}
-          <Line type="monotone" dataKey="current" name="Current" stroke="#EF553B" strokeWidth={2} dot={false} strokeDasharray="5 3" />
+          <Area type="monotone" dataKey="p95" name="Bull Case (p95)" stroke="none" fill="url(#oracleBand)" />
+          <Area type="monotone" dataKey="p5" name="Bear Case (p5)" stroke="none" fill="hsl(222 47% 8%)" />
+          <Line type="monotone" dataKey="p50" name="Median (p50)" stroke="#3B82F6" strokeWidth={2.5} dot={false} />
+          <Line type="monotone" dataKey="current" name="Current Price" stroke="#EF553B" strokeWidth={2} dot={false} strokeDasharray="5 3" />
         </ComposedChart>
       </ResponsiveContainer>
 
