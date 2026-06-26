@@ -1,0 +1,44 @@
+{
+  "name": "ParamSnapshot",
+  "type": "object",
+  "properties": {
+    "snapshot_name": {
+      "type": "string",
+      "description": "User-given name for this parameter configuration"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional notes about this strategy"
+    },
+    "serialized_params": {
+      "type": "string",
+      "description": "JSON-serialized dashboard parameter settings"
+    },
+    "active_scenario": {
+      "type": "string",
+      "description": "Active scenario at time of save"
+    },
+    "btc_price": {
+      "type": "number",
+      "description": "BTC price at time of snapshot"
+    },
+    "btc_cagr": {
+      "type": "number",
+      "description": "BTC CAGR at time of snapshot"
+    },
+    "amplification_ratio": {
+      "type": "number",
+      "description": "Amplification ratio at time of snapshot"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Labels for categorization (e.g. bull, bear, base)"
+    }
+  },
+  "required": [
+    "snapshot_name"
+  ]
+}

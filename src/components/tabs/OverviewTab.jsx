@@ -1,6 +1,7 @@
 import React from "react";
 import MetricCard from "../dashboard/MetricCard";
 import ATMMonitorPanel from "./ATMMonitorPanel";
+import ParamSnapshotPanel from "@/components/dashboard/ParamSnapshotPanel";
 import { Bitcoin, TrendingUp, Layers, DollarSign, Activity, Percent, Shield, BarChart3 } from "lucide-react";
 import { formatCurrency, formatNumber, calcTotalPrefLiquidation, calcTotalAnnualDividend } from "@/lib/calculations";
 import { ASST_DEFAULTS } from "./ASSTModelTab";
@@ -16,7 +17,7 @@ const SATA_NOTIONAL_M = 495.95;
 const SATA_DIVIDEND_RATE = 13.0;
 const SATA_ANNUAL_DIV = SATA_NOTIONAL_M * 1e6 * (SATA_DIVIDEND_RATE / 100);
 
-export default function OverviewTab({ params, preferreds, projections, liveData, onRefresh, refreshing }) {
+export default function OverviewTab({ params, preferreds, projections, liveData, onRefresh, refreshing, onLoadParams }) {
   // Prices — prefer liveData, fall back to params (declared first so calcs below can use them)
   const btcPrice = liveData?.btc_price ?? params.btc_price;
   const mstrPrice = liveData?.mstr_price ?? params.mstr_price;
@@ -160,6 +161,9 @@ export default function OverviewTab({ params, preferreds, projections, liveData,
 
       {/* ATM Monitor Panel */}
       <ATMMonitorPanel liveData={liveData} />
+
+      {/* Strategy Snapshot Panel */}
+      <ParamSnapshotPanel params={params} onLoad={onLoadParams} />
     </div>
   );
 }

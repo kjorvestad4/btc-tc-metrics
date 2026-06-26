@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/dashboard/Navbar";
 import OverviewTab from "@/components/tabs/OverviewTab";
+import ParamSnapshotPanel from "@/components/dashboard/ParamSnapshotPanel";
 import BTCModelsTab from "@/components/tabs/BTCModelsTab";
 import MSTRvsASSTTab from "@/components/tabs/MSTRvsASSTTab";
 import MSTYModelTab from "@/components/tabs/MSTYModelTab";
@@ -27,11 +28,13 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [liveData, setLiveData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastSynced, setLastSynced] = useState(null);
   const handleRefreshLive = useCallback(async () => {
     setRefreshing(true);
     try {
       const data = await fetchAllMarketData();
       setLiveData(data);
+      setLastSynced(new Date());
 
       // Update params with live prices
       setParams((prev) => ({
@@ -103,6 +106,7 @@ export default function Dashboard() {
         liveData={liveData}
         hasPolygonKey={true}
         params={params}
+        lastSynced={lastSynced}
       />
 
       <main className="p-4 lg:p-6">
@@ -128,6 +132,7 @@ export default function Dashboard() {
               liveData={liveData}
               onRefresh={handleRefreshLive}
               refreshing={refreshing}
+              onLoadParams={setParams}
             />
           </TabsContent>
 

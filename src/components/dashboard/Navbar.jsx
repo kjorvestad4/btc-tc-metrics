@@ -1,8 +1,9 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Zap, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import SyncStatusIndicator from "@/components/dashboard/SyncStatusIndicator";
 
-export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey, params }) {
+export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey, params, lastSynced }) {
   const btcPrice = liveData?.btc_price ?? params?.btc_price;
   const mstrPrice = liveData?.mstr_price ?? params?.mstr_price;
   const asstPrice = liveData?.asst_price ?? params?.asst_price;
@@ -51,9 +52,12 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
             Add Polygon key on Overview for full live data
           </span>
         }
-        <div className="hidden sm:flex items-center gap-1 text-[9px] text-muted-foreground">
-          <Clock className="w-3 h-3" />
-          auto-refresh 60s
+        <div className="hidden sm:flex items-center gap-2">
+          <SyncStatusIndicator refreshing={refreshing} lastSynced={lastSynced} />
+          <div className="hidden md:flex items-center gap-1 text-[9px] text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            auto 60s
+          </div>
         </div>
         <Button
           variant="default"
