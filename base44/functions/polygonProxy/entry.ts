@@ -48,14 +48,24 @@ async function getPrice(ticker) {
 }
 
 async function fetchBTC() {
-  // Try CoinGecko first, fall back to Polygon BTC/USD
+  // 1. Yahoo Finance (most reliable from server-side)
+  try {
+    const data = await fetchJSON("https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?interval=1d&range=1d", {
+      "User-Agent": "Mozilla/5.0",
+      "Accept-Language": "en-US,en;q=0.9",
+    });
+    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (price) return price;
+  } catch { /* fall through */ }
+
+  // 2. CoinGecko
   try {
     const data = await fetchJSON("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
     const price = data?.bitcoin?.usd;
     if (price) return price;
   } catch { /* fall through */ }
 
-  // Polygon fallback for BTC
+  // 3. Polygon crypto snapshot
   if (POLYGON_KEY) {
     const data = await fetchJSON(
       `https://api.polygon.io/v2/snapshot/locale/global/markets/crypto/tickers/X:BTCUSD?apiKey=${POLYGON_KEY}`
