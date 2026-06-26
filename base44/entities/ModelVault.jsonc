@@ -1,0 +1,58 @@
+{
+  "name": "ModelVault",
+  "type": "object",
+  "properties": {
+    "vault_key": {
+      "type": "string",
+      "description": "Unique key for this model (e.g. apbpe_netss_v2)"
+    },
+    "model_name": {
+      "type": "string",
+      "description": "Display name of the model"
+    },
+    "version": {
+      "type": "string",
+      "description": "Model version tag"
+    },
+    "serialized_params": {
+      "type": "string",
+      "description": "JSON-serialized engine parameters"
+    },
+    "scenario": {
+      "type": "string",
+      "description": "Scenario key used for this snapshot"
+    },
+    "on_chain_snapshot": {
+      "type": "string",
+      "description": "JSON-serialized on-chain data at time of save"
+    },
+    "simulation_result": {
+      "type": "string",
+      "description": "JSON-serialized percentile results (p5/p25/p50/p75/p95)"
+    },
+    "btc_price": {
+      "type": "number",
+      "description": "BTC price at time of snapshot"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for categorization (charting, treasury, realtime)"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "scheduled"
+      ],
+      "description": "Whether this was saved manually or by the daily automation",
+      "default": "manual"
+    }
+  },
+  "required": [
+    "vault_key",
+    "model_name"
+  ]
+}

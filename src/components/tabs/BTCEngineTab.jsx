@@ -6,6 +6,7 @@ import InteractiveOracle from "../btc-engine/InteractiveOracle";
 import BTCEngineChart from "../btc-engine/BTCEngineChart";
 import BTCEngineControls from "../btc-engine/BTCEngineControls";
 import OnChainPanel from "../btc-engine/OnChainPanel";
+import ModelVaultPanel from "../btc-engine/ModelVaultPanel";
 
 export default function BTCEngineTab({ params, liveData }) {
   const btcPrice = liveData?.btc_price ?? params.btc_price ?? 85000;
@@ -126,6 +127,14 @@ export default function BTCEngineTab({ params, liveData }) {
         params={engineParams}
         onChange={setEngineParams}
         onReset={handleReset}
+      />
+
+      {/* Model Vault — serialize + save */}
+      <ModelVaultPanel
+        engineParams={engineParams}
+        scenario={scenario}
+        onChainData={onChainData}
+        btcPrice={btcPrice}
       />
 
       {/* Stats summary */}
