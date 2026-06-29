@@ -223,6 +223,7 @@ export async function fetchAllMarketData() {
     msty_latest_div: poly.divs?.[0]?.amount ?? null,
     atm_strc: poly.atm?.strc ?? null,
     atm_sata: poly.atm?.sata ?? null,
+    sparklines: poly.sparklines ?? null,
     polygon_used: true,
     errors,
   };

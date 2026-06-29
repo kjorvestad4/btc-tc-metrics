@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Zap, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import SyncStatusIndicator from "@/components/dashboard/SyncStatusIndicator";
+import PricePill from "@/components/dashboard/PricePill";
 
 export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey, params, lastSynced }) {
   const btcPrice = liveData?.btc_price ?? params?.btc_price;
@@ -23,21 +24,39 @@ export default function Navbar({ onRefresh, refreshing, liveData, hasPolygonKey,
 
         {/* Price pills — always visible */}
         <div className="hidden md:flex items-center gap-2 ml-2">
-          {btcPrice &&
-          <span className="text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded px-2 py-0.5">
-              BTC ${Math.round(btcPrice).toLocaleString()}
-            </span>
-          }
-          {mstrPrice &&
-          <span className="text-[10px] font-mono bg-primary/10 text-primary border border-primary/20 rounded px-2 py-0.5">
-              MSTR ${parseFloat(mstrPrice).toFixed(2)}
-            </span>
-          }
-          {asstPrice &&
-          <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded px-2 py-0.5">
-              ASST ${parseFloat(asstPrice).toFixed(2)}
-            </span>
-          }
+          {btcPrice && (
+            <PricePill
+              label="BTC"
+              priceStr={`$${Math.round(btcPrice).toLocaleString()}`}
+              changePct={liveData?.sparklines?.BTC?.change_pct}
+              sparkline={liveData?.sparklines?.BTC?.sparkline}
+              bgClass="bg-amber-500/10"
+              textClass="text-amber-400"
+              borderClass="border-amber-500/20"
+            />
+          )}
+          {mstrPrice && (
+            <PricePill
+              label="MSTR"
+              priceStr={`$${parseFloat(mstrPrice).toFixed(2)}`}
+              changePct={liveData?.sparklines?.MSTR?.change_pct}
+              sparkline={liveData?.sparklines?.MSTR?.sparkline}
+              bgClass="bg-primary/10"
+              textClass="text-primary"
+              borderClass="border-primary/20"
+            />
+          )}
+          {asstPrice && (
+            <PricePill
+              label="ASST"
+              priceStr={`$${parseFloat(asstPrice).toFixed(2)}`}
+              changePct={liveData?.sparklines?.ASST?.change_pct}
+              sparkline={liveData?.sparklines?.ASST?.sparkline}
+              bgClass="bg-blue-500/10"
+              textClass="text-blue-400"
+              borderClass="border-blue-500/20"
+            />
+          )}
           {liveData && (liveData.errors?.length === 0 ?
           <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> :
 

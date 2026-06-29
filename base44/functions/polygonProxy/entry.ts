@@ -77,6 +77,31 @@ async function fetchBTC() {
   throw new Error("BTC price unavailable");
 }
 
+// Fetch 5-day sparkline + 24h change % from Yahoo Finance
+async function fetchSparkline(ticker) {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=5d`;
+    const data = await fetchJSON(url, {
+      "User-Agent": "Mozilla/5.0",
+      "Accept-Language": "en-US,en;q=0.9",
+    });
+    const result = data?.chart?.result?.[0];
+    if (!result) return null;
+    const currentPrice = result.meta?.regularMarketPrice;
+    const previousClose = result.meta?.previousClose ?? result.meta?.chartPreviousClose;
+    const closes = result.indicators?.quote?.[0]?.close?.filter(v => v != null) ?? [];
+    if (!currentPrice || !previousClose) return null;
+    const changePct = ((currentPrice - previousClose) / previousClose) * 100;
+    return {
+      price: currentPrice,
+      change_pct: parseFloat(changePct.toFixed(2)),
+      sparkline: closes.length > 1 ? closes : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     // No auth required — public price data endpoint
@@ -167,7 +192,17 @@ Deno.serve(async (req) => {
         })().catch(() => null)
       : Promise.resolve(null);
 
-    const [iv, divs, atmData] = await Promise.all([ivPromise, divsPromise, atmPromise]);
+    // Fetch sparklines for navbar (BTC, MSTR, ASST — 5d daily closes + 24h change %)
+    const sparklinePromise = (async () => {
+      const [btc, mstr, asst] = await Promise.all([
+        fetchSparkline("BTC-USD"),
+        fetchSparkline("MSTR"),
+        fetchSparkline("ASST"),
+      ]);
+      return { BTC: btc, MSTR: mstr, ASST: asst };
+    })();
+
+    const [iv, divs, atmData, sparklines] = await Promise.all([ivPromise, divsPromise, atmPromise, sparklinePromise]);
 
     const prices = {};
     const sources = {};
@@ -176,7 +211,7 @@ Deno.serve(async (req) => {
       sources[ticker] = source;
     });
 
-    return Response.json({ btc: btcResult, prices, sources, iv, divs, atm: atmData });
+    return Response.json({ btc: btcResult, prices, sources, iv, divs, atm: atmData, sparklines });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

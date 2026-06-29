@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import ATMMonitorPanel from "./ATMMonitorPanel";
+import CorrelationHeatmap from "@/components/correlations/CorrelationHeatmap";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import MetricCard from "../dashboard/MetricCard";
@@ -865,6 +866,9 @@ export default function CorrelationsTab({ params, liveData }) {
           <MetricCard title="MSTY Gamma (1Y)" value="0.14" subtitle="beta convexity" icon={Activity} accentClass="text-purple-400" />
           <MetricCard title="MSTY Theta" value="22.0%" subtitle="option decay drag / NAV" icon={AlertTriangle} accentClass="text-red-400" />
         </div>
+
+        {/* Correlation Heatmap */}
+        <CorrelationHeatmap />
 
         {/* BTC→MSTR and BTC→ASST */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
