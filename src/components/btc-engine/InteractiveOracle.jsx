@@ -56,7 +56,7 @@ export default function InteractiveOracle({ simResult, startPrice, scenario, onC
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-          <XAxis dataKey="yearLabel" tick={TICK} label={{ value: "Year", position: "insideBottom", offset: -4, fontSize: 9, fill: "hsl(215 20% 55%)" }} />
+          <XAxis dataKey="dateLabel" tick={TICK} interval="preserveStartEnd" minTickGap={40} />
           <YAxis tick={TICK} tickFormatter={formatPrice} scale="log" domain={[startPrice * 0.1, "auto"]} />
           <Tooltip
             contentStyle={{ background: "hsl(222 47% 10%)", border: "1px solid hsl(217 33% 17%)", borderRadius: 6, fontSize: 11 }}

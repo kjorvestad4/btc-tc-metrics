@@ -147,16 +147,21 @@ export function runSimulation(startPrice, params, scenarioKey, onChainState) {
   const p95 = percentile(0.95);
 
   // Build chart data: average the percentile bands across paths per day
-  const startYear = new Date().getFullYear();
+  const startDate = new Date();
   const chartData = [];
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   for (let d = 0; d <= days; d += Math.max(1, Math.floor(days / 120))) {
     const pricesAtDay = allPaths.map(p => p[Math.min(d, p.length - 1)].price).sort((a, b) => a - b);
     const idx = (pct) => Math.floor(pct * pricesAtDay.length);
     const yearsAhead = d / 365.25;
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + d);
     chartData.push({
       day: d,
       years: yearsAhead.toFixed(1),
-      yearLabel: String(startYear + Math.round(yearsAhead)),
+      dateObj: date,
+      dateLabel: `${MONTHS[date.getMonth()]} ${date.getFullYear()}`,
+      yearLabel: `${String(date.getFullYear())}`,
       current: startPrice,
       p5: pricesAtDay[idx(0.05)] || 0,
       p25: pricesAtDay[idx(0.25)] || 0,
