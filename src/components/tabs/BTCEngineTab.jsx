@@ -1,12 +1,16 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { Bitcoin, Zap, GitBranch } from "lucide-react";
+import { Bitcoin, Zap, GitBranch, Download } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { SCENARIOS, DEFAULT_PARAMS, runSimulation, recalibrateDrift } from "@/lib/btcEngine";
+import { SCENARIOS, DEFAULT_PARAMS, runEnsembleSimulation, recalibrateDrift, SUB_MODELS } from "@/lib/btcEngine";
 import InteractiveOracle from "../btc-engine/InteractiveOracle";
 import BTCEngineChart from "../btc-engine/BTCEngineChart";
 import BTCEngineControls from "../btc-engine/BTCEngineControls";
 import OnChainPanel from "../btc-engine/OnChainPanel";
 import ModelVaultPanel from "../btc-engine/ModelVaultPanel";
+import EnsemblePanel from "../btc-engine/EnsemblePanel";
+import EnsembleAnalysis from "../btc-engine/EnsembleAnalysis";
+import EnsembleBacktest from "../btc-engine/EnsembleBacktest";
+import { Tabs as SubTabs, TabsContent as SubTabsContent, TabsList as SubTabsList, TabsTrigger as SubTabsTrigger } from "@/components/ui/tabs";
 
 export default function BTCEngineTab({ params, liveData }) {
   const btcPrice = liveData?.btc_price ?? params.btc_price ?? 85000;
@@ -18,6 +22,10 @@ export default function BTCEngineTab({ params, liveData }) {
   const [autoRecalibrated, setAutoRecalibrated] = useState(false);
   const [liveMode, setLiveMode] = useState(true);
   const [countdown, setCountdown] = useState(60);
+  const [ensembleToggles, setEnsembleToggles] = useState(
+    Object.fromEntries(SUB_MODELS.map(m => [m, true]))
+  );
+  const [subTab, setSubTab] = useState("chart");
 
   const scenarioConfig = SCENARIOS[scenario];
 
@@ -68,10 +76,29 @@ export default function BTCEngineTab({ params, liveData }) {
     return () => clearInterval(tick);
   }, [liveMode, handlePoll]);
 
-  // Run simulation (memoized)
+  // Run ensemble simulation (memoized)
   const simResult = useMemo(() => {
-    return runSimulation(btcPrice, engineParams, scenario, onChainData);
-  }, [btcPrice, engineParams, scenario, onChainData]);
+    return runEnsembleSimulation(btcPrice, engineParams, scenario, onChainData, ensembleToggles);
+  }, [btcPrice, engineParams, scenario, onChainData, ensembleToggles]);
+
+  const handleExport = () => {
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      scenario,
+      startPrice: btcPrice,
+      engineParams,
+      ensembleToggles,
+      ensemble: simResult.ensemble,
+      percentiles: simResult.percentiles,
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `btc-engine-${scenario}-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-4">
@@ -91,18 +118,29 @@ export default function BTCEngineTab({ params, liveData }) {
         </div>
       </div>
 
-      {/* On-chain panel */}
-      <OnChainPanel
-        onChainData={onChainData}
-        polling={polling}
-        onPoll={handlePoll}
-        autoRecalibrated={autoRecalibrated}
-        liveMode={liveMode}
-        setLiveMode={setLiveMode}
-        countdown={countdown}
-      />
+      {/* Sub-tabs: Chart | Analysis | Backtest | Live */}
+      <SubTabs value={subTab} onValueChange={setSubTab}>
+        <SubTabsList className="bg-secondary mb-4 flex-wrap h-auto gap-0.5 p-1">
+          <SubTabsTrigger value="chart" className="text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1.5">Chart</SubTabsTrigger>
+          <SubTabsTrigger value="analysis" className="text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1.5">Analysis</SubTabsTrigger>
+          <SubTabsTrigger value="backtest" className="text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1.5">Backtest</SubTabsTrigger>
+          <SubTabsTrigger value="live" className="text-xs gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 py-1.5">Live</SubTabsTrigger>
+        </SubTabsList>
 
-      {/* Interactive Oracle (Plotly-style dual panel) */}
+        <SubTabsContent value="live">
+          <OnChainPanel
+            onChainData={onChainData}
+            polling={polling}
+            onPoll={handlePoll}
+            autoRecalibrated={autoRecalibrated}
+            liveMode={liveMode}
+            setLiveMode={setLiveMode}
+            countdown={countdown}
+          />
+        </SubTabsContent>
+
+        <SubTabsContent value="chart">
+          {/* Interactive Oracle (Plotly-style dual panel) */}
       <InteractiveOracle
         simResult={simResult}
         startPrice={btcPrice}
@@ -210,6 +248,17 @@ export default function BTCEngineTab({ params, liveData }) {
           </div>
         </div>
       </div>
+        </SubTabsContent>
+
+        <SubTabsContent value="analysis">
+          <EnsemblePanel ensemble={simResult.ensemble} onExport={handleExport} />
+          <EnsembleAnalysis ensemble={simResult.ensemble} toggles={ensembleToggles} onToggle={setEnsembleToggles} />
+        </SubTabsContent>
+
+        <SubTabsContent value="backtest">
+          <EnsembleBacktest btcPrice={btcPrice} />
+        </SubTabsContent>
+      </SubTabs>
 
       <p className="text-[10px] text-muted-foreground/40 text-center">
         Educational Monte Carlo simulation. Not financial advice.
